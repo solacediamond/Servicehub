@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Service Details</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="page-enter-right">
+
+    <!-- Navigation -->
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="index.html#categories">Categories</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">Log in</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+<!-- Service Details -->
+
+<main class="service-page">
+<button type="button" class="how-back-btn" onclick="history.back()">
+    ← Back
+</button>
+
+    <div class="service-detail">
+
+        <div class="detail-image">
+            <span id="serviceImage">VIDEO</span>
+        </div>
+
+
+        <div class="detail-content">
+
+            <p class="service-category" id="serviceCategory">
+                Video & Motion
+            </p>
+
+            <h1 id="serviceTitle">
+                Professional Video Editing
+            </h1>
+
+            <p class="detail-provider">
+                By <strong id="serviceProvider">Solaceproeditz</strong>
+            </p>
+
+
+            <div class="detail-rating">
+                ⭐ <span id="serviceRating">4.9</span>
+                <span>•</span>
+                <span id="serviceReviews">12 reviews</span>
+            </div>
+
+
+            <div class="detail-divider"></div>
+
+
+            <h2>About this service</h2>
+
+            <p class="detail-description" id="serviceDescription">
+                Professional video editing for businesses,
+                creators and digital projects. Get clean,
+                engaging visuals designed to communicate
+                your message clearly.
+            </p>
+
+
+            <h2>What's included</h2>
+
+            <ul class="included-list" id="serviceIncluded">
+                <li>Professional video editing</li>
+                <li>Motion graphics</li>
+                <li>Text and visual effects</li>
+                <li>Social media-ready output</li>
+            </ul>
+
+
+            <div class="detail-price">
+
+                <div>
+                    <span>Starting from</span>
+                    <strong id="servicePrice">₦5,000</strong>
+                </div>
+
+                <button class="contact-btn">
+                    Contact Provider
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+
+      <!-- CONTACT MODAL -->
+
+    <div class="contact-modal" id="contactModal">
+
+        <div class="contact-box">
+
+            <button class="close-modal" id="closeModal">
+                ×
+            </button>
+
+            <p class="eyebrow">
+                CONTACT PROVIDER
+            </p>
+
+            <h2>
+                Contact Solaceproeditz
+            </h2>
+
+            <p class="modal-description">
+                You don't need an account to contact a provider.
+            </p>
+
+            <label for="customerName">
+                Your name
+            </label>
+
+            <input
+                type="text"
+                id="customerName"
+                placeholder="Enter your name"
+                maxlength="40"
+            >
+
+            <button class="continue-btn" id="continueContact">
+                Continue →
+            </button>
+
+            <p class="saved-name" id="savedName"></p>
+
+        </div>
+
+    </div>
+
+
+    <!-- JavaScript -->
+
+    <script src="script.js"></script>
+
+</body>
+</html>

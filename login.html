@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Login | ServiceHub</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- ========================================
+         NAVBAR
+    ======================================== -->
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="index.html#categories">Categories</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html" class="active-action">Log in</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+<!-- ========================================
+         LOGIN PAGE
+    ======================================== -->
+
+    <main class="service-page login-page">
+<button type="button" class="how-back-btn" onclick="history.back()">
+    ← Back
+</button>
+
+        <section class="service-header">
+
+            <span class="service-category">
+                SERVICEHUB ACCOUNT
+            </span>
+
+            <h1>Welcome Back</h1>
+
+            <p>
+                Enter your information to continue to ServiceHub.
+            </p>
+
+        </section>
+
+
+        <!-- ========================================
+             LOGIN FORM
+        ======================================== -->
+
+        <section class="service-details">
+
+            <div class="login-card">
+
+                <form id="loginForm">
+
+                    <!-- NAME -->
+
+                    <div class="form-group">
+
+                        <label for="loginName">
+                            Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="loginName"
+                            name="name"
+                            placeholder="Enter your name"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- COMPANY -->
+
+                    <div class="form-group">
+
+                        <label for="loginCompany">
+                            Company Name
+                            <span class="optional">(Optional)</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            id="loginCompany"
+                            name="company"
+                            placeholder="Enter your company name"
+                        >
+
+                    </div>
+
+
+                    <!-- CONTACT -->
+
+                    <div class="form-group">
+
+                        <label for="loginContact">
+                            Contact Information
+                        </label>
+
+                        <input
+                            type="text"
+                            id="loginContact"
+                            name="contact"
+                            placeholder="Email, Telegram, or other contact"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- PHONE -->
+
+                    <div class="form-group">
+
+                        <label for="loginPhone">
+                            Phone Number
+                            <span class="optional">(Optional)</span>
+                        </label>
+
+                        <input
+                            type="tel"
+                            id="loginPhone"
+                            name="phone"
+                            placeholder="Enter your phone number"
+                        >
+
+                    </div>
+
+
+                    <!-- MESSAGE -->
+
+                    <p
+                        id="loginMessage"
+                        class="form-message"
+                    ></p>
+
+
+                    <!-- CONTINUE -->
+
+                    <button
+                        type="submit"
+                        class="contact-provider-btn login-submit"
+                    >
+                        Continue
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <!-- BACK -->
+
+            <a
+                href="index.html"
+                class="back-to-services"
+            >
+                ← Back to Home
+            </a>
+
+        </section>
+
+    </main>
+
+
+    <!-- ========================================
+         JAVASCRIPT
+    ======================================== -->
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <title>Explore Services | ServiceHub</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- ========================================
+         NAVBAR
+    ======================================== -->
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html" class="active">Explore</a>
+                <a href="index.html#categories">Categories</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">Log in</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+<!-- ========================================
+         EXPLORE PAGE
+    ======================================== -->
+
+    <main class="service-page explore-page">
+<button type="button" class="how-back-btn" onclick="history.back()">
+    ← Back
+</button>
+
+        <section class="service-header">
+
+            <span class="service-category">
+                SERVICEHUB
+            </span>
+
+
+            <h1>
+                Explore Services
+            </h1>
+
+
+            <p>
+                Discover digital services from providers
+                across ServiceHub.
+            </p>
+
+        </section>
+
+
+
+        <!-- ALL SERVICES WILL APPEAR HERE -->
+
+        <section
+            id="exploreGrid"
+            class="explore-grid"
+        >
+        </section>
+
+
+    </main>
+
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

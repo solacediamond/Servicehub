@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>List Your Service — ServiceHub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="provider-page">
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="index.html#categories">Categories</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">Log in</a>
+                <a class="list-btn" href="list-service.html" class="active-action">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+<main class="listing-page">
+<button type="button" class="how-back-btn" onclick="history.back()">
+    ← Back
+</button>
+
+        <section class="listing-card">
+
+            <div class="listing-heading">
+                <p class="eyebrow">PROVIDER</p>
+                <h1>List Your Service</h1>
+                <p>
+                    Tell people what you offer and give them a way to find
+                    and contact you.
+                </p>
+            </div>
+
+            <form id="serviceListingForm" class="listing-form">
+
+                <div class="form-group">
+                    <label for="providerName">Name</label>
+                    <input type="text" id="providerName" name="name"
+                           placeholder="Your full name" maxlength="80" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="companyName">Company name <span>(optional)</span></label>
+                    <input type="text" id="companyName" name="company"
+                           placeholder="Your company or brand name" maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="contactInfo">Contact info</label>
+                    <input type="text" id="contactInfo" name="contact"
+                           placeholder="Email, phone, Telegram, etc." maxlength="150" required>
+                </div>
+<!-- PHONE NUMBER -->
+
+<div class="form-group">
+
+    <label for="phone">
+        Phone Number
+    </label>
+
+    <input
+        type="tel"
+        id="phone"
+        name="phone"
+        placeholder="e.g. 08012345678"
+        inputmode="tel"
+        autocomplete="tel"
+    >
+
+</div>
+                <div class="form-group">
+                    <label for="serviceType">Service</label>
+                    <select id="serviceType" name="service" required>
+                        <option value="">Choose a service</option>
+                        <option value="Video Editing">Video Editing</option>
+                        <option value="Web Development">Web Development</option>
+                        <option value="Graphic Design">Graphic Design</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div id="otherServiceBox" class="form-group" style="display: none;">
+                    <label for="otherService">Specify Your Service</label>
+                    <input
+                        type="text"
+                        id="otherService"
+                        name="otherService"
+                        placeholder="Enter the service you provide"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="portfolio">Portfolio</label>
+                    <input type="url" id="portfolio" name="portfolio"
+                           placeholder="https://yourportfolio.com" required>
+                </div>
+<div class="form-group">
+    <label for="about">
+        About You / Your Service
+        <span class="optional">(Optional)</span>
+    </label>
+
+    <textarea
+        id="about"
+        name="about"
+        rows="5"
+        placeholder="Tell customers about yourself, your experience, and what makes your service different..."
+    ></textarea>
+</div>
+                <div class="form-group">
+                    <label for="media">Media</label>
+                    <input type="file" id="media" name="media"
+                           accept="image/*,video/*,.pdf" multiple>
+                    <small>Add images, videos or PDFs that showcase your work.</small>
+                </div>
+<!-- STARTING PRICE -->
+
+<div class="form-group">
+
+    <label for="price">
+        Starting Price
+        <span class="optional">(Optional)</span>
+    </label>
+
+    <div class="price-input">
+
+        <span class="currency">₦</span>
+
+        <input
+            type="number"
+            id="price"
+            name="price"
+            placeholder="e.g. 5000"
+            min="0"
+            inputmode="numeric"
+        >
+
+    </div>
+
+</div>
+
+
+<!-- PRICING RANK -->
+
+<div
+    class="form-group pricing-rank-group"
+    id="pricingRankGroup"
+    style="display: none;"
+>
+
+    <label for="pricingRank">
+        Pricing Rank
+        <span class="optional">(Optional)</span>
+    </label>
+
+    <select id="pricingRank" name="pricingRank">
+
+        <option value="">
+            Select a pricing level
+        </option>
+
+        <option value="basic">Basic</option>
+        <option value="standard">Standard</option>
+        <option value="medium">Medium</option>
+        <option value="premium">Premium</option>
+        <option value="custom">Custom</option>
+
+    </select>
+
+    <small class="field-hint">
+        Choose a pricing level if your service has different packages.
+    </small>
+<!-- PRICING CATEGORIES -->
+<div class="form-group">
+    <label>Pricing Categories</label>
+
+    <div id="pricingCategories" class="pricing-categories">
+
+        <!-- Basic -->
+        <div class="pricing-option">
+            <label class="pricing-check">
+                <input type="checkbox" class="pricing-toggle" data-category="Basic">
+                <span>Basic</span>
+            </label>
+
+            <div class="pricing-price-box">
+                <span>₦</span>
+                <input
+                    type="number"
+                    class="pricing-price"
+                    placeholder="Enter price"
+                    min="0"
+                    inputmode="numeric"
+                    disabled
+                >
+            </div>
+        </div>
+
+        <!-- Standard -->
+        <div class="pricing-option">
+            <label class="pricing-check">
+                <input type="checkbox" class="pricing-toggle" data-category="Standard">
+                <span>Standard</span>
+            </label>
+
+            <div class="pricing-price-box">
+                <span>₦</span>
+                <input
+                    type="number"
+                    class="pricing-price"
+                    placeholder="Enter price"
+                    min="0"
+                    inputmode="numeric"
+                    disabled
+                >
+            </div>
+        </div>
+
+        <!-- Medium -->
+        <div class="pricing-option">
+            <label class="pricing-check">
+                <input type="checkbox" class="pricing-toggle" data-category="Medium">
+                <span>Medium</span>
+            </label>
+
+            <div class="pricing-price-box">
+                <span>₦</span>
+                <input
+                    type="number"
+                    class="pricing-price"
+                    placeholder="Enter price"
+                    min="0"
+                    inputmode="numeric"
+                    disabled
+                >
+            </div>
+        </div>
+
+        <!-- Premium -->
+        <div class="pricing-option">
+            <label class="pricing-check">
+                <input type="checkbox" class="pricing-toggle" data-category="Premium">
+                <span>Premium</span>
+            </label>
+
+            <div class="pricing-price-box">
+                <span>₦</span>
+                <input
+                    type="number"
+                    class="pricing-price"
+                    placeholder="Enter price"
+                    min="0"
+                    inputmode="numeric"
+                    disabled
+                >
+            </div>
+        </div>
+
+        <!-- Custom -->
+        <div class="pricing-option custom-pricing-option">
+            <label class="pricing-check">
+                <input type="checkbox" id="customPricingToggle">
+                <span>Custom</span>
+            </label>
+        </div>
+
+        <div id="customPricingList" class="custom-pricing-list"></div>
+
+        <button
+            type="button"
+            id="addCustomPricing"
+            class="add-custom-pricing"
+            style="display:none;"
+        >
+            + Add Custom Category
+        </button>
+
+    </div>
+</div>
+</div>
+                <button type="submit" class="listing-submit">
+                    Continue →
+                </button>
+
+                <p class="listing-note" id="listingMessage"></p>
+            </form>
+<!-- SAVED LISTING INDICATOR -->
+<div id="savedListingIndicator" class="saved-listing-indicator" style="display:none;">
+    <div class="saved-file-icon">
+        📦
+    </div>
+
+    <div>
+        <strong>Service Listing Saved</strong>
+        <span>Your information has been saved</span>
+    </div>
+</div>
+        </section>
+        
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

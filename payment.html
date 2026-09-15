@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Payment — ServiceHub</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="provider-page">
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="index.html#categories">Categories</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">Log in</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+<!-- PAYMENT PAGE -->
+    <main class="listing-page">
+<button type="button" class="how-back-btn" onclick="history.back()">
+    ← Back
+</button>
+
+        <section class="listing-card payment-card">
+
+            <!-- SAVED LISTING -->
+            <a
+                href="list-service.html"
+                class="saved-listing-indicator payment-saved-indicator"
+            >
+
+                <div class="saved-file-icon">
+                    📦
+                </div>
+
+                <div>
+                    <strong>Service Listing Saved</strong>
+
+                    <span>
+                        Your information has been saved
+                    </span>
+                </div>
+
+                <span class="saved-arrow">
+                    →
+                </span>
+
+            </a>
+
+
+            <!-- HEADING -->
+            <div class="listing-heading">
+
+                <p class="eyebrow">
+                    PAYMENT
+                </p>
+
+                <h1>
+                    Complete Your Listing
+                </h1>
+
+                <p>
+                    Choose your preferred payment method to continue
+                    publishing your service on ServiceHub.
+                </p>
+
+            </div>
+
+
+            <!-- PAYMENT SUMMARY -->
+            <div class="payment-summary">
+
+                <div>
+                    <span class="payment-label">
+                        Listing fee
+                    </span>
+
+                    <strong>
+                        Service Listing
+                    </strong>
+                </div>
+
+                <span class="payment-status">
+                    Required
+                </span>
+
+            </div>
+
+
+            <!-- PAYMENT METHODS -->
+            <div class="payment-method-section">
+
+                <label class="payment-method-title">
+                    Choose Payment Method
+                </label>
+
+
+                <!-- NAIRA -->
+                <label class="payment-method">
+
+                    <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="naira"
+                        checked
+                    >
+
+                    <span class="payment-method-icon">
+                        ₦
+                    </span>
+
+                    <span class="payment-method-info">
+
+                        <strong>
+                            Naira
+                        </strong>
+
+                        <small>
+                            Pay in Nigerian Naira
+                        </small>
+
+                    </span>
+
+                    <span class="payment-radio"></span>
+
+                </label>
+
+
+                <!-- USD -->
+                <label class="payment-method">
+
+                    <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="usd"
+                    >
+
+                    <span class="payment-method-icon">
+                        $
+                    </span>
+
+                    <span class="payment-method-info">
+
+                        <strong>
+                            USD
+                        </strong>
+
+                        <small>
+                            Pay in US Dollars
+                        </small>
+
+                    </span>
+
+                    <span class="payment-radio"></span>
+
+                </label>
+
+
+                <!-- CRYPTO -->
+                <label class="payment-method">
+
+                    <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="crypto"
+                    >
+
+                    <span class="payment-method-icon">
+                        ₿
+                    </span>
+
+                    <span class="payment-method-info">
+
+                        <strong>
+                            Crypto
+                        </strong>
+
+                        <small>
+                            Pay using cryptocurrency
+                        </small>
+
+                    </span>
+
+                    <span class="payment-radio"></span>
+
+                </label>
+
+            </div>
+
+
+            <!-- CONTINUE -->
+            <button
+                type="button"
+                class="listing-submit payment-continue"
+                id="paymentContinue"
+            >
+                Continue to Payment →
+            </button>
+
+
+            <p
+                class="listing-note"
+                id="paymentMessage"
+            ></p>
+
+
+            <p class="payment-security-note">
+                🔒 Your saved listing information is kept separate
+                from this payment selection.
+            </p>
+
+        </section>
+
+    </main>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>
