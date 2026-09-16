@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat — ServiceHub</title>
+<style>
+:root{--bg:#080b12;--surface:#101522;--surface2:#151c2b;--blue:#2388ff;--text:#f3f6fa;--muted:#8993a5;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%}body{background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;overflow:hidden}.chat-page{height:100dvh;min-height:100vh;display:flex;flex-direction:column}.chat-header{height:58px;min-height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;position:relative}.avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#2388ff,#a855f7,#ff4fd8);font-weight:700;margin-right:10px}.provider-info h1{font-size:14px}.provider-info p{font-size:10px;color:var(--muted);margin-top:2px}.edit-name{position:absolute;right:8px;top:7px;border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;opacity:.7}.messages{flex:1;overflow:auto;padding:20px 16px;display:flex;flex-direction:column;gap:9px}.empty{margin:auto;text-align:center;color:var(--muted);font-size:12px;line-height:1.5}.empty strong{display:block;color:var(--text);font-size:16px;margin-bottom:5px}.bubble{max-width:min(75%,650px);padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.45}.bubble.user{align-self:flex-end;background:var(--blue);border-bottom-right-radius:4px}.bubble.provider{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-bottom-left-radius:4px}.time{display:block;font-size:8px;opacity:.55;margin-top:4px}.composer-area{background:var(--surface);border-top:1px solid var(--border);padding:8px 10px 3px}.composer{display:flex;gap:8px;align-items:center}.composer input{flex:1;min-width:0;height:42px;border-radius:21px;border:1px solid var(--border);background:var(--surface2);color:var(--text);outline:none;padding:0 13px;font-size:13px}.composer input:focus{border-color:rgba(35,136,255,.55)}.send{width:38px;height:38px;border:0;border-radius:50%;background:var(--blue);color:#fff;cursor:pointer;font-size:17px}.as{font-size:9px;color:var(--muted);padding:3px 13px;opacity:.7}.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:20px}.modal.active{display:flex}.modal-box{width:min(400px,100%);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px}.modal-box h2{font-size:18px;margin-bottom:7px}.modal-box p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:17px}.modal-box input{width:100%;height:42px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;padding:0 12px;font-size:13px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.actions button{height:36px;padding:0 15px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text);cursor:pointer;font-size:12px}.actions .primary{border:0;background:var(--blue)}@media(max-width:600px){.chat-header{height:54px;min-height:54px;padding:0 12px}.messages{padding:15px 11px}.bubble{max-width:82%;font-size:12px}.composer-area{padding:7px 8px 3px}.composer input{font-size:12px;height:40px}.send{width:36px;height:36px}}
+</style>
+</head>
+<body>
+<main class="chat-page">
+<header class="chat-header"><div class="avatar">S</div><div class="provider-info"><h1 id="providerName">Service Provider</h1><p id="serviceName">ServiceHub provider</p></div><button class="edit-name" id="editName" type="button" aria-label="Edit name">✎</button></header>
+<section class="messages" id="messages"><div class="empty" id="empty"><strong>Start a conversation</strong>Send a message to the provider about this service.</div></section>
+<div class="composer-area"><div class="composer"><input id="messageInput" maxlength="2000" autocomplete="off" placeholder="Type a message..."><button class="send" id="sendMessage" type="button" aria-label="Send">➤</button></div><div class="as" id="chattingAs"></div></div>
+</main>
+<div class="modal" id="nameModal"><div class="modal-box"><h2>Your name</h2><p>Enter the name you want the provider to see when you chat.</p><form id="nameForm"><input id="nameInput" maxlength="80" autocomplete="name" placeholder="Enter your name" required><div class="actions"><button type="button" id="cancelName">Cancel</button><button class="primary" type="submit">Continue</button></div></form></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+/* ========================================
+   SERVICEHUB — SUPABASE CHAT
+======================================== */
+
+const SUPABASE_URL =
+    "https://qqnvnceoipxyxkqsubsv.supabase.co";
+
+const SUPABASE_ANON_KEY =
+    "
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbnZuY2VvaXB4eXhrcXN1YnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1ODg2NzMsImV4cCI6MjEwNTE2NDY3M30.a_6wsmD3fH2Dv_-Wd47DMQlfeTBRsP7XoDAOdXthUns
+";
+
+const NAME_KEY = "customerName";
+const TOKEN_KEY = "serviceHubClientToken";
+
+const params = new URLSearchParams(location.search);
+
+const messages = document.getElementById("messages");
+const empty = document.getElementById("empty");
+const input = document.getElementById("messageInput");
+const send = document.getElementById("sendMessage");
+
+const nameModal = document.getElementById("nameModal");
+const nameForm = document.getElementById("nameForm");
+const nameInput = document.getElementById("nameInput");
+const chattingAs = document.getElementById("chattingAs");
+
+const providerNameEl =
+    document.getElementById("providerName");
+
+const serviceNameEl =
+    document.getElementById("serviceName");
+
+
+/* ---------- CLIENT TOKEN ---------- */
+
+function createToken() {
+    if (crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+
+    return "sh-" +
+        Date.now() +
+        "-" +
+        Math.random().toString(36).slice(2);
+}
+
+let clientToken =
+    localStorage.getItem(TOKEN_KEY);
+
+if (!clientToken) {
+    clientToken = createToken();
+    localStorage.setItem(TOKEN_KEY, clientToken);
+}
+
+
+/* ---------- SUPABASE ---------- */
+
+const supabaseClient =
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+        {
+            global: {
+                headers: {
+                    "x-servicehub-token": clientToken
+                }
+            }
+        }
+    );
+
+
+/* ---------- SERVICE INFO ---------- */
+
+const backendCards =
+    JSON.parse(
+        localStorage.getItem("serviceHubBackendCards") || "{}"
+    );
+
+const staticServices = {
+
+    "video-editing": {
+        providerId: "solaceproeditz",
+        providerName: "Solaceproeditz",
+        serviceName: "Professional Video Editing"
+    },
+
+    "graphic-design": {
+        providerId: "creative-studio",
+        providerName: "Creative Studio",
+        serviceName: "Brand Identity Design"
+    },
+
+    "web-development": {
+        providerId: "digital-works",
+        providerName: "Digital Works",
+        serviceName: "Website Development"
+    }
+
+};
+
+const serviceId =
+    params.get("service") || "video-editing";
+
+const card =
+    backendCards[serviceId];
+
+const service =
+    card || staticServices[serviceId] || {
+        providerId: "solaceproeditz",
+        providerName: "Solaceproeditz",
+        serviceName: "Professional Video Editing"
+    };
+
+
+providerNameEl.textContent =
+    service.provider ||
+    service.providerName ||
+    "Service Provider";
+
+serviceNameEl.textContent =
+    service.title ||
+    service.serviceName ||
+    service.category ||
+    "ServiceHub provider";
+
+const providerId =
+    service.providerId ||
+    "solaceproeditz";
+
+const providerName =
+    service.provider ||
+    service.providerName ||
+    "Solaceproeditz";
+
+const serviceName =
+    service.title ||
+    service.serviceName ||
+    service.category ||
+    "ServiceHub provider";
+
+
+/* ---------- NAME ---------- */
+
+function getName() {
+    return (
+        localStorage.getItem(NAME_KEY) || ""
+    ).trim();
+}
+
+function updateName() {
+
+    const name = getName();
+
+    chattingAs.textContent =
+        name ? "chatting as " + name : "";
+}
+
+function openModal() {
+
+    nameInput.value = getName();
+
+    nameModal.classList.add("active");
+
+    setTimeout(function () {
+        nameInput.focus();
+        nameInput.select();
+    }, 50);
+}
+
+function closeModal() {
+    nameModal.classList.remove("active");
+}
+
+document
+    .getElementById("editName")
+    .onclick = openModal;
+
+document
+    .getElementById("cancelName")
+    .onclick = closeModal;
+
+
+/* ---------- CONVERSATION ---------- */
+
+let conversationId = null;
+
+const conversationKey =
+    "serviceHubConversation_" +
+    providerId +
+    "_" +
+    serviceId;
+
+
+async function createOrGetConversation() {
+
+    if (conversationId) {
+        return conversationId;
+    }
+
+    const savedConversation =
+        localStorage.getItem(conversationKey);
+
+    if (savedConversation) {
+
+        conversationId =
+            savedConversation;
+
+        return conversationId;
+    }
+
+
+    /* Try to find an existing conversation */
+
+    const { data: existing, error: findError } =
+        await supabaseClient
+            .from("conversations")
+            .select("*")
+            .eq("client_token", clientToken)
+            .eq("provider_id", providerId)
+            .eq("service_id", serviceId)
+            .maybeSingle();
+
+
+    if (findError) {
+
+        console.warn(
+            "Conversation lookup failed:",
+            findError
+        );
+    }
+
+
+    if (existing) {
+
+        conversationId =
+            existing.id;
+
+        localStorage.setItem(
+            conversationKey,
+            conversationId
+        );
+
+        return conversationId;
+    }
+
+
+    /* Create new conversation */
+
+    const { data: created, error: createError } =
+        await supabaseClient
+            .from("conversations")
+            .insert({
+                client_token: clientToken,
+                customer_name: getName(),
+                provider_id: providerId,
+                provider_name: providerName,
+                service_id: serviceId,
+                service_name: serviceName
+            })
+            .select()
+            .single();
+
+
+    if (createError) {
+
+        console.error(
+            "Could not create conversation:",
+            createError
+        );
+
+        throw createError;
+    }
+
+
+    conversationId =
+        created.id;
+
+    localStorage.setItem(
+        conversationKey,
+        conversationId
+    );
+
+    return conversationId;
+}
+
+
+/* ---------- MESSAGE DISPLAY ---------- */
+
+const displayedMessages =
+    new Set();
+
+
+function addMessage(
+    message,
+    who,
+    time,
+    messageId
+) {
+
+    if (messageId) {
+
+        if (displayedMessages.has(messageId)) {
+            return;
+        }
+
+        displayedMessages.add(messageId);
+    }
+
+
+    if (empty) {
+        empty.remove();
+    }
+
+
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "bubble " + who;
+
+    bubble.textContent =
+        message;
+
+
+    const timestamp =
+        document.createElement("span");
+
+    timestamp.className =
+        "time";
+
+    timestamp.textContent =
+        new Date(time || Date.now())
+            .toLocaleTimeString(
+                [],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            );
+
+
+    bubble.appendChild(timestamp);
+
+    messages.appendChild(bubble);
+
+    messages.scrollTop =
+        messages.scrollHeight;
+}
+
+
+/* ---------- LOAD MESSAGES ---------- */
+
+async function loadMessages() {
+
+    if (!conversationId) {
+        return;
+    }
+
+
+    const { data, error } =
+        await supabaseClient
+            .from("messages")
+            .select("*")
+            .eq("conversation_id", conversationId)
+            .order("created_at", {
+                ascending: true
+            });
+
+
+    if (error) {
+
+        console.warn(
+            "Could not load messages:",
+            error
+        );
+
+        return;
+    }
+
+
+    data.forEach(function (message) {
+
+        const who =
+            message.sender_type === "customer"
+                ? "user"
+                : "provider";
+
+        addMessage(
+            message.message,
+            who,
+            message.created_at,
+            message.id
+        );
+
+    });
+}
+
+
+/* ---------- SEND MESSAGE ---------- */
+
+async function doSend() {
+
+    const text =
+        input.value.trim();
+
+
+    if (!text) {
+        return;
+    }
+
+
+    if (!getName()) {
+
+        openModal();
+
+        return;
+    }
+
+
+    send.disabled = true;
+
+    try {
+
+        await createOrGetConversation();
+
+
+        const { error } =
+            await supabaseClient
+                .from("messages")
+                .insert({
+                    conversation_id:
+                        conversationId,
+
+                    sender_type:
+                        "customer",
+
+                    sender_name:
+                        getName(),
+
+                    message:
+                        text
+                });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        input.value = "";
+
+        await loadMessages();
+
+        input.focus();
+
+
+    } catch (error) {
+
+        console.error(
+            "Message could not be sent:",
+            error
+        );
+
+        alert(
+            "Message could not be sent. Check your Supabase connection."
+        );
+
+    } finally {
+
+        send.disabled = false;
+
+    }
+}
+
+
+/* ---------- REALTIME ---------- */
+
+let realtimeChannel = null;
+
+
+function startRealtime() {
+
+    if (!conversationId) {
+        return;
+    }
+
+
+    if (realtimeChannel) {
+
+        supabaseClient.removeChannel(
+            realtimeChannel
+        );
+
+    }
+
+
+    realtimeChannel =
+        supabaseClient
+            .channel(
+                "customer-chat-" +
+                conversationId
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "INSERT",
+                    schema: "public",
+                    table: "messages",
+                    filter:
+                        "conversation_id=eq." +
+                        conversationId
+                },
+                function (payload) {
+
+                    const message =
+                        payload.new;
+
+
+                    if (
+                        message.sender_type ===
+                        "customer"
+                    ) {
+                        return;
+                    }
+
+
+                    addMessage(
+                        message.message,
+                        "provider",
+                        message.created_at,
+                        message.id
+                    );
+
+                }
+            )
+            .subscribe();
+
+}
+
+
+/* ---------- POLLING FALLBACK ---------- */
+
+/*
+   Realtime handles instant messages.
+
+   This small fallback check also makes the
+   customer chat reliable if Realtime takes
+   a moment to establish the connection.
+*/
+
+setInterval(function () {
+
+    if (conversationId) {
+        loadMessages();
+    }
+
+}, 2000);
+
+
+/* ---------- NAME FORM ---------- */
+
+nameForm.onsubmit =
+    async function (event) {
+
+        event.preventDefault();
+
+
+        const name =
+            nameInput.value.trim();
+
+
+        if (!name) {
+
+            nameInput.focus();
+
+            return;
+        }
+
+
+        localStorage.setItem(
+            NAME_KEY,
+            name
+        );
+
+        updateName();
+
+        closeModal();
+
+
+        try {
+
+            await createOrGetConversation();
+
+            await loadMessages();
+
+            startRealtime();
+
+        } catch (error) {
+
+            console.error(
+                "Chat initialization failed:",
+                error
+            );
+
+        }
+
+        input.focus();
+    };
+
+
+/* ---------- EVENTS ---------- */
+
+send.onclick =
+    doSend;
+
+
+input.onkeydown =
+    function (event) {
+
+        if (
+            event.key === "Enter" &&
+            !event.shiftKey
+        ) {
+
+            event.preventDefault();
+
+            doSend();
+
+        }
+
+    };
+
+
+/* ---------- START CHAT ---------- */
+
+async function initializeChat() {
+
+    const savedName =
+        getName();
+
+
+    if (!savedName) {
+
+        openModal();
+
+        return;
+    }
+
+
+    updateName();
+
+
+    try {
+
+        await createOrGetConversation();
+
+        await loadMessages();
+
+        startRealtime();
+
+        input.focus();
+
+    } catch (error) {
+
+        console.error(
+            "Chat initialization failed:",
+            error
+        );
+
+    }
+
+}
+
+
+initializeChat();
+
+</script>
+</body>
+</html>

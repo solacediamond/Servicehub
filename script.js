@@ -2,6 +2,46 @@
    SERVICEHUB JAVASCRIPT
 ================================= */
 
+/* =================================
+   SERVICEHUB BACKEND CONNECTION
+================================= */
+
+async function sendToServiceHubBackend(route, payload) {
+
+    const baseUrl = window.SERVICEHUB_BACKEND_URL || "";
+
+    if (!baseUrl) {
+        console.log("ServiceHub backend URL is not configured.", payload);
+        return { ok: false, offline: true, payload: payload };
+    }
+
+    try {
+        const response = await fetch(
+            baseUrl.replace(/\/$/, "") + "/" + route.replace(/^\//, ""),
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Backend returned HTTP " + response.status);
+        }
+
+        return {
+            ok: true,
+            data: await response.json().catch(() => null)
+        };
+
+    } catch (error) {
+        console.error("ServiceHub backend error:", error);
+        return { ok: false, error: error };
+    }
+
+}
+
+
 
 /* =================================
    MAIN PAGE FUNCTIONS
@@ -765,163 +805,213 @@ categorySearchLinks.forEach(function (card) {
 
 });
     /* ================================
-       CONTACT PROVIDER
+       CONTACT PROVIDER + CHAT
     ================================= */
 
-    const contactButton =
-        document.querySelector(
-            ".contact-btn"
-        );
+    const contactButton = document.querySelector(".contact-btn");
+    const contactModal = document.querySelector("#contactModal");
+    const closeModal = document.querySelector("#closeModal");
 
-    const contactModal =
-        document.querySelector(
-            "#contactModal"
-        );
+    const continueContact = document.querySelector("#continueContact");
+    const customerName = document.querySelector("#customerName");
+    const savedName = document.querySelector("#savedName");
 
-    const closeModal =
-        document.querySelector(
-            "#closeModal"
-        );
+    const contactIdentity = document.querySelector("#contactIdentity");
+    const chatInterface = document.querySelector("#chatInterface");
+    const chatMessages = document.querySelector("#chatMessages");
+    const chatInput = document.querySelector("#chatInput");
+    const sendChatMessage = document.querySelector("#sendChatMessage");
+    const chatProviderName = document.querySelector("#chatProviderName");
 
-    const continueContact =
-        document.querySelector(
-            "#continueContact"
-        );
+    function showChatInterface(name) {
 
-    const customerName =
-        document.querySelector(
-            "#customerName"
-        );
+        if (contactIdentity) {
+            contactIdentity.style.display = "none";
+        }
 
-    const savedName =
-        document.querySelector(
-            "#savedName"
-        );
+        if (chatInterface) {
+            chatInterface.style.display = "flex";
+        }
 
+        if (chatProviderName) {
+            chatProviderName.textContent = "Solaceproeditz";
+        }
+
+        if (chatInput) {
+            chatInput.focus();
+        }
+
+    }
 
     /* Open contact modal */
 
-    if (
-        contactButton &&
-        contactModal
-    ) {
+    if (contactButton && contactModal) {
 
-        contactButton.addEventListener(
-            "click",
-            function () {
+        contactButton.addEventListener("click", function () {
 
-                contactModal.classList.add(
-                    "active"
-                );
+            const existingStoredName =
+                localStorage.getItem("customerName");
 
+            if (existingStoredName && existingStoredName.trim() !== "") {
+                window.location.href = "chat.html?service=" + encodeURIComponent(serviceId || "");
+                return;
+            }
 
-                const storedName =
-                    localStorage.getItem(
-                        "customerName"
-                    );
+            contactModal.classList.add("active");
 
+            const storedName =
+                localStorage.getItem("customerName");
 
-                if (
-                    storedName &&
-                    customerName
-                ) {
+            if (storedName && customerName) {
 
-                    customerName.value =
-                        storedName;
+                customerName.value = storedName;
 
-
-                    if (savedName) {
-
-                        savedName.textContent =
-                            "Saved name: " +
-                            storedName;
-
-                    }
-
+                if (savedName) {
+                    savedName.textContent = "Saved name: " + storedName;
                 }
 
-
-                if (customerName) {
-
-                    customerName.focus();
-
+                if (continueContact) {
+                    continueContact.textContent =
+                        "Continue as " + storedName + " →";
                 }
+
+            } else if (continueContact) {
+
+                continueContact.textContent = "Continue →";
 
             }
-        );
+
+            if (chatInterface) {
+                chatInterface.style.display = "none";
+            }
+
+            if (contactIdentity) {
+                contactIdentity.style.display = "block";
+            }
+
+            if (customerName) {
+                customerName.focus();
+            }
+
+        });
 
     }
-
 
     /* Close modal */
 
-    if (
-        closeModal &&
-        contactModal
-    ) {
+    if (closeModal && contactModal) {
 
-        closeModal.addEventListener(
-            "click",
-            function () {
-
-                contactModal.classList.remove(
-                    "active"
-                );
-
-            }
-        );
+        closeModal.addEventListener("click", function () {
+            contactModal.classList.remove("active");
+        });
 
     }
 
+    /* Continue as saved/new name */
 
-    /* Continue contact */
+    if (continueContact && contactModal && customerName) {
 
-    if (
-        continueContact &&
-        contactModal &&
-        customerName
-    ) {
+        continueContact.addEventListener("click", function () {
 
-        continueContact.addEventListener(
-            "click",
-            function () {
+            const name = customerName.value.trim();
 
-                const name =
-                    customerName.value.trim();
-
-
-                if (name === "") {
-
-                    alert(
-                        "Please enter your name."
-                    );
-
-                    customerName.focus();
-
-                    return;
-
-                }
-
-
-                localStorage.setItem(
-                    "customerName",
-                    name
-                );
-
-
-                alert(
-                    "You're continuing as " +
-                    name +
-                    "."
-                );
-
-
-                contactModal.classList.remove(
-                    "active"
-                );
-
+            if (name === "") {
+                alert("Please enter your name.");
+                customerName.focus();
+                return;
             }
+
+            localStorage.setItem("customerName", name);
+
+            if (savedName) {
+                savedName.textContent = "Saved name: " + name;
+            }
+
+            continueContact.textContent =
+                "Continue as " + name + " →";
+
+            window.location.href =
+                "chat.html?service=" +
+                encodeURIComponent(serviceId || "");
+
+        });
+
+    }
+
+    /* ================================
+       CHAT MESSAGE → BACKEND
+    ================================= */
+
+    async function sendChatToBackend(message, name) {
+
+        const payload = {
+            type: "chat_message",
+            name: name,
+            message: message,
+            provider: "Solaceproeditz",
+            service: document.querySelector("#serviceTitle")?.textContent.trim() || "",
+            timestamp: new Date().toISOString()
+        };
+
+        localStorage.setItem(
+            "serviceHubLastChatMessage",
+            JSON.stringify(payload)
         );
+
+        return sendToServiceHubBackend("chat", payload);
+    }
+
+    function addChatMessage(text, sender) {
+
+        if (!chatMessages) return;
+
+        const bubble = document.createElement("div");
+
+        bubble.className =
+            "chat-message " +
+            (sender === "user"
+                ? "chat-message-user"
+                : "chat-message-provider");
+
+        bubble.textContent = text;
+
+        chatMessages.appendChild(bubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    }
+
+    async function handleChatSend() {
+
+        if (!chatInput) return;
+
+        const message = chatInput.value.trim();
+
+        if (!message) return;
+
+        const name =
+            localStorage.getItem("customerName") || "";
+
+        addChatMessage(message, "user");
+        chatInput.value = "";
+
+        await sendChatToBackend(message, name);
+
+    }
+
+    if (sendChatMessage) {
+        sendChatMessage.addEventListener("click", handleChatSend);
+    }
+
+    if (chatInput) {
+
+        chatInput.addEventListener("keydown", function (event) {
+
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                handleChatSend();
+            }
+
+        });
 
     }
 
@@ -1186,8 +1276,12 @@ const params =
 const serviceId =
     params.get("service");
 
+const backendCards = JSON.parse(
+    localStorage.getItem("serviceHubBackendCards") || "{}"
+);
+
 const selectedService =
-    services[serviceId];
+    services[serviceId] || backendCards[serviceId];
 
 
 if (selectedService) {
@@ -1240,7 +1334,9 @@ if (selectedService) {
 
     setText(
         "serviceDescription",
-        selectedService.description
+        selectedService.description ||
+        selectedService.about ||
+        "Contact the provider to learn more about this service."
     );
 
     setText(
@@ -1260,7 +1356,11 @@ if (selectedService) {
         includedList.innerHTML = "";
 
 
-        selectedService.included.forEach(
+        (selectedService.included || [
+            "Contact the provider for service details",
+            "Portfolio available from the provider",
+            "Pricing can be discussed with the provider"
+        ]).forEach(
             function (item) {
 
                 const li =
@@ -1764,6 +1864,16 @@ if (listingForm) {
                 "serviceHubListingSaved",
                 "true"
             );
+
+            /* ---------- SEND LISTING TO BACKEND ---------- */
+            sendToServiceHubBackend(
+                "listings",
+                listingData
+            ).then(function (result) {
+                if (!result.ok && !result.offline) {
+                    console.error("ServiceHub listing backend error:", result);
+                }
+            });
 
 
             /* ---------- GO TO PAYMENT ---------- */
@@ -2285,6 +2395,209 @@ if (featuredServices && typeof services !== "undefined") {
         `;
 
         featuredServices.appendChild(card);
+
+    });
+
+}
+
+/* ========================================
+   BACKEND REALTIME COMMANDS + SERVICE CARDS
+======================================== */
+
+(function connectServiceHubBackend() {
+
+    const baseUrl =
+        window.SERVICEHUB_BACKEND_URL || "";
+
+    if (!baseUrl) return;
+
+    const apiBase = baseUrl.replace(/\/$/, "");
+
+    function storeBackendCard(card) {
+        if (!card || !card.id) return;
+
+        const cards = JSON.parse(
+            localStorage.getItem("serviceHubBackendCards") || "{}"
+        );
+
+        cards[card.id] = {
+            image: "SERVICE",
+            category: card.category || "SERVICE",
+            title: card.title || "Service",
+            provider: card.provider || "Provider",
+            company: card.company || "",
+            rating: card.rating || "New",
+            reviews: String(card.reviews || 0) + " reviews",
+            description: card.about || "",
+            about: card.about || "",
+            price: card.price || "Contact provider",
+            portfolio: card.portfolio || "",
+            contact: card.contact || "",
+            phone: card.phone || "",
+            pricing: card.pricing || [],
+            customPricing: card.customPricing || [],
+            media: card.media || [],
+            included: []
+        };
+
+        localStorage.setItem(
+            "serviceHubBackendCards",
+            JSON.stringify(cards)
+        );
+
+        addBackendCardToPage(cards[card.id], card.id);
+    }
+
+    function addBackendCardToPage(cardData, cardId) {
+        const containers = [
+            document.getElementById("featuredServices"),
+            document.getElementById("exploreGrid")
+        ].filter(Boolean);
+
+        containers.forEach(function (container) {
+
+            if (container.querySelector('[data-backend-card-id="' + CSS.escape(cardId) + '"]')) {
+                return;
+            }
+
+            const card = document.createElement("a");
+            card.href = "service.html?service=" + encodeURIComponent(cardId);
+            card.className = "service-card";
+            card.setAttribute("data-backend-card-id", cardId);
+
+            card.innerHTML = `
+                <div class="service-image">
+                    <span>${escapeCardText(cardData.title)}</span>
+                </div>
+                <div class="service-info">
+                    <p class="service-category">
+                        ${escapeCardText(cardData.category || "SERVICE")}
+                    </p>
+                    <h3>${escapeCardText(cardData.title)}</h3>
+                    <p class="provider">${escapeCardText(cardData.provider)}</p>
+                    <div class="service-bottom">
+                        <span>⭐ ${escapeCardText(cardData.rating)}</span>
+                        <strong>From ${escapeCardText(cardData.price)}</strong>
+                    </div>
+                </div>
+            `;
+
+            container.prepend(card);
+        });
+    }
+
+    function escapeCardText(value) {
+        const div = document.createElement("div");
+        div.textContent = value == null ? "" : String(value);
+        return div.innerHTML;
+    }
+
+    // Load cards that were created before this browser opened.
+    fetch(apiBase + "/listings")
+        .then(function (response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.json();
+        })
+        .then(function (data) {
+            (data.cards || []).forEach(function (command) {
+                if (command.card) storeBackendCard(command.card);
+            });
+        })
+        .catch(function (error) {
+            console.warn("ServiceHub listings sync unavailable:", error);
+        });
+
+    // Listen for commands sent by the backend in real time.
+    if (typeof EventSource !== "undefined") {
+        const events = new EventSource(apiBase + "/events");
+
+        events.onmessage = function (event) {
+            try {
+                const command = JSON.parse(event.data);
+
+                if (command.command === "add_card" && command.card) {
+                    storeBackendCard(command.card);
+                }
+
+                if (command.type === "chat_message") {
+                    window.dispatchEvent(
+                        new CustomEvent("serviceHubChatMessage", {
+                            detail: command.message
+                        })
+                    );
+                }
+            } catch (error) {
+                console.error("Invalid ServiceHub backend event:", error);
+            }
+        };
+
+        events.onerror = function () {
+            console.warn("ServiceHub realtime connection interrupted; browser will retry.");
+        };
+    }
+
+})();
+
+
+/* ========================================
+   LOGIN → BACKEND
+======================================== */
+
+const loginForm = document.getElementById("loginForm");
+const loginMessage = document.getElementById("loginMessage");
+
+if (loginForm) {
+
+    loginForm.addEventListener("submit", async function (event) {
+
+        event.preventDefault();
+
+        const name = document.getElementById("loginName")?.value.trim() || "";
+        const company = document.getElementById("loginCompany")?.value.trim() || "";
+        const contact = document.getElementById("loginContact")?.value.trim() || "";
+        const phone = document.getElementById("loginPhone")?.value.trim() || "";
+
+        if (!name || !contact) {
+            if (loginMessage) {
+                loginMessage.textContent =
+                    "Please fill in the required information.";
+            }
+            return;
+        }
+
+        const payload = {
+            type: "login",
+            "Name": name,
+            "Company Name": company,
+            "Contact Information": contact,
+            "Phone Number": phone,
+            timestamp: new Date().toISOString()
+        };
+
+        localStorage.setItem(
+            "serviceHubLogin",
+            JSON.stringify(payload)
+        );
+
+        if (loginMessage) {
+            loginMessage.textContent = "Information prepared. Sending...";
+        }
+
+        const result =
+            await sendToServiceHubBackend("login", payload);
+
+        if (loginMessage) {
+            if (result.ok) {
+                loginMessage.textContent =
+                    "Information sent successfully.";
+            } else if (result.offline) {
+                loginMessage.textContent =
+                    "Saved locally. Backend is not connected yet.";
+            } else {
+                loginMessage.textContent =
+                    "Could not reach the backend. Please try again.";
+            }
+        }
 
     });
 

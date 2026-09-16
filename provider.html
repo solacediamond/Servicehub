@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ServiceHub — Provider</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #080b12;
+            color: #f3f6fa;
+            font-family: Arial, sans-serif;
+        }
+
+        .provider-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 18px 20px;
+            background: #101522;
+            border-bottom: 1px solid #20283a;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .provider-name {
+            margin-top: 5px;
+            color: #8993a6;
+            font-size: 13px;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .status.connected {
+            color: #48e28a;
+        }
+
+        .status.error {
+            color: #ff6262;
+        }
+
+        .conversations {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .empty {
+            text-align: center;
+            color: #8993a6;
+            margin-top: 60px;
+        }
+
+        .conversation {
+            background: #101522;
+            border: 1px solid #20283a;
+            border-radius: 14px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .customer {
+            font-weight: bold;
+        }
+
+        .service {
+            color: #8993a6;
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .time {
+            color: #687386;
+            font-size: 11px;
+        }
+
+        .message {
+            background: #151c2b;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .message-name {
+            color: #2388ff;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .reply-box {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .reply-box input {
+            flex: 1;
+            min-width: 0;
+            background: #080b12;
+            border: 1px solid #30394d;
+            border-radius: 9px;
+            padding: 11px;
+            color: white;
+            outline: none;
+        }
+
+        .reply-box button {
+            border: 0;
+            border-radius: 9px;
+            padding: 0 15px;
+            background: #2388ff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .reply-box button:active {
+            transform: scale(.97);
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="provider-page">
+
+    <header class="header">
+        <h1>ServiceHub Provider</h1>
+
+        <div class="provider-name">
+            Signed in as: <strong>Solaceproeditz</strong>
+        </div>
+
+        <div id="status" class="status">
+            Connecting...
+        </div>
+    </header>
+
+    <main class="conversations" id="conversations">
+
+        <div class="empty" id="emptyState">
+            Waiting for customer messages...
+        </div>
+
+    </main>
+
+</div>
+
+
+<script>
+
+    /* ========================================
+       SUPABASE CONFIG
+    ======================================== */
+
+const SUPABASE_URL =
+    "https://qqnvnceoipxyxkqsubsv.supabase.co";
+
+const SUPABASE_ANON_KEY =
+    "
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbnZuY2VvaXB4eXhrcXN1YnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1ODg2NzMsImV4cCI6MjEwNTE2NDY3M30.a_6wsmD3fH2Dv_-Wd47DMQlfeTBRsP7XoDAOdXthUns
+";
+    const supabaseClient =
+        window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_ANON_KEY
+        );
+
+
+    /* ========================================
+       TEMPORARY PROVIDER
+    ======================================== */
+
+    const PROVIDER_ID = "solaceproeditz";
+
+    const PROVIDER_NAME = "Solaceproeditz";
+
+
+    const conversationsContainer =
+        document.getElementById("conversations");
+
+    const emptyState =
+        document.getElementById("emptyState");
+
+    const statusElement =
+        document.getElementById("status");
+
+
+    /* ========================================
+       CONNECTION STATUS
+    ======================================== */
+
+    function setStatus(message, connected) {
+
+        statusElement.textContent = message;
+
+        statusElement.className =
+            connected
+                ? "status connected"
+                : "status error";
+    }
+
+
+    /* ========================================
+       LOAD EXISTING CONVERSATIONS
+    ======================================== */
+
+    async function loadConversations() {
+
+        const { data, error } =
+            await supabaseClient
+                .from("conversations")
+                .select("*")
+                .eq("provider_id", PROVIDER_ID)
+                .order("updated_at", {
+                    ascending: false
+                });
+
+        if (error) {
+
+            console.error(error);
+
+            setStatus(
+                "Database error: " + error.message,
+                false
+            );
+
+            return;
+        }
+
+        conversationsContainer
+            .innerHTML = "";
+
+        if (!data || data.length === 0) {
+
+            conversationsContainer
+                .appendChild(emptyState);
+
+            return;
+        }
+
+        for (const conversation of data) {
+
+            await renderConversation(conversation);
+        }
+    }
+
+
+    /* ========================================
+       RENDER CONVERSATION
+    ======================================== */
+
+    async function renderConversation(conversation) {
+
+        const wrapper =
+            document.createElement("div");
+
+        wrapper.className =
+            "conversation";
+
+        wrapper.dataset.id =
+            conversation.id;
+
+
+        const header =
+            document.createElement("div");
+
+        header.className =
+            "conversation-header";
+
+
+        const customerInfo =
+            document.createElement("div");
+
+        customerInfo.innerHTML = `
+            <div class="customer">
+                ${escapeHTML(conversation.customer_name)}
+            </div>
+
+            <div class="service">
+                ${escapeHTML(conversation.service_name || "")}
+            </div>
+        `;
+
+
+        const time =
+            document.createElement("div");
+
+        time.className = "time";
+
+        time.textContent =
+            new Date(
+                conversation.updated_at
+            ).toLocaleTimeString();
+
+
+        header.appendChild(customerInfo);
+        header.appendChild(time);
+
+
+        const messages =
+            document.createElement("div");
+
+        messages.className =
+            "messages";
+
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(messages);
+
+
+        const replyBox =
+            document.createElement("div");
+
+        replyBox.className =
+            "reply-box";
+
+
+        const input =
+            document.createElement("input");
+
+        input.type = "text";
+
+        input.placeholder =
+            "Reply to customer...";
+
+
+        const button =
+            document.createElement("button");
+
+        button.textContent =
+            "Send";
+
+
+        button.addEventListener(
+            "click",
+            function () {
+
+                sendReply(
+                    conversation,
+                    input
+                );
+            }
+        );
+
+
+        input.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (event.key === "Enter") {
+
+                    sendReply(
+                        conversation,
+                        input
+                    );
+                }
+            }
+        );
+
+
+        replyBox.appendChild(input);
+        replyBox.appendChild(button);
+
+        wrapper.appendChild(replyBox);
+
+        conversationsContainer
+            .appendChild(wrapper);
+
+
+        await loadMessages(
+            conversation.id,
+            messages
+        );
+    }
+
+
+    /* ========================================
+       LOAD MESSAGES
+    ======================================== */
+
+    async function loadMessages(
+        conversationId,
+        container
+    ) {
+
+        const { data, error } =
+            await supabaseClient
+                .from("messages")
+                .select("*")
+                .eq(
+                    "conversation_id",
+                    conversationId
+                )
+                .order("created_at", {
+                    ascending: true
+                });
+
+
+        if (error) {
+
+            console.error(error);
+            return;
+        }
+
+
+        container.innerHTML = "";
+
+
+        data.forEach(function (message) {
+
+            addMessageToContainer(
+                message,
+                container
+            );
+
+        });
+    }
+
+
+    /* ========================================
+       ADD MESSAGE TO SCREEN
+    ======================================== */
+
+    function addMessageToContainer(
+        message,
+        container
+    ) {
+
+        const messageElement =
+            document.createElement("div");
+
+        messageElement.className =
+            "message";
+
+
+        messageElement.innerHTML = `
+
+            <div class="message-name">
+                ${escapeHTML(message.sender_name)}
+            </div>
+
+            <div>
+                ${escapeHTML(message.message)}
+            </div>
+
+        `;
+
+
+        container.appendChild(
+            messageElement
+        );
+    }
+
+
+    /* ========================================
+       SEND PROVIDER REPLY
+    ======================================== */
+
+    async function sendReply(
+        conversation,
+        input
+    ) {
+
+        const message =
+            input.value.trim();
+
+
+        if (!message) {
+            return;
+        }
+
+
+        input.disabled = true;
+
+
+        const { error } =
+            await supabaseClient
+                .from("messages")
+                .insert({
+
+                    conversation_id:
+                        conversation.id,
+
+                    sender_type:
+                        "provider",
+
+                    sender_name:
+                        PROVIDER_NAME,
+
+                    message:
+                        message
+                });
+
+
+        input.disabled = false;
+
+
+        if (error) {
+
+            console.error(error);
+
+            alert(
+                "Could not send message:\n" +
+                error.message
+            );
+
+            return;
+        }
+
+
+        input.value = "";
+    }
+
+
+    /* ========================================
+       REALTIME
+    ======================================== */
+
+    function startRealtime() {
+
+        const channel =
+            supabaseClient
+                .channel(
+                    "provider-messages-" +
+                    PROVIDER_ID
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "INSERT",
+                        schema: "public",
+                        table: "messages"
+                    },
+                    async function (payload) {
+
+                        console.log(
+                            "New message:",
+                            payload.new
+                        );
+
+
+                        const message =
+                            payload.new;
+
+
+                        const { data: conversation } =
+                            await supabaseClient
+                                .from("conversations")
+                                .select("*")
+                                .eq(
+                                    "id",
+                                    message.conversation_id
+                                )
+                                .eq(
+                                    "provider_id",
+                                    PROVIDER_ID
+                                )
+                                .maybeSingle();
+
+
+                        if (!conversation) {
+                            return;
+                        }
+
+
+                        const existing =
+                            document.querySelector(
+                                `[data-id="${conversation.id}"]`
+                            );
+
+
+                        if (existing) {
+
+                            const messageContainer =
+                                existing.querySelector(
+                                    ".messages"
+                                );
+
+
+                            addMessageToContainer(
+                                message,
+                                messageContainer
+                            );
+
+                            return;
+                        }
+
+
+                        await renderConversation(
+                            conversation
+                        );
+                    }
+                )
+                .subscribe(function (status) {
+
+                    console.log(
+                        "Realtime status:",
+                        status
+                    );
+
+
+                    if (
+                        status === "SUBSCRIBED"
+                    ) {
+
+                        setStatus(
+                            "● Connected to ServiceHub",
+                            true
+                        );
+
+                    } else if (
+                        status === "CHANNEL_ERROR"
+                    ) {
+
+                        setStatus(
+                            "Realtime connection error",
+                            false
+                        );
+                    }
+                });
+    }
+
+
+    /* ========================================
+       BASIC HTML ESCAPING
+    ======================================== */
+
+    function escapeHTML(value) {
+
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+
+    /* ========================================
+       START
+    ======================================== */
+
+    async function startProvider() {
+
+        setStatus(
+            "Connecting to ServiceHub...",
+            false
+        );
+
+
+        await loadConversations();
+
+        startRealtime();
+    }
+
+
+    startProvider();
+
+</script>
+
+</body>
+</html>

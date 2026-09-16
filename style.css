@@ -2951,3 +2951,133 @@ body.menu-open {
     display: inline-block;
     white-space: nowrap;
 }
+
+/* ========================================
+   SERVICEHUB CHAT INTERFACE
+======================================== */
+
+.chat-interface {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    min-height: 420px;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding-bottom: 16px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+.chat-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.chat-status {
+    padding: 5px 9px;
+    border: 1px solid rgba(35, 136, 255, 0.35);
+    border-radius: 999px;
+    color: var(--blue);
+    background: rgba(35, 136, 255, 0.08);
+    font-size: 11px;
+}
+
+.chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 250px;
+    max-height: 330px;
+    padding: 8px 2px;
+    overflow-y: auto;
+}
+
+.chat-message {
+    width: fit-content;
+    max-width: 82%;
+    padding: 10px 13px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.chat-message-user {
+    align-self: flex-end;
+    border: 1px solid rgba(35, 136, 255, 0.3);
+    background: rgba(35, 136, 255, 0.13);
+}
+
+.chat-message-provider {
+    align-self: flex-start;
+    border: 1px solid rgba(255, 79, 216, 0.25);
+    background: rgba(255, 79, 216, 0.08);
+}
+
+.chat-input-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.chat-input-area textarea {
+    flex: 1;
+    min-height: 44px;
+    max-height: 120px;
+    resize: none;
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    outline: none;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.chat-input-area textarea:focus {
+    border-color: rgba(35, 136, 255, 0.55);
+    box-shadow: 0 0 0 3px rgba(35, 136, 255, 0.08);
+}
+
+.chat-send-btn {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid rgba(35, 136, 255, 0.45);
+    border-radius: 12px;
+    background: rgba(35, 136, 255, 0.12);
+    color: var(--blue);
+    font-size: 19px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.chat-send-btn:hover {
+    border-color: var(--blue);
+    background: rgba(35, 136, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 650px) {
+    .chat-interface {
+        min-height: 390px;
+    }
+
+    .chat-messages {
+        min-height: 220px;
+        max-height: 300px;
+    }
+
+    .chat-message {
+        max-width: 88%;
+    }
+}

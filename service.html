@@ -101,7 +101,7 @@
                     <strong id="servicePrice">₦5,000</strong>
                 </div>
 
-                <button class="contact-btn">
+                <button class="contact-btn" id="contactProviderBtn" type="button">
                     Contact Provider
                 </button>
 
@@ -121,38 +121,92 @@
 
         <div class="contact-box">
 
-            <button class="close-modal" id="closeModal">
+            <button class="close-modal" id="closeModal" type="button">
                 ×
             </button>
 
-            <p class="eyebrow">
-                CONTACT PROVIDER
-            </p>
+            <!-- NAME / CONTINUE SCREEN -->
 
-            <h2>
-                Contact Solaceproeditz
-            </h2>
+            <div id="contactIdentity">
 
-            <p class="modal-description">
-                You don't need an account to contact a provider.
-            </p>
+                <p class="eyebrow">
+                    CONTACT PROVIDER
+                </p>
 
-            <label for="customerName">
-                Your name
-            </label>
+                <h2>
+                    Contact Solaceproeditz
+                </h2>
 
-            <input
-                type="text"
-                id="customerName"
-                placeholder="Enter your name"
-                maxlength="40"
-            >
+                <p class="modal-description">
+                    Enter your name to continue to the chat.
+                </p>
 
-            <button class="continue-btn" id="continueContact">
-                Continue →
-            </button>
+                <label for="customerName">
+                    Your name
+                </label>
 
-            <p class="saved-name" id="savedName"></p>
+                <input
+                    type="text"
+                    id="customerName"
+                    placeholder="Enter your name"
+                    maxlength="40"
+                >
+
+                <button class="continue-btn" id="continueContact" type="button">
+                    Continue →
+                </button>
+
+                <p class="saved-name" id="savedName"></p>
+
+            </div>
+
+
+            <!-- CHAT INTERFACE -->
+
+            <div class="chat-interface" id="chatInterface">
+
+                <div class="chat-header">
+
+                    <div>
+                        <p class="eyebrow">CHAT</p>
+                        <h2 id="chatProviderName">Solaceproeditz</h2>
+                    </div>
+
+                    <span class="chat-status">
+                        Provider
+                    </span>
+
+                </div>
+
+                <div
+                    class="chat-messages"
+                    id="chatMessages"
+                    aria-live="polite"
+                ></div>
+
+                <div class="chat-input-area">
+
+                    <textarea
+                        id="chatInput"
+                        rows="1"
+                        maxlength="2000"
+                        placeholder="Type a message..."
+                        aria-label="Type a message"
+                    ></textarea>
+
+                    <button
+                        type="button"
+                        id="sendChatMessage"
+                        class="chat-send-btn"
+                        aria-label="Send message"
+                        title="Send"
+                    >
+                        ➤
+                    </button>
+
+                </div>
+
+            </div>
 
         </div>
 
@@ -161,6 +215,7 @@
 
     <!-- JavaScript -->
 
+    <script src="backend-config.js"></script>
     <script src="script.js"></script>
 
 </body>
