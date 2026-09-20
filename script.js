@@ -3,6 +3,27 @@
 ================================= */
 
 /* =================================
+   SERVICEHUB CONFIG
+   (previously in backend-config.js —
+   now inlined here directly)
+================================= */
+
+window.SERVICEHUB_BACKEND_URL = "";
+
+window.SERVICEHUB_SUPABASE_URL =
+    "https://qqnvnceoipxyxkqsubsv.supabase.co";
+
+window.SERVICEHUB_SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbnZuY2VvaXB4eXhrcXN1YnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1ODg2NzMsImV4cCI6MjEwNTE2NDY3M30.a_6wsmD3fH2Dv_-Wd47DMQlfeTBRsP7XoDAOdXthUns";
+
+window.SERVICEHUB_BANK_DETAILS = {
+    bankName: "Moniepoint",
+    accountNumber: "5302022430",
+    accountName: "SOLACE OGHENEKPAROBOR UNUOVO"
+};
+
+
+/* =================================
    SERVICEHUB BACKEND CONNECTION
 ================================= */
 
@@ -2437,7 +2458,7 @@ if (listingForm) {
                 /* ---------- GO TO PAYMENT ---------- */
 
                 window.location.href =
-                    "payment-naira.html";
+                    "payment.html";
 
             });
 
