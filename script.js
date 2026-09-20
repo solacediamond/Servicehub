@@ -2437,7 +2437,7 @@ if (listingForm) {
                 /* ---------- GO TO PAYMENT ---------- */
 
                 window.location.href =
-                    "payment.html";
+                    "payment-naira.html";
 
             });
 
