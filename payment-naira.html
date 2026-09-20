@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Bank Transfer — ServiceHub</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="provider-page">
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="index.html#categories">Categories</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">Log in</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+<!-- NAIRA PAYMENT PAGE -->
+    <main class="listing-page">
+
+        <button type="button" class="how-back-btn" onclick="window.location.href='payment.html'">
+            ← Back
+        </button>
+
+        <section class="listing-card payment-card">
+
+            <!-- STEP 1 + 2: BANK TRANSFER + WAITING -->
+            <div id="nairaWaitingStep">
+
+                <div class="listing-heading">
+
+                    <p class="eyebrow">
+                        BANK TRANSFER
+                    </p>
+
+                    <h1>
+                        Pay With Naira
+                    </h1>
+
+                    <p>
+                        Transfer the listing fee to the account below, using
+                        the description exactly as shown, so it can be
+                        matched automatically.
+                        Fee=N300
+                    </p>
+
+                </div>
+
+
+                <!-- BANK DETAILS -->
+                <div class="bank-info-box">
+
+                    <div class="bank-row">
+                        <span class="bank-label">Bank Name</span>
+                        <strong class="bank-value" id="nairaBankName">—</strong>
+                    </div>
+
+                    <div class="bank-row">
+                        <span class="bank-label">Account Number</span>
+                        <strong class="bank-value" id="nairaAccountNumber">—</strong>
+                    </div>
+
+                    <div class="bank-row">
+                        <span class="bank-label">Account Name</span>
+                        <strong class="bank-value" id="nairaAccountName">—</strong>
+                    </div>
+
+                </div>
+
+
+                <!-- DESCRIPTION / CODE -->
+                <div class="code-box">
+
+                    <span class="bank-label">
+                        Use this description
+                    </span>
+
+                    <div class="code-row">
+                        <code id="nairaDescription">Alert Service hub Payment …</code>
+
+                        <button type="button" class="copy-btn" id="nairaCopyCode">
+                            Copy
+                        </button>
+                    </div>
+
+                    <p class="code-hint">
+                        Add this exact text as your transfer narration/description
+                        so we can match it to your listing.
+                    </p>
+
+                </div>
+
+
+                <!-- STATUS -->
+                <div class="payment-status-pill" id="nairaStatusPill">
+                    <span class="payment-spinner"></span>
+                    Waiting for payment confirmation…
+                </div>
+
+                <p class="payment-security-note">
+                    🔒 Once your transfer is confirmed on our end, this page
+                    will update automatically — no need to refresh.
+                </p>
+
+            </div>
+
+
+            <!-- STEP 3: APPROVED -->
+            <div id="nairaApprovedStep" style="display:none;">
+
+                <div class="approved-check">✓</div>
+
+                <div class="listing-heading approved-heading">
+
+                    <p class="eyebrow">PAYMENT CONFIRMED</p>
+
+                    <h1>You're Live!</h1>
+
+                    <p>
+                        Your payment has been confirmed and your service is
+                        now published on ServiceHub.
+                    </p>
+
+                </div>
+
+                <a href="explore.html" class="listing-submit">
+                    View Your Listing →
+                </a>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- PAYMENT SUCCESS POPUP -->
+    <div
+        id="nairaPaymentSuccessPopup"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nairaPaymentSuccessTitle"
+        style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.55); align-items:center; justify-content:center; padding:20px;"
+    >
+        <div style="width:min(420px,100%); background:#fff; border-radius:18px; padding:28px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="font-size:48px; line-height:1; margin-bottom:14px;">✓</div>
+            <h2 id="nairaPaymentSuccessTitle" style="margin:0 0 10px;">Payment Successful</h2>
+            <p style="margin:0 0 18px;">Your payment has been confirmed successfully.</p>
+            <p style="margin:0;">Returning to the homepage in <strong id="nairaPaymentCountdown">5</strong> seconds…</p>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="backend-config.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+    /*
+       Naira payment success redirect.
+       This only reacts to the existing approved state produced by the
+       Supabase flow in script.js. No payment status is fabricated here.
+    */
+    (function () {
+        const popup = document.getElementById("nairaPaymentSuccessPopup");
+        const countdownEl = document.getElementById("nairaPaymentCountdown");
+        const approvedStep = document.getElementById("nairaApprovedStep");
+
+        if (!popup || !approvedStep || !countdownEl) return;
+
+        let redirectStarted = false;
+
+        function startSuccessCountdown() {
+            if (redirectStarted) return;
+            redirectStarted = true;
+
+            popup.style.display = "flex";
+
+            let seconds = 5;
+            countdownEl.textContent = String(seconds);
+
+            const timer = setInterval(function () {
+                seconds -= 1;
+                countdownEl.textContent = String(seconds);
+
+                if (seconds <= 0) {
+                    clearInterval(timer);
+                    window.location.href = "index.html";
+                }
+            }, 1000);
+        }
+
+        /*
+           script.js reveals the existing approved section when Supabase
+           reports status = "approved". Observe that existing change so
+           all existing payment/realtime/polling logic remains untouched.
+        */
+        const observer = new MutationObserver(function () {
+            if (approvedStep.style.display !== "none") {
+                startSuccessCountdown();
+            }
+        });
+
+        observer.observe(approvedStep, {
+            attributes: true,
+            attributeFilter: ["style"]
+        });
+
+        if (approvedStep.style.display !== "none") {
+            startSuccessCountdown();
+        }
+    })();
+    </script>
+
+</body>
+</html>

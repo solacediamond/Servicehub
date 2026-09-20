@@ -3081,3 +3081,314 @@ body.menu-open {
         max-width: 88%;
     }
 }
+/* ---------- PROVIDER CHAT LAYOUT ---------- */
+
+.provider-layout {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+
+/* ---------- CHAT LIST ---------- */
+
+.chat-list {
+    width: 320px;
+    flex-shrink: 0;
+    background: #101522;
+    border-right: 1px solid #20283a;
+    overflow-y: auto;
+}
+
+.chat-list-title {
+    padding: 18px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    border-bottom: 1px solid #20283a;
+    position: sticky;
+    top: 0;
+    background: #101522;
+    z-index: 2;
+}
+
+
+/* ---------- CHAT ITEM ---------- */
+
+.chat-item {
+    padding: 14px 16px;
+    border-bottom: 1px solid #20283a;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.chat-item:hover {
+    background: #151c2b;
+}
+
+.chat-item.active {
+    background: #18243a;
+}
+
+.chat-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.chat-item-name {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.chat-item-time {
+    color: #687386;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.chat-item-service {
+    color: #8993a6;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.chat-item-preview {
+    color: #aeb7c7;
+    font-size: 13px;
+    margin-top: 7px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* ---------- ACTIVE CHAT ---------- */
+
+.chat-window {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: #080b12;
+}
+
+.chat-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #687386;
+    text-align: center;
+    padding: 30px;
+}
+
+.placeholder-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+
+/* ---------- MOBILE ---------- */
+
+@media (max-width: 700px) {
+
+    .provider-layout {
+        display: block;
+    }
+
+    .chat-list {
+        width: 100%;
+        border-right: 0;
+    }
+
+    .chat-window {
+        display: none;
+    }
+
+}
+/* ========================================
+   NAIRA PAYMENT PAGE
+======================================== */
+
+.bank-info-box {
+    display: grid;
+    gap: 14px;
+    padding: 22px;
+    margin: 8px 0 22px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: var(--surface-light);
+}
+
+.bank-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.bank-label {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.bank-value {
+    font-size: 16px;
+    letter-spacing: 0.2px;
+    text-align: right;
+}
+
+.code-box {
+    padding: 20px;
+    margin-bottom: 22px;
+    border: 1px dashed rgba(35, 136, 255, 0.4);
+    border-radius: 16px;
+    background: rgba(35, 136, 255, 0.06);
+}
+
+.code-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.code-row code {
+    flex: 1;
+    display: block;
+    padding: 13px 15px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+    word-break: break-word;
+}
+
+.copy-btn {
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 13px 16px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.copy-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+}
+
+.code-hint {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.payment-status-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--muted);
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.payment-status-pill-rejected {
+    color: var(--pink);
+    border-color: rgba(255, 79, 216, 0.35);
+    background: rgba(255, 79, 216, 0.08);
+}
+
+.payment-spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(35, 136, 255, 0.25);
+    border-top-color: var(--blue);
+    animation: nairaSpin 0.8s linear infinite;
+}
+
+@keyframes nairaSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.approved-check {
+    width: 64px;
+    height: 64px;
+    margin: 4px auto 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(35, 136, 255, 0.12);
+    border: 1px solid rgba(35, 136, 255, 0.35);
+    color: var(--blue);
+    font-size: 30px;
+    font-weight: 700;
+    animation: nairaFadeIn 0.5s ease-out;
+}
+
+.approved-heading {
+    text-align: center;
+}
+
+.approved-heading p:not(.eyebrow) {
+    margin: 0 auto;
+}
+
+@keyframes nairaFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+#nairaApprovedStep {
+    text-align: center;
+}
+
+#nairaApprovedStep .listing-submit {
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+    margin-top: 10px;
+}
+
+@media (max-width: 480px) {
+    .bank-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .bank-value {
+        text-align: left;
+    }
+
+    .code-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

@@ -44,10 +44,337 @@ async function sendToServiceHubBackend(route, payload) {
 
 
 /* =================================
+   SUPABASE CONNECTION
+   (listings, Naira payment codes,
+   and live "approved" cards)
+================================= */
+
+let serviceHubSupabaseClient = null;
+
+function getServiceHubSupabase() {
+
+    if (serviceHubSupabaseClient) {
+        return serviceHubSupabaseClient;
+    }
+
+    const url = window.SERVICEHUB_SUPABASE_URL;
+    const key = window.SERVICEHUB_SUPABASE_ANON_KEY;
+
+    if (!url || !key || typeof window.supabase === "undefined") {
+        return null;
+    }
+
+    serviceHubSupabaseClient = window.supabase.createClient(url, key);
+
+    return serviceHubSupabaseClient;
+
+}
+
+
+// Sends a new listing to the Supabase "create-listing" Edge Function.
+// The function inserts the listing as "pending", generates the 6-character
+// payment code, and returns both the listing id and the code.
+async function createSupabaseListing(listingData) {
+
+    const url = window.SERVICEHUB_SUPABASE_URL;
+    const key = window.SERVICEHUB_SUPABASE_ANON_KEY;
+
+    if (!url || !key) {
+        console.log("Supabase is not configured yet.", listingData);
+        return { ok: false, offline: true };
+    }
+
+    try {
+
+        const response = await fetch(
+            url.replace(/\/$/, "") + "/functions/v1/create-listing",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": key,
+                    "Authorization": "Bearer " + key
+                },
+                body: JSON.stringify(listingData)
+            }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || !data.ok) {
+            throw new Error((data && data.error) || ("HTTP " + response.status));
+        }
+
+        return { ok: true, id: data.id, code: data.code };
+
+    } catch (error) {
+        console.error("Supabase create-listing error:", error);
+        return { ok: false, error: error };
+    }
+
+}
+
+
+// Fallback used on the Naira payment page if the payment code was not
+// already stored locally (e.g. the page was reloaded on another device).
+async function fetchSupabaseListingCode(listingId) {
+
+    const url = window.SERVICEHUB_SUPABASE_URL;
+    const key = window.SERVICEHUB_SUPABASE_ANON_KEY;
+
+    if (!url || !key || !listingId) {
+        return { ok: false };
+    }
+
+    try {
+
+        const response = await fetch(
+            url.replace(/\/$/, "") + "/functions/v1/get-listing-code",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": key,
+                    "Authorization": "Bearer " + key
+                },
+                body: JSON.stringify({ id: listingId })
+            }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data || !data.ok) {
+            throw new Error((data && data.error) || ("HTTP " + response.status));
+        }
+
+        return { ok: true, code: data.code, status: data.status };
+
+    } catch (error) {
+        console.error("Supabase get-listing-code error:", error);
+        return { ok: false, error: error };
+    }
+
+}
+
+
+function escapeServiceHubText(value) {
+    const div = document.createElement("div");
+    div.textContent = value == null ? "" : String(value);
+    return div.innerHTML;
+}
+
+
+// Turns a listing (from the legacy Node backend OR a Supabase row) into a
+// card and adds it to whichever containers exist on the current page
+// (the homepage's featured strip and/or the Explore grid).
+function storeServiceHubCard(card) {
+
+    if (!card || !card.id) return;
+
+    const cards = JSON.parse(
+        localStorage.getItem("serviceHubBackendCards") || "{}"
+    );
+
+    cards[card.id] = {
+        image: "SERVICE",
+        category: card.category || "SERVICE",
+        title: card.title || "Service",
+        provider: card.provider || "Provider",
+        company: card.company || "",
+        rating: card.rating || "New",
+        reviews: String(card.reviews || 0) + " reviews",
+        description: card.about || "",
+        about: card.about || "",
+        price: card.price || "Contact provider",
+        portfolio: card.portfolio || "",
+        contact: card.contact || "",
+        phone: card.phone || "",
+        pricing: card.pricing || [],
+        customPricing: card.customPricing || [],
+        media: card.media || [],
+        included: []
+    };
+
+    localStorage.setItem(
+        "serviceHubBackendCards",
+        JSON.stringify(cards)
+    );
+
+    addServiceHubCardToPage(cards[card.id], card.id);
+
+}
+
+
+function addServiceHubCardToPage(cardData, cardId) {
+
+    const containers = [
+        document.getElementById("featuredServices"),
+        document.getElementById("exploreGrid")
+    ].filter(Boolean);
+
+    containers.forEach(function (container) {
+
+        if (container.querySelector('[data-backend-card-id="' + CSS.escape(cardId) + '"]')) {
+            return;
+        }
+
+        const card = document.createElement("a");
+        card.href = "service.html?service=" + encodeURIComponent(cardId);
+        card.className = "service-card";
+        card.setAttribute("data-backend-card-id", cardId);
+
+        card.innerHTML = `
+            <div class="service-image">
+                <span>${escapeServiceHubText(cardData.title)}</span>
+            </div>
+            <div class="service-info">
+                <p class="service-category">
+                    ${escapeServiceHubText(cardData.category || "SERVICE")}
+                </p>
+                <h3>${escapeServiceHubText(cardData.title)}</h3>
+                <p class="provider">${escapeServiceHubText(cardData.provider)}</p>
+                <div class="service-bottom">
+                    <span>⭐ ${escapeServiceHubText(cardData.rating)}</span>
+                    <strong>From ${escapeServiceHubText(cardData.price)}</strong>
+                </div>
+            </div>
+        `;
+
+        container.prepend(card);
+    });
+
+}
+
+
+// Maps a Supabase "listings" row (snake_case columns) into the same
+// card shape used above.
+function mapSupabaseListingToCard(row) {
+
+    return {
+        id: row.id,
+        title: row.service,
+        provider: row.name,
+        company: row.company,
+        contact: row.contact,
+        phone: row.phone,
+        portfolio: row.portfolio,
+        about: row.about,
+        category: row.service,
+        rating: row.rating || "New",
+        reviews: row.reviews || 0,
+        price: row.starting_price ? ("₦" + row.starting_price) : "Contact provider",
+        pricing: row.pricing || [],
+        customPricing: row.custom_pricing || [],
+        media: row.media || []
+    };
+
+}
+
+
+
+/* =================================
+   RECONCILE PUBLISHED CARDS
+   (removes any locally-cached card
+   whose listing is no longer
+   "approved" in Supabase, e.g. an
+   admin flipped it back to pending)
+================================= */
+
+async function reconcileServiceHubCards() {
+
+    const supabase = getServiceHubSupabase();
+
+    if (!supabase) {
+        return;
+    }
+
+    let data, error;
+
+    try {
+
+        const result = await supabase
+            .from("listings")
+            .select("id")
+            .eq("status", "approved");
+
+        data = result.data;
+        error = result.error;
+
+    } catch (fetchError) {
+
+        console.error("ServiceHub reconcile fetch error:", fetchError);
+        return;
+    }
+
+    if (error) {
+
+        console.error("ServiceHub reconcile error:", error);
+        return;
+    }
+
+    const approvedIds = new Set(
+        (data || []).map(function (row) {
+            return row.id;
+        })
+    );
+
+    const cards = JSON.parse(
+        localStorage.getItem("serviceHubBackendCards") || "{}"
+    );
+
+    let changed = false;
+
+    Object.keys(cards).forEach(function (cardId) {
+
+        if (!approvedIds.has(cardId)) {
+
+            delete cards[cardId];
+            changed = true;
+
+            document
+                .querySelectorAll(
+                    '[data-backend-card-id="' +
+                    CSS.escape(cardId) +
+                    '"]'
+                )
+                .forEach(function (el) {
+                    el.remove();
+                });
+
+        }
+
+    });
+
+    if (changed) {
+
+        localStorage.setItem(
+            "serviceHubBackendCards",
+            JSON.stringify(cards)
+        );
+
+    }
+
+}
+
+
+/* =================================
    MAIN PAGE FUNCTIONS
 ================================= */
 
 document.addEventListener("DOMContentLoaded", function () {
+
+
+    /* ================================
+       RECONCILE ON LOAD, THEN POLL
+    ================================= */
+
+    reconcileServiceHubCards();
+
+    setInterval(
+        reconcileServiceHubCards,
+        2 * 60 * 1000 // every 2 minutes
+    );
+
 
 
     /* ================================
@@ -633,14 +960,24 @@ document.body.classList.remove("menu-open");
 
             }
 
+            /* Smart Search is Explore-only.
+               From the homepage, send the query to Explore.
+               On Explore, search only the Explore service grid. */
+            const isExplorePage =
+                window.location.pathname.endsWith("explore.html");
 
-            const items =
-                Array.from(
-                    document.querySelectorAll(
-                        ".service-card, .category-card, [data-service], [data-category]"
-                    )
-                );
+            if (!isExplorePage) {
+                window.location.href =
+                    "explore.html?search=" + encodeURIComponent(term);
+                return;
+            }
 
+            const exploreGrid =
+                document.getElementById("exploreGrid");
+
+            const items = exploreGrid
+                ? Array.from(exploreGrid.querySelectorAll(".service-card"))
+                : [];
 
             const uniqueItems =
                 [...new Set(items)];
@@ -748,6 +1085,31 @@ document.body.classList.remove("menu-open");
             }
         );
 
+        /* If Explore was opened from the homepage with a search query,
+           wait until its service cards have been rendered, then search them. */
+        if (window.location.pathname.endsWith("explore.html")) {
+            const exploreSearch =
+                new URLSearchParams(window.location.search).get("search");
+
+            if (exploreSearch) {
+                searchInput.value = exploreSearch;
+
+                let attempts = 0;
+                const runExploreSearch = setInterval(function () {
+                    attempts += 1;
+                    const grid = document.getElementById("exploreGrid");
+                    const cards = grid
+                        ? grid.querySelectorAll(".service-card")
+                        : [];
+
+                    if (cards.length || attempts >= 20) {
+                        clearInterval(runExploreSearch);
+                        performSearch();
+                    }
+                }, 150);
+            }
+        }
+
     }
 
 /* ========================================
@@ -834,7 +1196,8 @@ categorySearchLinks.forEach(function (card) {
         }
 
         if (chatProviderName) {
-            chatProviderName.textContent = "Solaceproeditz";
+            chatProviderName.textContent =
+    selectedService?.provider || "Service Provider";
         }
 
         if (chatInput) {
@@ -948,7 +1311,7 @@ categorySearchLinks.forEach(function (card) {
             type: "chat_message",
             name: name,
             message: message,
-            provider: "Solaceproeditz",
+            provider: selectedService?.provider || "Service Provider",
             service: document.querySelector("#serviceTitle")?.textContent.trim() || "",
             timestamp: new Date().toISOString()
         };
@@ -1399,7 +1762,7 @@ if (listingForm) {
 
     listingForm.addEventListener(
         "submit",
-        function (event) {
+        async function (event) {
 
             event.preventDefault();
 
@@ -1772,31 +2135,202 @@ if (listingForm) {
             const mediaFiles = [];
 
 
-            if (
-                mediaInput &&
-                mediaInput.files
-            ) {
+            /*
+               Uploads an actual file to Supabase Storage
+               and returns the permanent public URL.
+            */
+            async function uploadServiceHubMedia(file) {
 
-                Array
-                    .from(mediaInput.files)
-                    .forEach(
-                        function (file) {
+                const supabase =
+                    getServiceHubSupabase();
 
-                            mediaFiles.push({
 
-                                name:
-                                    file.name,
+                if (!supabase) {
 
-                                type:
-                                    file.type,
-
-                                size:
-                                    file.size
-
-                            });
-
-                        }
+                    throw new Error(
+                        "Supabase is not configured."
                     );
+
+                }
+
+
+                /*
+                   Give every upload its own unique folder.
+                   This prevents two providers uploading
+                   files with the same filename from
+                   overwriting each other.
+                */
+                const uploadFolder =
+                    crypto.randomUUID();
+
+
+                /*
+                   Make the filename Storage-safe.
+                */
+                const safeName =
+                    file.name.replace(
+                        /[^a-zA-Z0-9._-]/g,
+                        "_"
+                    );
+
+
+                const filePath =
+                    uploadFolder +
+                    "/" +
+                    Date.now() +
+                    "_" +
+                    safeName;
+
+
+                /*
+                   Upload the ACTUAL FILE.
+                */
+                const uploadResult =
+                    await supabase
+                        .storage
+                        .from("service-media")
+                        .upload(
+                            filePath,
+                            file,
+                            {
+                                cacheControl: "3600",
+                                upsert: false,
+                                contentType: file.type
+                            }
+                        );
+
+
+                if (uploadResult.error) {
+
+                    throw uploadResult.error;
+
+                }
+
+
+                /*
+                   Get the public URL of the uploaded file.
+                */
+                const publicUrlResult =
+                    supabase
+                        .storage
+                        .from("service-media")
+                        .getPublicUrl(
+                            uploadResult.data.path
+                        );
+
+
+                return {
+
+                    name:
+                        file.name,
+
+                    type:
+                        file.type,
+
+                    size:
+                        file.size,
+
+                    path:
+                        uploadResult.data.path,
+
+                    url:
+                        publicUrlResult
+                            .data
+                            .publicUrl
+
+                };
+
+            }
+
+
+            /*
+               Upload all selected media files.
+            */
+            async function uploadAllServiceHubMedia() {
+
+                const uploadedMedia = [];
+
+
+                if (
+                    !mediaInput ||
+                    !mediaInput.files ||
+                    mediaInput.files.length === 0
+                ) {
+
+                    return uploadedMedia;
+
+                }
+
+
+                for (
+                    const file of Array.from(
+                        mediaInput.files
+                    )
+                ) {
+
+                    try {
+
+                        const uploadedFile =
+                            await uploadServiceHubMedia(
+                                file
+                            );
+
+
+                        uploadedMedia.push(
+                            uploadedFile
+                        );
+
+
+                    } catch (error) {
+
+                        console.error(
+                            "Media upload failed:",
+                            error
+                        );
+
+
+                        throw new Error(
+                            "Failed to upload " +
+                            file.name +
+                            ". " +
+                            (
+                                error.message ||
+                                "Unknown upload error."
+                            )
+                        );
+
+                    }
+
+                }
+
+
+                return uploadedMedia;
+
+            }
+
+
+            /* ---------- UPLOAD MEDIA TO SUPABASE ---------- */
+
+            let uploadedMediaFiles = [];
+
+            try {
+
+                uploadedMediaFiles =
+                    await uploadAllServiceHubMedia();
+
+            } catch (error) {
+
+                alert(
+                    error.message ||
+                    "There was a problem uploading your media."
+                );
+
+                console.error(
+                    "ServiceHub media upload error:",
+                    error
+                );
+
+                return;
 
             }
 
@@ -1827,7 +2361,7 @@ if (listingForm) {
                     about,
 
                 media:
-                    mediaFiles,
+                    uploadedMediaFiles,
 
                 startingPrice:
                     startingPrice,
@@ -1865,7 +2399,7 @@ if (listingForm) {
                 "true"
             );
 
-            /* ---------- SEND LISTING TO BACKEND ---------- */
+            /* ---------- SEND LISTING TO LEGACY BACKEND (optional) ---------- */
             sendToServiceHubBackend(
                 "listings",
                 listingData
@@ -1876,10 +2410,36 @@ if (listingForm) {
             });
 
 
-            /* ---------- GO TO PAYMENT ---------- */
+            /* ---------- SEND LISTING TO SUPABASE ---------- */
+            /* Creates the listing as "pending" and generates the
+               6-character payment code shown on the Naira payment page. */
 
-            window.location.href =
-                "payment.html";
+            createSupabaseListing(listingData).then(function (result) {
+
+                if (result.ok) {
+
+                    localStorage.setItem(
+                        "serviceHubListingId",
+                        result.id
+                    );
+
+                    localStorage.setItem(
+                        "serviceHubPaymentCode",
+                        result.code
+                    );
+
+                } else if (!result.offline) {
+
+                    console.error("Supabase listing error:", result);
+
+                }
+
+                /* ---------- GO TO PAYMENT ---------- */
+
+                window.location.href =
+                    "payment.html";
+
+            });
 
         }
     );
@@ -2413,85 +2973,6 @@ if (featuredServices && typeof services !== "undefined") {
 
     const apiBase = baseUrl.replace(/\/$/, "");
 
-    function storeBackendCard(card) {
-        if (!card || !card.id) return;
-
-        const cards = JSON.parse(
-            localStorage.getItem("serviceHubBackendCards") || "{}"
-        );
-
-        cards[card.id] = {
-            image: "SERVICE",
-            category: card.category || "SERVICE",
-            title: card.title || "Service",
-            provider: card.provider || "Provider",
-            company: card.company || "",
-            rating: card.rating || "New",
-            reviews: String(card.reviews || 0) + " reviews",
-            description: card.about || "",
-            about: card.about || "",
-            price: card.price || "Contact provider",
-            portfolio: card.portfolio || "",
-            contact: card.contact || "",
-            phone: card.phone || "",
-            pricing: card.pricing || [],
-            customPricing: card.customPricing || [],
-            media: card.media || [],
-            included: []
-        };
-
-        localStorage.setItem(
-            "serviceHubBackendCards",
-            JSON.stringify(cards)
-        );
-
-        addBackendCardToPage(cards[card.id], card.id);
-    }
-
-    function addBackendCardToPage(cardData, cardId) {
-        const containers = [
-            document.getElementById("featuredServices"),
-            document.getElementById("exploreGrid")
-        ].filter(Boolean);
-
-        containers.forEach(function (container) {
-
-            if (container.querySelector('[data-backend-card-id="' + CSS.escape(cardId) + '"]')) {
-                return;
-            }
-
-            const card = document.createElement("a");
-            card.href = "service.html?service=" + encodeURIComponent(cardId);
-            card.className = "service-card";
-            card.setAttribute("data-backend-card-id", cardId);
-
-            card.innerHTML = `
-                <div class="service-image">
-                    <span>${escapeCardText(cardData.title)}</span>
-                </div>
-                <div class="service-info">
-                    <p class="service-category">
-                        ${escapeCardText(cardData.category || "SERVICE")}
-                    </p>
-                    <h3>${escapeCardText(cardData.title)}</h3>
-                    <p class="provider">${escapeCardText(cardData.provider)}</p>
-                    <div class="service-bottom">
-                        <span>⭐ ${escapeCardText(cardData.rating)}</span>
-                        <strong>From ${escapeCardText(cardData.price)}</strong>
-                    </div>
-                </div>
-            `;
-
-            container.prepend(card);
-        });
-    }
-
-    function escapeCardText(value) {
-        const div = document.createElement("div");
-        div.textContent = value == null ? "" : String(value);
-        return div.innerHTML;
-    }
-
     // Load cards that were created before this browser opened.
     fetch(apiBase + "/listings")
         .then(function (response) {
@@ -2500,7 +2981,7 @@ if (featuredServices && typeof services !== "undefined") {
         })
         .then(function (data) {
             (data.cards || []).forEach(function (command) {
-                if (command.card) storeBackendCard(command.card);
+                if (command.card) storeServiceHubCard(command.card);
             });
         })
         .catch(function (error) {
@@ -2516,7 +2997,7 @@ if (featuredServices && typeof services !== "undefined") {
                 const command = JSON.parse(event.data);
 
                 if (command.command === "add_card" && command.card) {
-                    storeBackendCard(command.card);
+                    storeServiceHubCard(command.card);
                 }
 
                 if (command.type === "chat_message") {
@@ -2535,6 +3016,184 @@ if (featuredServices && typeof services !== "undefined") {
             console.warn("ServiceHub realtime connection interrupted; browser will retry.");
         };
     }
+
+})();
+
+
+/* ========================================
+   SUPABASE REALTIME → EXPLORE PAGE CARDS
+   Watches the "listings" table for rows that
+   become "approved" and turns each one into a
+   card on the homepage / Explore grid.
+======================================== */
+
+(function connectServiceHubSupabaseRealtime() {
+
+    const supabaseClient = getServiceHubSupabase();
+
+    if (!supabaseClient) return;
+
+    // Load every already-approved listing once, on page load.
+    supabaseClient
+        .from("listings")
+        .select("*")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .then(function (result) {
+            if (result.error) {
+                console.warn("Supabase approved-listings load failed:", result.error);
+                return;
+            }
+            (result.data || []).forEach(function (row) {
+                storeServiceHubCard(mapSupabaseListingToCard(row));
+            });
+        });
+
+    // Listen for listings flipping to "approved" in real time.
+    supabaseClient
+        .channel("servicehub-approved-listings")
+        .on(
+            "postgres_changes",
+            {
+                event: "*",
+                schema: "public",
+                table: "listings",
+                filter: "status=eq.approved"
+            },
+            function (payload) {
+                if (payload.new) {
+                    storeServiceHubCard(mapSupabaseListingToCard(payload.new));
+                }
+            }
+        )
+        .subscribe();
+
+})();
+
+
+/* ========================================
+   NAIRA PAYMENT PAGE
+======================================== */
+
+(function serviceHubNairaPaymentPage() {
+
+    const codeEl = document.getElementById("nairaDescription");
+
+    if (!codeEl) return;
+
+    const bankNameEl = document.getElementById("nairaBankName");
+    const accountNumberEl = document.getElementById("nairaAccountNumber");
+    const accountNameEl = document.getElementById("nairaAccountName");
+    const copyBtn = document.getElementById("nairaCopyCode");
+    const statusPill = document.getElementById("nairaStatusPill");
+    const waitingStep = document.getElementById("nairaWaitingStep");
+    const approvedStep = document.getElementById("nairaApprovedStep");
+
+    const bankDetails = window.SERVICEHUB_BANK_DETAILS || {};
+
+    if (bankNameEl) bankNameEl.textContent = bankDetails.bankName || "Not configured yet";
+    if (accountNumberEl) accountNumberEl.textContent = bankDetails.accountNumber || "—";
+    if (accountNameEl) accountNameEl.textContent = bankDetails.accountName || "—";
+
+    const listingId = localStorage.getItem("serviceHubListingId");
+    let currentCode = localStorage.getItem("serviceHubPaymentCode") || "";
+
+    function renderCode() {
+        codeEl.textContent = currentCode
+            ? ("Alert Service hub Payment " + currentCode)
+            : "Alert Service hub Payment …";
+    }
+
+    renderCode();
+
+    function showApproved() {
+        if (waitingStep) waitingStep.style.display = "none";
+        if (approvedStep) approvedStep.style.display = "block";
+    }
+
+    function showRejected() {
+        if (statusPill) {
+            statusPill.classList.add("payment-status-pill-rejected");
+            statusPill.innerHTML = "Payment could not be confirmed. Please contact support.";
+        }
+    }
+
+    // Fetch the code from Supabase if it wasn't already saved locally
+    // (e.g. this page was opened fresh / on another device).
+    if (!currentCode && listingId) {
+        fetchSupabaseListingCode(listingId).then(function (result) {
+            if (result.ok && result.code) {
+                currentCode = result.code;
+                localStorage.setItem("serviceHubPaymentCode", currentCode);
+                renderCode();
+            }
+            if (result.ok && result.status === "approved") {
+                showApproved();
+            }
+        });
+    }
+
+    if (copyBtn) {
+        copyBtn.addEventListener("click", function () {
+            const text = currentCode
+                ? ("Alert Service hub Payment " + currentCode)
+                : codeEl.textContent;
+
+            navigator.clipboard.writeText(text).then(function () {
+                const original = copyBtn.textContent;
+                copyBtn.textContent = "Copied!";
+                setTimeout(function () {
+                    copyBtn.textContent = original;
+                }, 2000);
+            });
+        });
+    }
+
+    if (!listingId) return;
+
+    const supabaseClient = getServiceHubSupabase();
+
+    if (!supabaseClient) return;
+
+    // Real-time: the moment the backend marks this listing "approved",
+    // this page updates without a refresh.
+    supabaseClient
+        .channel("listing-status-" + listingId)
+        .on(
+            "postgres_changes",
+            {
+                event: "UPDATE",
+                schema: "public",
+                table: "listings",
+                filter: "id=eq." + listingId
+            },
+            function (payload) {
+                if (!payload.new) return;
+                if (payload.new.status === "approved") showApproved();
+                if (payload.new.status === "rejected") showRejected();
+            }
+        )
+        .subscribe();
+
+    // Fallback poll in case the realtime socket doesn't connect
+    // (some networks block WebSockets).
+    const pollTimer = setInterval(function () {
+        supabaseClient
+            .from("listings")
+            .select("status")
+            .eq("id", listingId)
+            .single()
+            .then(function (result) {
+                if (result.error || !result.data) return;
+                if (result.data.status === "approved") {
+                    clearInterval(pollTimer);
+                    showApproved();
+                } else if (result.data.status === "rejected") {
+                    clearInterval(pollTimer);
+                    showRejected();
+                }
+            });
+    }, 8000);
 
 })();
 
@@ -2601,4 +3260,846 @@ if (loginForm) {
 
     });
 
+}
+/* ========================================
+   PROVIDER CHAT INBOX
+======================================== */
+
+const chatList =
+    document.getElementById("chatList");
+
+const chatWindow =
+    document.getElementById("chatWindow");
+
+let conversations = [];
+
+let activeConversationId = null;
+
+
+/* ========================================
+   LOAD EXISTING CONVERSATIONS
+======================================== */
+
+async function loadConversations() {
+
+    const { data, error } =
+        await supabaseClient
+            .from("conversations")
+            .select("*")
+            .eq("provider_id", PROVIDER_ID)
+            .order("updated_at", {
+                ascending: false
+            });
+
+
+    if (error) {
+
+        console.error(error);
+
+        setStatus(
+            "Database error: " + error.message,
+            false
+        );
+
+        return;
+    }
+
+
+    conversations = data || [];
+
+    renderChatList();
+}
+
+
+/* ========================================
+   RENDER CHAT LIST
+======================================== */
+
+function renderChatList() {
+
+    chatList.innerHTML = "";
+
+
+    const title =
+        document.createElement("div");
+
+    title.className =
+        "chat-list-title";
+
+    title.textContent = "Chats";
+
+    chatList.appendChild(title);
+
+
+    if (conversations.length === 0) {
+
+        const empty =
+            document.createElement("div");
+
+        empty.className = "empty";
+
+        empty.textContent =
+            "No conversations yet.";
+
+        chatList.appendChild(empty);
+
+        return;
+    }
+
+
+    conversations.forEach(
+        function (conversation) {
+
+            renderChatItem(conversation);
+        }
+    );
+}
+
+
+/* ========================================
+   RENDER CHAT ITEM
+======================================== */
+
+function renderChatItem(conversation) {
+
+    const item =
+        document.createElement("div");
+
+    item.className = "chat-item";
+
+    item.dataset.id =
+        conversation.id;
+
+
+    if (
+        conversation.id ===
+        activeConversationId
+    ) {
+
+        item.classList.add("active");
+    }
+
+
+    const header =
+        document.createElement("div");
+
+    header.className =
+        "chat-item-header";
+
+
+    const name =
+        document.createElement("div");
+
+    name.className =
+        "chat-item-name";
+
+    name.textContent =
+        conversation.customer_name ||
+        "Customer";
+
+
+    const time =
+        document.createElement("div");
+
+    time.className =
+        "chat-item-time";
+
+    time.textContent =
+        formatTime(conversation.updated_at);
+
+
+    header.appendChild(name);
+    header.appendChild(time);
+
+
+    const service =
+        document.createElement("div");
+
+    service.className =
+        "chat-item-service";
+
+    service.textContent =
+        conversation.service_name || "";
+
+
+    const preview =
+        document.createElement("div");
+
+    preview.className =
+        "chat-item-preview";
+
+    preview.textContent =
+        "Open conversation";
+
+
+    item.appendChild(header);
+    item.appendChild(service);
+    item.appendChild(preview);
+
+
+    item.addEventListener(
+        "click",
+        function () {
+
+            openConversation(conversation);
+        }
+    );
+
+
+    chatList.appendChild(item);
+
+
+    /*
+       Load the latest message so the
+       inbox can show a preview.
+    */
+
+    loadLatestMessage(
+        conversation.id,
+        preview
+    );
+}
+
+
+/* ========================================
+   LOAD LATEST MESSAGE
+======================================== */
+
+async function loadLatestMessage(
+    conversationId,
+    previewElement
+) {
+
+    const { data, error } =
+        await supabaseClient
+            .from("messages")
+            .select("*")
+            .eq(
+                "conversation_id",
+                conversationId
+            )
+            .order("created_at", {
+                ascending: false
+            })
+            .limit(1);
+
+
+    if (error) {
+
+        console.error(error);
+
+        return;
+    }
+
+
+    if (
+        data &&
+        data.length > 0
+    ) {
+
+        previewElement.textContent =
+            data[0].message;
+    }
+}
+
+
+/* ========================================
+   OPEN CONVERSATION
+======================================== */
+
+async function openConversation(
+    conversation
+) {
+
+    activeConversationId =
+        conversation.id;
+
+
+    /*
+       Highlight the selected chat.
+    */
+
+    document
+        .querySelectorAll(".chat-item")
+        .forEach(function (item) {
+
+            item.classList.toggle(
+                "active",
+                item.dataset.id ===
+                String(conversation.id)
+            );
+        });
+
+
+    /*
+       Build the chat window.
+    */
+
+    chatWindow.innerHTML = "";
+
+
+    const header =
+        document.createElement("div");
+
+    header.className =
+        "active-chat-header";
+
+
+    const customer =
+        document.createElement("div");
+
+    customer.className =
+        "active-chat-customer";
+
+    customer.textContent =
+        conversation.customer_name ||
+        "Customer";
+
+
+    const service =
+        document.createElement("div");
+
+    service.className =
+        "active-chat-service";
+
+    service.textContent =
+        conversation.service_name || "";
+
+
+    header.appendChild(customer);
+    header.appendChild(service);
+
+
+    /*
+       Messages area
+    */
+
+    const messages =
+        document.createElement("div");
+
+    messages.className =
+        "active-messages";
+
+
+    /*
+       Reply box
+    */
+
+    const replyBox =
+        document.createElement("div");
+
+    replyBox.className =
+        "active-reply-box";
+
+
+    const input =
+        document.createElement("input");
+
+    input.type = "text";
+
+    input.placeholder =
+        "Reply to customer...";
+
+
+    const button =
+        document.createElement("button");
+
+    button.textContent =
+        "Send";
+
+
+    button.addEventListener(
+        "click",
+        function () {
+
+            sendReply(
+                conversation,
+                input
+            );
+        }
+    );
+
+
+    input.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (
+                event.key === "Enter"
+            ) {
+
+                sendReply(
+                    conversation,
+                    input
+                );
+            }
+        }
+    );
+
+
+    replyBox.appendChild(input);
+    replyBox.appendChild(button);
+
+
+    chatWindow.appendChild(header);
+    chatWindow.appendChild(messages);
+    chatWindow.appendChild(replyBox);
+
+
+    /*
+       Load only this conversation's
+       messages.
+    */
+
+    await loadMessages(
+        conversation.id,
+        messages
+    );
+}
+
+
+/* ========================================
+   LOAD MESSAGES
+======================================== */
+
+async function loadMessages(
+    conversationId,
+    container
+) {
+
+    const { data, error } =
+        await supabaseClient
+            .from("messages")
+            .select("*")
+            .eq(
+                "conversation_id",
+                conversationId
+            )
+            .order("created_at", {
+                ascending: true
+            });
+
+
+    if (error) {
+
+        console.error(error);
+
+        container.textContent =
+            "Could not load messages.";
+
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+
+    if (
+        !data ||
+        data.length === 0
+    ) {
+
+        const empty =
+            document.createElement("div");
+
+        empty.className =
+            "empty";
+
+        empty.textContent =
+            "No messages yet.";
+
+        container.appendChild(empty);
+
+        return;
+    }
+
+
+    data.forEach(function (message) {
+
+        addMessageToContainer(
+            message,
+            container
+        );
+
+    });
+
+
+    scrollMessagesToBottom(container);
+}
+
+
+/* ========================================
+   ADD MESSAGE TO SCREEN
+======================================== */
+
+function addMessageToContainer(
+    message,
+    container
+) {
+
+    const messageElement =
+        document.createElement("div");
+
+    messageElement.className =
+        "message";
+
+
+    /*
+       Make provider/customer messages
+       visually different.
+    */
+
+    if (
+        message.sender_type ===
+        "provider"
+    ) {
+
+        messageElement.classList.add(
+            "provider-message"
+        );
+
+    } else {
+
+        messageElement.classList.add(
+            "customer-message"
+        );
+    }
+
+
+    const name =
+        document.createElement("div");
+
+    name.className =
+        "message-name";
+
+    name.textContent =
+        message.sender_name ||
+        (
+            message.sender_type ===
+            "provider"
+                ? PROVIDER_NAME
+                : "Customer"
+        );
+
+
+    const text =
+        document.createElement("div");
+
+    text.textContent =
+        message.message;
+
+
+    messageElement.appendChild(name);
+    messageElement.appendChild(text);
+
+
+    container.appendChild(
+        messageElement
+    );
+}
+
+
+/* ========================================
+   SEND PROVIDER REPLY
+======================================== */
+
+async function sendReply(
+    conversation,
+    input
+) {
+
+    const message =
+        input.value.trim();
+
+
+    if (!message) {
+
+        return;
+    }
+
+
+    input.disabled = true;
+
+
+    const { error } =
+        await supabaseClient
+            .from("messages")
+            .insert({
+
+                conversation_id:
+                    conversation.id,
+
+                sender_type:
+                    "provider",
+
+                sender_name:
+                    PROVIDER_NAME,
+
+                message:
+                    message
+            });
+
+
+    input.disabled = false;
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Could not send message:\n" +
+            error.message
+        );
+
+        return;
+    }
+
+
+    input.value = "";
+}
+
+
+/* ========================================
+   REALTIME
+======================================== */
+
+function startRealtime() {
+
+    const channel =
+        supabaseClient
+            .channel(
+                "provider-messages-" +
+                PROVIDER_ID
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "INSERT",
+                    schema: "public",
+                    table: "messages"
+                },
+                async function (payload) {
+
+                    console.log(
+                        "New message:",
+                        payload.new
+                    );
+
+
+                    const message =
+                        payload.new;
+
+
+                    /*
+                       Find which conversation
+                       this message belongs to.
+                    */
+
+                    const {
+                        data: conversation
+                    } =
+                        await supabaseClient
+                            .from(
+                                "conversations"
+                            )
+                            .select("*")
+                            .eq(
+                                "id",
+                                message.conversation_id
+                            )
+                            .eq(
+                                "provider_id",
+                                PROVIDER_ID
+                            )
+                            .maybeSingle();
+
+
+                    if (!conversation) {
+
+                        return;
+                    }
+
+
+                    /*
+                       If this is a brand-new
+                       conversation, reload
+                       the inbox.
+                    */
+
+                    const exists =
+                        conversations.some(
+                            function (item) {
+
+                                return (
+                                    item.id ===
+                                    conversation.id
+                                );
+                            }
+                        );
+
+
+                    if (!exists) {
+
+                        await loadConversations();
+
+                        return;
+                    }
+
+
+                    /*
+                       If the conversation is
+                       currently open, display
+                       the new message.
+                    */
+
+                    if (
+                        activeConversationId ===
+                        conversation.id
+                    ) {
+
+                        const messageContainer =
+                            document.querySelector(
+                                ".active-messages"
+                            );
+
+
+                        if (
+                            messageContainer
+                        ) {
+
+                            /*
+                               Remove empty message
+                               placeholder if present.
+                            */
+
+                            const empty =
+                                messageContainer
+                                    .querySelector(
+                                        ".empty"
+                                    );
+
+                            if (empty) {
+
+                                empty.remove();
+                            }
+
+
+                            addMessageToContainer(
+                                message,
+                                messageContainer
+                            );
+
+
+                            scrollMessagesToBottom(
+                                messageContainer
+                            );
+                        }
+
+                    }
+
+
+                    /*
+                       Update conversation
+                       information in memory.
+                    */
+
+                    const index =
+                        conversations.findIndex(
+                            function (item) {
+
+                                return (
+                                    item.id ===
+                                    conversation.id
+                                );
+                            }
+                        );
+
+
+                    if (index !== -1) {
+
+                        conversations[index] =
+                            conversation;
+                    }
+
+
+                    /*
+                       Refresh the inbox so
+                       latest-message previews
+                       and ordering update.
+                    */
+
+                    renderChatList();
+                }
+            )
+            .subscribe(
+                function (status) {
+
+                    console.log(
+                        "Realtime status:",
+                        status
+                    );
+
+
+                    if (
+                        status ===
+                        "SUBSCRIBED"
+                    ) {
+
+                        setStatus(
+                            "● Connected to ServiceHub",
+                            true
+                        );
+
+                    } else if (
+                        status ===
+                        "CHANNEL_ERROR"
+                    ) {
+
+                        setStatus(
+                            "Realtime connection error",
+                            false
+                        );
+                    }
+                }
+            );
+}
+
+
+/* ========================================
+   TIME FORMAT
+======================================== */
+
+function formatTime(
+    timestamp
+) {
+
+    if (!timestamp) {
+
+        return "";
+    }
+
+
+    return new Date(
+        timestamp
+    ).toLocaleTimeString(
+        [],
+        {
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    );
+}
+
+
+/* ========================================
+   SCROLL CHAT
+======================================== */
+
+function scrollMessagesToBottom(
+    container
+) {
+
+    container.scrollTop =
+        container.scrollHeight;
 }
