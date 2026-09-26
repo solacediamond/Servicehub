@@ -838,13 +838,40 @@ function normalizeServiceHubMedia(list) {
 
 /*
    Turns a Nigerian/international number into a wa.me link.
+   `message`, if provided, is pre-filled into the WhatsApp text box.
 */
-function buildServiceHubWhatsAppLink(number) {
+function buildServiceHubWhatsAppLink(number, message) {
     let digits = String(number || "").replace(/[^0-9]/g, "");
     if (!digits) return "";
     if (digits.indexOf("00") === 0) digits = digits.slice(2);
     else if (digits.charAt(0) === "0") digits = "234" + digits.slice(1);
-    return "https://wa.me/" + digits;
+    let link = "https://wa.me/" + digits;
+    if (message) {
+        link += "?text=" + encodeURIComponent(message);
+    }
+    return link;
+}
+
+/*
+   Builds the pre-filled "Hi, I'm ... found you on ServiceHub ... I want ..."
+   message sent to the provider's WhatsApp when a customer taps
+   "Contact Provider" on a service page.
+*/
+function buildServiceHubContactMessage(card) {
+    let storedName = "";
+    try {
+        storedName = localStorage.getItem("customerName") || "";
+    } catch (_) {
+        storedName = "";
+    }
+
+    const title = (card && card.title) ? card.title : "your service";
+
+    let message = "Hi, I'm " + (storedName || "a ServiceHub user") + ". ";
+    message += "I found you on ServiceHub. ";
+    message += "I want to know more about your \"" + title + "\" service.";
+
+    return message;
 }
 
 /*
@@ -1775,55 +1802,33 @@ categorySearchLinks.forEach(function (card) {
 
     }
 
-    /* Open contact modal */
+    /* Open WhatsApp (or fall back to nothing if no number is on file).
+       NOTE: there is no reliable way for browser JS to detect whether a
+       phone number actually has a WhatsApp account — wa.me gives no
+       success/failure signal back to the page. So this opens WhatsApp
+       as the primary contact method; the "Phone" link already shown in
+       the Provider Details section below serves as the manual fallback
+       if WhatsApp doesn't work for a given user. The name-entry / chat
+       modal below is left in place, unused for now, for when the
+       in-built chat system is added later. */
 
-    if (contactButton && contactModal) {
+    if (contactButton) {
 
         contactButton.addEventListener("click", function () {
 
-            const existingStoredName =
-                localStorage.getItem("customerName");
+            const number =
+                (selectedService && (selectedService.whatsapp || selectedService.phone)) || "";
 
-            if (existingStoredName && existingStoredName.trim() !== "") {
-                window.location.href = "chat.html?service=" + encodeURIComponent(serviceId || "");
+            const message = buildServiceHubContactMessage(selectedService);
+
+            const wa = buildServiceHubWhatsAppLink(number, message);
+
+            if (wa) {
+                window.open(wa, "_blank", "noopener");
                 return;
             }
 
-            contactModal.classList.add("active");
-
-            const storedName =
-                localStorage.getItem("customerName");
-
-            if (storedName && customerName) {
-
-                customerName.value = storedName;
-
-                if (savedName) {
-                    savedName.textContent = "Saved name: " + storedName;
-                }
-
-                if (continueContact) {
-                    continueContact.textContent =
-                        "Continue as " + storedName + " →";
-                }
-
-            } else if (continueContact) {
-
-                continueContact.textContent = "Continue →";
-
-            }
-
-            if (chatInterface) {
-                chatInterface.style.display = "none";
-            }
-
-            if (contactIdentity) {
-                contactIdentity.style.display = "block";
-            }
-
-            if (customerName) {
-                customerName.focus();
-            }
+            alert("This provider hasn't added a phone number yet.");
 
         });
 

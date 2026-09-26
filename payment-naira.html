@@ -158,13 +158,14 @@
         role="dialog"
         aria-modal="true"
         aria-labelledby="nairaPaymentSuccessTitle"
-        style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.55); align-items:center; justify-content:center; padding:20px;"
+        class="naira-success-popup"
+        style="display:none;"
     >
-        <div style="width:min(420px,100%); background:#fff; border-radius:18px; padding:28px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.25);">
-            <div style="font-size:48px; line-height:1; margin-bottom:14px;">✓</div>
-            <h2 id="nairaPaymentSuccessTitle" style="margin:0 0 10px;">Payment Successful</h2>
-            <p style="margin:0 0 18px;">Your payment has been confirmed successfully.</p>
-            <p style="margin:0;">Returning to the homepage in <strong id="nairaPaymentCountdown">5</strong> seconds…</p>
+        <div class="naira-success-box">
+            <div class="naira-success-check">✓</div>
+            <h2 id="nairaPaymentSuccessTitle">Payment Successful</h2>
+            <p>Your payment has been confirmed successfully.</p>
+            <p>Returning to the homepage in <strong id="nairaPaymentCountdown">5</strong> seconds…</p>
         </div>
     </div>
 

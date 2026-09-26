@@ -3550,3 +3550,80 @@ body.listing-upload-locked {
 @media (max-width: 768px) {
     .service-detail-image { min-height: 280px; }
 }
+
+
+/* ========================================
+   NAIRA PAYMENT SUCCESS POPUP
+   (matches the dark surface / blue-accent
+   language used by .contact-modal and
+   .approved-check elsewhere on the site)
+======================================== */
+
+.naira-success-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.naira-success-box {
+    width: min(420px, 100%);
+    padding: 32px 28px;
+    text-align: center;
+
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(35, 136, 255, 0.08);
+
+    animation: nairaFadeIn 0.4s cubic-bezier(.22, .8, .2, 1);
+}
+
+.naira-success-check {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    background: rgba(35, 136, 255, 0.12);
+    border: 1px solid rgba(35, 136, 255, 0.35);
+    color: var(--blue);
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.naira-success-box h2 {
+    margin: 0 0 10px;
+    color: var(--text);
+    font-size: 22px;
+}
+
+.naira-success-box p {
+    margin: 0 0 12px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.naira-success-box p:last-child {
+    margin-bottom: 0;
+}
+
+.naira-success-box strong {
+    color: var(--text);
+}
+
