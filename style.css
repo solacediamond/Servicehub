@@ -1748,6 +1748,12 @@ body.page-exit-right .service-page {
     transform: translateY(0);
 }
 
+.listing-submit:disabled {
+    opacity: 0.65;
+    cursor: wait;
+    transform: none;
+}
+
 .listing-note {
     min-height: 20px;
     margin: -6px 0 0;
@@ -3322,6 +3328,75 @@ body.menu-open {
     border: 2px solid rgba(35, 136, 255, 0.25);
     border-top-color: var(--blue);
     animation: nairaSpin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+/* Floating wait overlay used while media / Apps Script is in flight */
+body.listing-upload-locked {
+    overflow: hidden;
+}
+
+.listing-upload-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(8, 11, 18, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.listing-upload-overlay.is-visible,
+.listing-upload-overlay:not([hidden]) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.listing-upload-overlay[hidden] {
+    display: none !important;
+}
+
+.listing-upload-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    max-width: min(440px, calc(100vw - 40px));
+    padding: 14px 22px;
+    border-radius: 999px;
+    background: #151b27;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 18px 50px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(35, 136, 255, 0.06);
+    color: #c5cdd8;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+    text-align: left;
+    animation: listingUploadPop 0.22s ease-out;
+}
+
+.listing-upload-text {
+    color: #c5cdd8;
+}
+
+@keyframes listingUploadPop {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @keyframes nairaSpin {
@@ -3391,4 +3466,87 @@ body.menu-open {
         flex-direction: column;
         align-items: stretch;
     }
+}
+.service-card .service-image {
+    overflow: hidden;
+    position: relative;
+}
+
+.service-card .service-card-media {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+/* ========================================
+   SERVICE DETAIL: hero image, provider details, media gallery
+======================================== */
+.detail-image { overflow: hidden; }
+
+.service-detail-image {
+    width: 100%;
+    height: 100%;
+    min-height: 500px;
+    object-fit: cover;
+    display: block;
+}
+.service-detail-image[hidden] { display: none; }
+
+.provider-details,
+.service-media-section {
+    margin-top: 26px;
+}
+
+.provider-details[hidden],
+.service-media-section[hidden] { display: none; }
+
+.provider-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 14px;
+}
+.provider-detail-row:last-child { border-bottom: 0; }
+.provider-detail-label { color: var(--muted); }
+.provider-detail-value { text-align: right; word-break: break-word; }
+.provider-detail-value a { color: var(--blue); text-decoration: none; }
+
+.provider-whatsapp-btn {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #25d366;
+    color: #06130c !important;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.service-media-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+.service-gallery-image,
+.service-media-gallery video,
+.service-gallery-video,
+.service-gallery-document {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border: 0;
+    border-radius: 12px;
+    background: #0b0f18;
+}
+.service-media-file {
+    grid-column: 1 / -1;
+    color: var(--blue);
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .service-detail-image { min-height: 280px; }
 }

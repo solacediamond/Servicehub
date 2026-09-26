@@ -44,8 +44,13 @@
 
     <div class="service-detail">
 
-        <div class="detail-image">
-            <span id="serviceImage">VIDEO</span>
+        <div class="detail-image" id="serviceImageContainer">
+            <img
+                id="serviceImage"
+                class="service-detail-image"
+                alt=""
+                hidden
+            >
         </div>
 
 
@@ -92,6 +97,31 @@
                 <li>Text and visual effects</li>
                 <li>Social media-ready output</li>
             </ul>
+
+            <!-- Provider details (phone / WhatsApp / etc.) filled from the listing -->
+            <section
+                class="provider-details"
+                id="serviceProviderDetails"
+                hidden
+            >
+                <h2>Provider details</h2>
+                <div id="serviceProviderDetailsList"></div>
+            </section>
+
+            <!-- Portfolio / media shown after the service is opened.
+                 The main detail face remains image-only. -->
+            <section
+                class="service-media-section"
+                id="serviceMediaSection"
+                hidden
+            >
+                <h2>Portfolio &amp; Media</h2>
+
+                <div
+                    class="service-media-gallery"
+                    id="serviceMediaGallery"
+                ></div>
+            </section>
 
 
             <div class="detail-price">
@@ -214,8 +244,6 @@
 
 
     <!-- JavaScript -->
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="script.js"></script>
 

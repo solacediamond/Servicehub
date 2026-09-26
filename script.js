@@ -9,12 +9,14 @@
 ================================= */
 
 window.SERVICEHUB_BACKEND_URL = "";
+window.SERVICEHUB_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyshp8ls2f-PTWGBaHveiAjDhhuOVxUhcdNjw7OWPVSfLyhSIwNAG4eGerwTH5SktRi/exec";
 
-window.SERVICEHUB_SUPABASE_URL =
-    "https://qqnvnceoipxyxkqsubsv.supabase.co";
 
-window.SERVICEHUB_SUPABASE_ANON_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbnZuY2VvaXB4eXhrcXN1YnN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1ODg2NzMsImV4cCI6MjEwNTE2NDY3M30.a_6wsmD3fH2Dv_-Wd47DMQlfeTBRsP7XoDAOdXthUns";
+/* Keep existing diagnostic calls harmless without adding any visible UI. */
+window.serviceHubDebug = window.serviceHubDebug || {
+    addLog: function () {},
+    test: function () {}
+};
 
 window.SERVICEHUB_BANK_DETAILS = {
     bankName: "Moniepoint",
@@ -65,118 +67,361 @@ async function sendToServiceHubBackend(route, payload) {
 
 
 /* =================================
-   SUPABASE CONNECTION
-   (listings, Naira payment codes,
-   and live "approved" cards)
+   GOOGLE APPS SCRIPT CONNECTION
+   Listings + payment approval backend
 ================================= */
 
-let serviceHubSupabaseClient = null;
-
-function getServiceHubSupabase() {
-
-    if (serviceHubSupabaseClient) {
-        return serviceHubSupabaseClient;
-    }
-
-    const url = window.SERVICEHUB_SUPABASE_URL;
-    const key = window.SERVICEHUB_SUPABASE_ANON_KEY;
-
-    if (!url || !key || typeof window.supabase === "undefined") {
-        return null;
-    }
-
-    serviceHubSupabaseClient = window.supabase.createClient(url, key);
-
-    return serviceHubSupabaseClient;
-
+function getAppsScriptUrl() {
+    return String(window.SERVICEHUB_APPS_SCRIPT_URL || "").replace(/\/$/, "");
 }
 
+async function callServiceHubAppsScript(action, params) {
+    const baseUrl = getAppsScriptUrl();
+    if (!baseUrl) {
+        throw new Error("Apps Script URL is not configured.");
+    }
 
-// Sends a new listing to the Supabase "create-listing" Edge Function.
-// The function inserts the listing as "pending", generates the 6-character
-// payment code, and returns both the listing id and the code.
-async function createSupabaseListing(listingData) {
+    const query = new URLSearchParams();
+    query.set("action", action);
 
-    const url = window.SERVICEHUB_SUPABASE_URL;
-    const key = window.SERVICEHUB_SUPABASE_ANON_KEY;
+    Object.keys(params || {}).forEach(function (key) {
+        const value = params[key];
+        if (value !== undefined && value !== null) {
+            query.set(key, String(value));
+        }
+    });
 
-    if (!url || !key) {
-        console.log("Supabase is not configured yet.", listingData);
-        return { ok: false, offline: true };
+    const url = baseUrl + "?" + query.toString() + "&_=" + Date.now();
+
+    try {
+        /*
+         * The supplied Code.gs reads GET values from e.parameter.
+         * Do not send this through /apps-script: that route only exists
+         * inside server.js and is the reason the editor preview returned
+         * "Error 404, file not found".
+         */
+        const response = await fetch(url, {
+            method: "GET",
+            redirect: "follow",
+            cache: "no-store",
+            mode: "cors"
+        });
+
+        const text = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(text);
+        } catch (_) {
+            throw new Error(
+                "Apps Script returned a non-JSON response: " + text.slice(0, 300)
+            );
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                (data && (data.error || data.message)) ||
+                ("HTTP " + response.status)
+            );
+        }
+
+        if (data && data.success === false) {
+            throw new Error(
+                data.error || data.message || "Apps Script request failed."
+            );
+        }
+
+        return data;
+
+    } catch (error) {
+        /* Give a useful message instead of the old local /apps-script 404. */
+        const message = String(error && error.message || error);
+        if (/failed to fetch|networkerror|cors/i.test(message)) {
+            throw new Error(
+                "The Apps Script Web App could not be read directly by this browser. " +
+                "The request URL is correct, but browser cross-origin access may be blocking the response. " +
+                "This is separate from the old localhost /apps-script 404."
+            );
+        }
+        throw error;
+    }
+}
+
+/*
+   Helpers for building the Apps Script listing payload.
+*/
+async function generateServiceHubListingId() {
+    const data = await callServiceHubAppsScript("getNextListingId", {});
+    const listingId = String(data.listingId || data.id || "").trim();
+
+    if (!/^SH-\d+$/i.test(listingId)) {
+        throw new Error("Apps Script returned an invalid Listing ID.");
+    }
+
+    return listingId.toUpperCase();
+}
+
+function slugifyServiceHubProvider(value) {
+    return String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "")
+        .slice(0, 40);
+}
+
+function parseServiceHubAmount(value) {
+    const cleaned = String(value == null ? "" : value).replace(/[^0-9.]/g, "");
+    if (!cleaned) return "";
+    const n = Number(cleaned);
+    return isFinite(n) ? n : "";
+}
+
+/*
+   Creates a listing in Google Apps Script.
+   The browser proposes a Listing ID; Apps Script stores the row, generates
+   the unique 6-character payment code and returns both (Apps Script has the
+   final say on the ID if there is ever a collision).
+*/
+async function postToExistingAppsScript(payload) {
+    const baseUrl = getAppsScriptUrl();
+    if (!baseUrl) {
+        throw new Error("Apps Script URL is not configured.");
     }
 
     try {
+        /*
+         * The supplied Code.gs does:
+         *   JSON.parse(e.postData.contents)
+         * so the request body must remain raw JSON.
+         *
+         * text/plain is intentionally used instead of application/json.
+         * application/json can trigger a browser CORS preflight before
+         * Apps Script ever reaches doPost(). text/plain keeps the POST a
+         * simple request while e.postData.contents is still the JSON text
+         * that Code.gs expects.
+         */
+        const response = await fetch(baseUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=UTF-8"
+            },
+            body: JSON.stringify(payload),
+            redirect: "follow",
+            cache: "no-store",
+            mode: "cors"
+        });
 
-        const response = await fetch(
-            url.replace(/\/$/, "") + "/functions/v1/create-listing",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "apikey": key,
-                    "Authorization": "Bearer " + key
-                },
-                body: JSON.stringify(listingData)
-            }
-        );
+        const text = await response.text();
+        let data;
 
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok || !data || !data.ok) {
-            throw new Error((data && data.error) || ("HTTP " + response.status));
+        try {
+            data = JSON.parse(text);
+        } catch (_) {
+            throw new Error(
+                "Apps Script returned a non-JSON response: " + text.slice(0, 300)
+            );
         }
 
-        return { ok: true, id: data.id, code: data.code };
+        if (!response.ok) {
+            throw new Error(
+                (data && (data.error || data.message)) ||
+                ("HTTP " + response.status)
+            );
+        }
+
+        if (data && data.success === false) {
+            throw new Error(
+                data.error || data.message || "Apps Script request failed."
+            );
+        }
+
+        return data;
 
     } catch (error) {
-        console.error("Supabase create-listing error:", error);
-        return { ok: false, error: error };
+        const message = String(error && error.message || error);
+        if (/failed to fetch|networkerror|cors/i.test(message)) {
+            throw new Error(
+                "The listing could not read the Apps Script response from this browser. " +
+                "The POST is now sent to the exact doPost() endpoint, but browser cross-origin " +
+                "access may still be blocking the response."
+            );
+        }
+        throw error;
+    }
+}
+
+function parseAppsScriptMediaValue(value) {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") return [value];
+    if (typeof value !== "string" || !value.trim()) return [];
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+async function waitForAppsScriptListing(listingId, predicate, timeoutMs) {
+    const timeout = Number(timeoutMs || 45000);
+    const started = Date.now();
+    let lastError = null;
+
+    while ((Date.now() - started) < timeout) {
+        try {
+            const result = await fetchAppsScriptListing(listingId);
+            if (result.ok && result.listing) {
+                if (!predicate || predicate(result.listing)) return result;
+            }
+        } catch (error) {
+            lastError = error;
+        }
+
+        await new Promise(function (resolve) {
+            setTimeout(resolve, 1800);
+        });
     }
 
+    throw lastError || new Error("Apps Script did not confirm the requested operation in time.");
+}
+
+/*
+   Creates a listing using the exact fields consumed by the supplied
+   createListingWithPaymentCode() function. The frontend generates the ID,
+   then Apps Script creates the row and owns the payment code.
+*/
+async function createAppsScriptListing(listingData) {
+    const baseUrl = getAppsScriptUrl();
+    if (!baseUrl) return { ok: false, offline: true };
+
+    const listingId = String(listingData.listingId || await generateServiceHubListingId());
+    const providerId = slugifyServiceHubProvider(
+        listingData.company || listingData.name
+    );
+
+    const payload = {
+        action: "createListing",
+        listingId: listingId,
+        providerId: providerId,
+        serviceName: listingData.service || "",
+        price: parseServiceHubAmount(listingData.startingPrice),
+
+        /* Extra fields are retained in the request for compatibility with
+           existing frontend data, but the supplied backend only requires the
+           four fields above when creating the sheet row. */
+        providerName: listingData.name || "",
+        company: listingData.company || "",
+        contact: listingData.contact || "",
+        phone: listingData.phone || "",
+        whatsapp: listingData.phone || "",
+        about: listingData.about || "",
+        portfolio: listingData.portfolio || "",
+        category: listingData.service || "",
+        pricingRank: listingData.pricing || "",
+        customPricing: JSON.stringify(listingData.customPricing || [])
+    };
+
+    try {
+        const createResponse = await postToExistingAppsScript(payload);
+        const actualListingId = String(
+            createResponse.listingId ||
+            createResponse.id ||
+            listingId
+        ).trim();
+
+        const confirmed = await waitForAppsScriptListing(
+            actualListingId,
+            function () { return true; },
+            45000
+        );
+
+        const listing = confirmed.listing || {};
+        const code =
+            confirmed.code ||
+            listing.paymentCode ||
+            listing["Payment Code"] ||
+            "";
+
+        if (!code) {
+            throw new Error("Apps Script created the listing but did not expose its payment code yet.");
+        }
+
+        return {
+            ok: true,
+            id: actualListingId,
+            code: String(code),
+            listing: listing
+        };
+    } catch (error) {
+        console.error("Apps Script createListing error:", error);
+        return { ok: false, error: error };
+    }
 }
 
 
-// Fallback used on the Naira payment page if the payment code was not
-// already stored locally (e.g. the page was reloaded on another device).
-async function fetchSupabaseListingCode(listingId) {
+/*
+   Recovers a listing and its payment code from Apps Script.
+*/
+async function fetchAppsScriptListing(listingId) {
+    if (!listingId) return { ok: false };
 
-    const url = window.SERVICEHUB_SUPABASE_URL;
-    const key = window.SERVICEHUB_SUPABASE_ANON_KEY;
+    try {
+        const data = await callServiceHubAppsScript("getListing", {
+            listingId: listingId
+        });
 
-    if (!url || !key || !listingId) {
-        return { ok: false };
+        const listing = data.listing || data.data || {};
+        const code =
+            data.paymentCode ||
+            data.code ||
+            listing.paymentCode ||
+            listing["Payment Code"] ||
+            listing.code ||
+            "";
+
+        return {
+            ok: data.success !== false && !!listing,
+            listing: listing,
+            code: code,
+            status: data.status || listing.status || listing.Status || ""
+        };
+    } catch (error) {
+        console.error("Apps Script getListing error:", error);
+        return { ok: false, error: error };
+    }
+}
+
+
+/*
+   Checks ONE specific listing against ONE specific payment code.
+   This endpoint only reads approval state. It never approves a payment.
+*/
+async function checkAppsScriptPayment(listingId, paymentCode) {
+    if (!listingId || !paymentCode) {
+        return { ok: false, status: "not_found" };
     }
 
     try {
+        const data = await callServiceHubAppsScript("checkPayment", {
+            listingId: listingId,
+            code: paymentCode,
+            paymentCode: paymentCode
+        });
 
-        const response = await fetch(
-            url.replace(/\/$/, "") + "/functions/v1/get-listing-code",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "apikey": key,
-                    "Authorization": "Bearer " + key
-                },
-                body: JSON.stringify({ id: listingId })
-            }
-        );
-
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok || !data || !data.ok) {
-            throw new Error((data && data.error) || ("HTTP " + response.status));
-        }
-
-        return { ok: true, code: data.code, status: data.status };
-
+        return {
+            ok: data.success !== false,
+            status: String(data.status || "pending").toLowerCase(),
+            listingId: data.listingId || listingId,
+            approvedAt: data.approvedAt || null
+        };
     } catch (error) {
-        console.error("Supabase get-listing-code error:", error);
-        return { ok: false, error: error };
+        console.error("Apps Script payment check error:", error);
+        return {
+            ok: false,
+            status: "error",
+            error: error
+        };
     }
-
 }
-
 
 function escapeServiceHubText(value) {
     const div = document.createElement("div");
@@ -185,7 +430,65 @@ function escapeServiceHubText(value) {
 }
 
 
-// Turns a listing (from the legacy Node backend OR a Supabase row) into a
+function addServiceHubCardToPage(cardData, cardId) {
+
+    const containers = [
+        document.getElementById("featuredServices"),
+        document.getElementById("exploreGrid")
+    ].filter(Boolean);
+
+    containers.forEach(function (container) {
+
+        if (container.querySelector('[data-backend-card-id="' + CSS.escape(String(cardId)) + '"]')) {
+            return;
+        }
+
+        const card = document.createElement("a");
+        card.href = "service.html?service=" + encodeURIComponent(cardId);
+        card.className = "service-card";
+        card.setAttribute("data-backend-card-id", cardId);
+
+        const media = Array.isArray(cardData.media) ? cardData.media : [];
+        const firstImage = media.find(function (item) {
+            const type = String(item && (item.type || item.mimeType || "")).toLowerCase();
+            return type.indexOf("image/") === 0 && (item.previewUrl || item.url);
+        });
+        const firstVideo = media.find(function (item) {
+            const type = String(item && (item.type || item.mimeType || "")).toLowerCase();
+            return type.indexOf("video/") === 0 && (item.previewUrl || item.url);
+        });
+
+        let imageHTML = '<span>' + escapeServiceHubText(cardData.title) + '</span>';
+        if (firstImage) {
+            imageHTML = '<img class="service-card-media" src="' + escapeServiceHubAttribute(firstImage.previewUrl || firstImage.url) + '" alt="' + escapeServiceHubAttribute(cardData.title) + '" loading="lazy">';
+        } else if (firstVideo) {
+            imageHTML = '<video class="service-card-media" src="' + escapeServiceHubAttribute(firstVideo.previewUrl || firstVideo.url) + '" muted playsinline preload="metadata"></video>';
+        }
+
+        card.innerHTML = `
+            <div class="service-image">
+                ${imageHTML}
+            </div>
+            <div class="service-info">
+                <p class="service-category">
+                    ${escapeServiceHubText(cardData.category || "SERVICE")}
+                </p>
+                <h3>${escapeServiceHubText(cardData.title)}</h3>
+                <p class="provider">${escapeServiceHubText(cardData.provider)}</p>
+                <div class="service-bottom">
+                    <span>⭐ ${escapeServiceHubText(cardData.rating)}</span>
+                    <strong>From ${escapeServiceHubText(cardData.price)}</strong>
+                </div>
+            </div>
+        `;
+
+        container.prepend(card);
+    });
+
+}
+
+
+// Turns a listing (from the legacy Node backend OR a legacy backend row) into a
 // card and adds it to whichever containers exist on the current page
 // (the homepage's featured strip and/or the Explore grid).
 function storeServiceHubCard(card) {
@@ -210,6 +513,7 @@ function storeServiceHubCard(card) {
         portfolio: card.portfolio || "",
         contact: card.contact || "",
         phone: card.phone || "",
+        whatsapp: card.whatsapp || card.phone || "",
         pricing: card.pricing || [],
         customPricing: card.customPricing || [],
         media: card.media || [],
@@ -226,50 +530,11 @@ function storeServiceHubCard(card) {
 }
 
 
-function addServiceHubCardToPage(cardData, cardId) {
-
-    const containers = [
-        document.getElementById("featuredServices"),
-        document.getElementById("exploreGrid")
-    ].filter(Boolean);
-
-    containers.forEach(function (container) {
-
-        if (container.querySelector('[data-backend-card-id="' + CSS.escape(cardId) + '"]')) {
-            return;
-        }
-
-        const card = document.createElement("a");
-        card.href = "service.html?service=" + encodeURIComponent(cardId);
-        card.className = "service-card";
-        card.setAttribute("data-backend-card-id", cardId);
-
-        card.innerHTML = `
-            <div class="service-image">
-                <span>${escapeServiceHubText(cardData.title)}</span>
-            </div>
-            <div class="service-info">
-                <p class="service-category">
-                    ${escapeServiceHubText(cardData.category || "SERVICE")}
-                </p>
-                <h3>${escapeServiceHubText(cardData.title)}</h3>
-                <p class="provider">${escapeServiceHubText(cardData.provider)}</p>
-                <div class="service-bottom">
-                    <span>⭐ ${escapeServiceHubText(cardData.rating)}</span>
-                    <strong>From ${escapeServiceHubText(cardData.price)}</strong>
-                </div>
-            </div>
-        `;
-
-        container.prepend(card);
-    });
-
-}
 
 
-// Maps a Supabase "listings" row (snake_case columns) into the same
+// Maps a legacy backend "listings" row (snake_case columns) into the same
 // card shape used above.
-function mapSupabaseListingToCard(row) {
+function mapLegacyBackendListingToCard(row) {
 
     return {
         id: row.id,
@@ -297,84 +562,379 @@ function mapSupabaseListingToCard(row) {
    RECONCILE PUBLISHED CARDS
    (removes any locally-cached card
    whose listing is no longer
-   "approved" in Supabase, e.g. an
+   "approved" in legacy backend, e.g. an
    admin flipped it back to pending)
 ================================= */
 
 async function reconcileServiceHubCards() {
-
-    const supabase = getServiceHubSupabase();
-
-    if (!supabase) {
-        return;
-    }
-
-    let data, error;
+    const baseUrl = getAppsScriptUrl();
+    if (!baseUrl) return;
 
     try {
+        const data = await callServiceHubAppsScript("getListings", {});
+        const listings = Array.isArray(data.listings) ? data.listings : [];
 
-        const result = await supabase
-            .from("listings")
-            .select("id")
-            .eq("status", "approved");
+        const approvedListings = listings.filter(function (listing) {
+            return String(
+                listing.status ||
+                listing.Status ||
+                ""
+            ).toLowerCase() === "approved";
+        });
 
-        data = result.data;
-        error = result.error;
+        const approvedIds = new Set();
 
-    } catch (fetchError) {
+        approvedListings.forEach(function (listing) {
+            const card = mapAppsScriptListingToCard(listing);
+            if (!card.id) return;
 
-        console.error("ServiceHub reconcile fetch error:", fetchError);
-        return;
-    }
+            approvedIds.add(String(card.id));
+            storeServiceHubCard(card);
+        });
 
-    if (error) {
-
-        console.error("ServiceHub reconcile error:", error);
-        return;
-    }
-
-    const approvedIds = new Set(
-        (data || []).map(function (row) {
-            return row.id;
-        })
-    );
-
-    const cards = JSON.parse(
-        localStorage.getItem("serviceHubBackendCards") || "{}"
-    );
-
-    let changed = false;
-
-    Object.keys(cards).forEach(function (cardId) {
-
-        if (!approvedIds.has(cardId)) {
-
-            delete cards[cardId];
-            changed = true;
-
-            document
-                .querySelectorAll(
-                    '[data-backend-card-id="' +
-                    CSS.escape(cardId) +
-                    '"]'
-                )
-                .forEach(function (el) {
-                    el.remove();
-                });
-
-        }
-
-    });
-
-    if (changed) {
-
-        localStorage.setItem(
-            "serviceHubBackendCards",
-            JSON.stringify(cards)
+        const cards = JSON.parse(
+            localStorage.getItem("serviceHubBackendCards") || "{}"
         );
 
+        let changed = false;
+
+        Object.keys(cards).forEach(function (cardId) {
+            if (!approvedIds.has(String(cardId))) {
+                delete cards[cardId];
+                changed = true;
+
+                document
+                    .querySelectorAll(
+                        '[data-backend-card-id="' +
+                        CSS.escape(cardId) +
+                        '"]'
+                    )
+                    .forEach(function (el) {
+                        el.remove();
+                    });
+            }
+        });
+
+        if (changed) {
+            localStorage.setItem(
+                "serviceHubBackendCards",
+                JSON.stringify(cards)
+            );
+        }
+
+        window.serviceHubDebug && window.serviceHubDebug.addLog(
+            "OK",
+            "Marketplace sync completed",
+            "Approved listings: " + approvedListings.length
+        );
+
+    } catch (error) {
+        console.warn("Apps Script marketplace sync failed:", error);
+        window.serviceHubDebug && window.serviceHubDebug.addLog(
+            "ERROR",
+            "Marketplace sync failed",
+            error
+        );
+    }
+}
+function escapeServiceHubAttribute(value) {
+
+    return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+function renderServiceMedia(selectedService) {
+
+    const section =
+        document.getElementById(
+            "serviceMediaSection"
+        );
+
+    const gallery =
+        document.getElementById(
+            "serviceMediaGallery"
+        );
+
+    if (!section || !gallery) {
+        return;
     }
 
+    const media =
+        Array.isArray(selectedService.media)
+            ? selectedService.media
+            : [];
+
+    gallery.innerHTML = "";
+
+    if (!media.length) {
+        section.hidden = true;
+        return;
+    }
+
+    section.hidden = false;
+
+    media.forEach(function(item) {
+
+        if (!item) return;
+
+        const type =
+            String(
+                item.type ||
+                item.mimeType ||
+                ""
+            ).toLowerCase();
+
+        const name =
+            item.name ||
+            "Media";
+
+        /*
+         * IMAGE
+         */
+        if (type.indexOf("image/") === 0) {
+
+            const img =
+                document.createElement("img");
+
+            img.src =
+                item.previewUrl ||
+                item.url ||
+                "";
+
+            img.alt = name;
+
+            img.loading = "lazy";
+
+            img.className =
+                "service-gallery-image";
+
+            gallery.appendChild(img);
+
+            return;
+        }
+
+        /*
+         * VIDEO
+         */
+        if (type.indexOf("video/") === 0) {
+
+            const video =
+                document.createElement("video");
+
+            video.controls = true;
+            video.playsInline = true;
+            video.preload = "metadata";
+
+            /*
+             * Drive preview is more reliable for
+             * marketplace viewing than putting the
+             * Drive page itself inside <video>.
+             */
+            if (item.embedUrl) {
+
+                const iframe =
+                    document.createElement("iframe");
+
+                iframe.src =
+                    item.embedUrl;
+
+                iframe.loading = "lazy";
+
+                iframe.allow =
+                    "autoplay; fullscreen";
+
+                iframe.className =
+                    "service-gallery-video";
+
+                gallery.appendChild(iframe);
+
+            } else if (item.url) {
+
+                video.src = item.url;
+
+                gallery.appendChild(video);
+            }
+
+            return;
+        }
+
+        /*
+         * PDF
+         */
+        if (
+            type === "application/pdf" ||
+            name.toLowerCase().endsWith(".pdf")
+        ) {
+
+            const iframe =
+                document.createElement("iframe");
+
+            iframe.src =
+                item.embedUrl ||
+                item.url ||
+                "";
+
+            iframe.loading = "lazy";
+
+            iframe.className =
+                "service-gallery-document";
+
+            gallery.appendChild(iframe);
+
+            return;
+        }
+
+        /*
+         * OTHER FILES
+         */
+        const link =
+            document.createElement("a");
+
+        link.href =
+            item.url || "#";
+
+        link.target = "_blank";
+        link.rel = "noopener";
+
+        link.textContent =
+            "Open " + name;
+
+        link.className =
+            "service-media-file";
+
+        gallery.appendChild(link);
+    });
+}
+/*
+   Normalises media entries. Supports direct URLs (legacy backend etc.) and
+   Google Drive file IDs (turned into thumbnail / preview URLs).
+*/
+function normalizeServiceHubMedia(list) {
+    if (!Array.isArray(list)) return [];
+
+    return list.map(function (item) {
+        if (typeof item === "string") {
+            item = { url: item };
+        }
+        if (!item || typeof item !== "object") return null;
+
+        const out = Object.assign({}, item);
+        const driveId = out.driveId || out.fileId || out.id || "";
+
+        if (driveId && !out.url) {
+            out.url = "https://drive.google.com/uc?export=view&id=" + encodeURIComponent(driveId);
+        }
+        if (driveId && !out.previewUrl) {
+            out.previewUrl = "https://drive.google.com/thumbnail?id=" + encodeURIComponent(driveId) + "&sz=w1000";
+        }
+        if (driveId && String(out.type || "").indexOf("video/") === 0 && !out.embedUrl) {
+            out.embedUrl = "https://drive.google.com/file/d/" + encodeURIComponent(driveId) + "/preview";
+        }
+        return (out.url || out.previewUrl || out.embedUrl) ? out : null;
+    }).filter(Boolean);
+}
+
+/*
+   Turns a Nigerian/international number into a wa.me link.
+*/
+function buildServiceHubWhatsAppLink(number) {
+    let digits = String(number || "").replace(/[^0-9]/g, "");
+    if (!digits) return "";
+    if (digits.indexOf("00") === 0) digits = digits.slice(2);
+    else if (digits.charAt(0) === "0") digits = "234" + digits.slice(1);
+    return "https://wa.me/" + digits;
+}
+
+/*
+   Maps the Apps Script listing object into the existing card renderer.
+   Supports both the Apps Script header names and the older frontend names.
+*/
+function mapAppsScriptListingToCard(listing) {
+    const get = function () {
+        for (let i = 0; i < arguments.length; i++) {
+            const key = arguments[i];
+            if (
+                listing[key] !== undefined &&
+                listing[key] !== null &&
+                listing[key] !== ""
+            ) {
+                return listing[key];
+            }
+        }
+        return "";
+    };
+
+    let pricing = get("pricing", "Pricing");
+    let customPricing = get("customPricing", "Custom Pricing", "custom_pricing");
+    let media = get("media", "Media");
+
+    function parseMaybeJSON(value, fallback) {
+        if (Array.isArray(value)) return value;
+        if (typeof value !== "string" || !value.trim()) return fallback;
+        try {
+            const parsed = JSON.parse(value);
+            return parsed;
+        } catch (_) {
+            return fallback;
+        }
+    }
+
+    pricing = parseMaybeJSON(pricing, []);
+    customPricing = parseMaybeJSON(customPricing, []);
+    media = normalizeServiceHubMedia(parseMaybeJSON(media, []));
+
+    const id = get(
+        "listingId",
+        "Listing ID",
+        "id",
+        "ID"
+    );
+
+    const service = get(
+        "serviceName",
+        "Service Name",
+        "service",
+        "Service"
+    ) || "Service";
+
+    const provider = get(
+        "providerName",
+        "Provider Name",
+        "name",
+        "provider",
+        "Provider ID"
+    ) || "Provider";
+
+    const price = get(
+        "price",
+        "Price",
+        "startingPrice",
+        "Starting Price",
+        "starting_price"
+    );
+
+    return {
+        id: String(id || ""),
+        title: service,
+        provider: provider,
+        company: get("company", "Company", "Company Name"),
+        contact: get("contact", "Contact", "Contact Information"),
+        phone: get("phone", "Phone", "Phone Number"),
+        whatsapp: get("whatsapp", "WhatsApp", "Whatsapp") || get("phone", "Phone", "Phone Number"),
+        portfolio: get("portfolio", "Portfolio"),
+        about: get("about", "About"),
+        category: service,
+        rating: get("rating", "Rating") || "New",
+        reviews: get("reviews", "Reviews") || 0,
+        price: price !== ""
+            ? ("₦" + (isNaN(Number(price)) ? price : Number(price).toLocaleString("en-NG")))
+            : "Contact provider",
+        pricing: pricing,
+        customPricing: customPricing,
+        media: media
+    };
 }
 
 
@@ -383,18 +943,6 @@ async function reconcileServiceHubCards() {
 ================================= */
 
 document.addEventListener("DOMContentLoaded", function () {
-
-
-    /* ================================
-       RECONCILE ON LOAD, THEN POLL
-    ================================= */
-
-    reconcileServiceHubCards();
-
-    setInterval(
-        reconcileServiceHubCards,
-        2 * 60 * 1000 // every 2 minutes
-    );
 
 
 
@@ -1559,97 +2107,13 @@ categorySearchLinks.forEach(function (card) {
    SERVICE DATA
 ======================================== */
 
-const services = {
+/* Cards now come only from approved listings in the Google Sheet
+   (via Apps Script). No fixed/sample services remain. */
+const services = {};
 
-    "video-editing": {
-
-        image: "VIDEO",
-
-        category: "Video & Motion",
-
-        title: "Professional Video Editing",
-
-        provider: "Solaceproeditz",
-
-        rating: "4.9",
-
-        reviews: "12 reviews",
-
-        description:
-            "Professional video editing for businesses, creators and digital projects. Get clean, engaging visuals designed to communicate your message clearly.",
-
-        price: "₦5,000",
-
-        included: [
-            "Professional video editing",
-            "Motion graphics",
-            "Text and visual effects",
-            "Social media-ready output"
-        ]
-
-    },
-
-
-    "graphic-design": {
-
-        image: "DESIGN",
-
-        category: "Graphic Design",
-
-        title: "Brand Identity Design",
-
-        provider: "Creative Studio",
-
-        rating: "4.8",
-
-        reviews: "10 reviews",
-
-        description:
-            "Creative graphic design for brands, businesses and digital projects. Get polished visuals that communicate your message clearly.",
-
-        price: "₦10,000",
-
-        included: [
-            "Brand identity design",
-            "Social media graphics",
-            "Marketing designs",
-            "Promotional visuals"
-        ]
-
-    },
-
-
-    "web-development": {
-
-        image: "WEB",
-
-        category: "Web Development",
-
-        title: "Website Development",
-
-        provider: "Digital Works",
-
-        rating: "5.0",
-
-        reviews: "8 reviews",
-
-        description:
-            "Modern, responsive websites for businesses and digital projects, designed to work smoothly across phones, tablets and computers.",
-
-        price: "₦25,000",
-
-        included: [
-            "Responsive website",
-            "Frontend development",
-            "Mobile optimization",
-            "Modern user interface"
-        ]
-
-    }
-
-};
 /* ========================================
    SERVICE PAGE
+   Built from an approved Google Sheets listing
 ======================================== */
 
 const params =
@@ -1660,111 +2124,281 @@ const params =
 const serviceId =
     params.get("service");
 
-const backendCards = JSON.parse(
-    localStorage.getItem("serviceHubBackendCards") || "{}"
-);
+let selectedService = null;
 
-const selectedService =
-    services[serviceId] || backendCards[serviceId];
+function getCachedServiceHubCard(id) {
+    try {
+        const cards = JSON.parse(
+            localStorage.getItem("serviceHubBackendCards") || "{}"
+        );
+        return cards[id] || null;
+    } catch (_) {
+        return null;
+    }
+}
 
+function renderServicePage(card) {
 
-if (selectedService) {
+    selectedService = card;
 
-    const setText =
-        function (id, value) {
+    const setText = function (id, value) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    };
 
-            const element =
-                document.getElementById(id);
-
-            if (element) {
-
-                element.textContent =
-                    value;
-
-            }
-
-        };
-
-
-    setText(
-        "serviceImage",
-        selectedService.image
-    );
-
-    setText(
-        "serviceCategory",
-        selectedService.category
-    );
-
-    setText(
-        "serviceTitle",
-        selectedService.title
-    );
-
-    setText(
-        "serviceProvider",
-        selectedService.provider
-    );
-
-    setText(
-        "serviceRating",
-        selectedService.rating
-    );
-
-    setText(
-        "serviceReviews",
-        selectedService.reviews
-    );
-
+    setText("serviceCategory", card.category || "SERVICE");
+    setText("serviceTitle", card.title || "Service");
+    setText("serviceProvider", card.provider || "Provider");
+    setText("serviceRating", card.rating || "New");
+    setText("serviceReviews", card.reviews || "0 reviews");
     setText(
         "serviceDescription",
-        selectedService.description ||
-        selectedService.about ||
+        card.description ||
+        card.about ||
         "Contact the provider to learn more about this service."
     );
+    setText("servicePrice", card.price || "Contact provider");
 
-    setText(
-        "servicePrice",
-        selectedService.price
-    );
+    /* Big image = first uploaded image (image only, no video/docs here) */
+    const media = Array.isArray(card.media) ? card.media : [];
+    const faceImage = media.find(function (m) {
+        return String(m && (m.type || m.mimeType || "")).toLowerCase().indexOf("image/") === 0 &&
+            (m.previewUrl || m.url);
+    });
+    const heroImg = document.getElementById("serviceImage");
+    if (heroImg && heroImg.tagName === "IMG") {
+        if (faceImage) {
+            heroImg.src = faceImage.previewUrl || faceImage.url;
+            heroImg.alt = card.title || "";
+            heroImg.hidden = false;
+        } else {
+            heroImg.hidden = true;
+        }
+    }
 
-
-    const includedList =
-        document.getElementById(
-            "serviceIncluded"
-        );
-
-
+    /* What's included: pricing tiers if the provider set them */
+    const includedList = document.getElementById("serviceIncluded");
     if (includedList) {
-
         includedList.innerHTML = "";
 
-
-        (selectedService.included || [
-            "Contact the provider for service details",
-            "Portfolio available from the provider",
-            "Pricing can be discussed with the provider"
-        ]).forEach(
-            function (item) {
-
-                const li =
-                    document.createElement(
-                        "li"
-                    );
-
-
-                li.textContent =
-                    item;
-
-
-                includedList.appendChild(
-                    li
-                );
-
+        let items = [];
+        (Array.isArray(card.customPricing) ? card.customPricing : []).forEach(function (row) {
+            if (row && row.category) {
+                items.push(row.category + (row.price ? " — ₦" + row.price : ""));
             }
+        });
+        if (!items.length && Array.isArray(card.included) && card.included.length) {
+            items = card.included;
+        }
+        if (!items.length) {
+            items = [
+                "Contact the provider for service details",
+                "Portfolio available from the provider",
+                "Pricing can be discussed with the provider"
+            ];
+        }
+        items.forEach(function (text) {
+            const li = document.createElement("li");
+            li.textContent = text;
+            includedList.appendChild(li);
+        });
+    }
+
+    renderServiceProviderDetails(card);
+    renderServiceMedia(card);
+}
+
+function renderServiceProviderDetails(card) {
+    const box = document.getElementById("serviceProviderDetails");
+    const list = document.getElementById("serviceProviderDetailsList");
+    if (!box || !list) return;
+
+    list.innerHTML = "";
+
+    function addRow(label, valueNode) {
+        const row = document.createElement("div");
+        row.className = "provider-detail-row";
+        const l = document.createElement("span");
+        l.className = "provider-detail-label";
+        l.textContent = label;
+        const v = document.createElement("div");
+        v.className = "provider-detail-value";
+        v.appendChild(valueNode);
+        row.appendChild(l);
+        row.appendChild(v);
+        list.appendChild(row);
+    }
+
+    function text(value) {
+        return document.createTextNode(value);
+    }
+
+    function link(href, label, external) {
+        const a = document.createElement("a");
+        a.href = href;
+        a.textContent = label;
+        if (external) {
+            a.target = "_blank";
+            a.rel = "noopener";
+        }
+        return a;
+    }
+
+    let count = 0;
+
+    if (card.provider) { addRow("Provider", text(card.provider)); count++; }
+    if (card.company) { addRow("Company", text(card.company)); count++; }
+
+    if (card.phone) {
+        addRow("Phone", link("tel:" + String(card.phone).replace(/[^0-9+]/g, ""), card.phone, false));
+        count++;
+    }
+
+    const wa = buildServiceHubWhatsAppLink(card.whatsapp || card.phone);
+    if (wa) {
+        const a = link(wa, "Chat on WhatsApp", true);
+        a.className = "provider-whatsapp-btn";
+        addRow("WhatsApp", a);
+        count++;
+    }
+
+    if (card.contact) { addRow("Contact", text(card.contact)); count++; }
+
+    if (card.portfolio) {
+        const url = /^https?:\/\//i.test(card.portfolio) ? card.portfolio : "https://" + card.portfolio;
+        addRow("Portfolio", link(url, card.portfolio, true));
+        count++;
+    }
+
+    box.hidden = count === 0;
+}
+
+async function loadServicePage() {
+
+    if (!document.getElementById("serviceTitle") || !serviceId) return;
+
+    const cached = getCachedServiceHubCard(serviceId);
+
+    if (cached) {
+        renderServicePage(cached);
+    } else if (getAppsScriptUrl()) {
+        showListingUploadOverlay("Loading service, please wait");
+    }
+
+    if (!getAppsScriptUrl()) return;
+
+    try {
+        const data = await callServiceHubAppsScript("getListings", {});
+        const listings = Array.isArray(data.listings) ? data.listings : [];
+
+        const match = listings.find(function (listing) {
+            const card = mapAppsScriptListingToCard(listing);
+            return card.id === String(serviceId) &&
+                String(listing.status || listing.Status || "").toLowerCase() === "approved";
+        });
+
+        if (match) {
+            storeServiceHubCard(mapAppsScriptListingToCard(match));
+            renderServicePage(getCachedServiceHubCard(serviceId));
+        } else if (!cached) {
+            const title = document.getElementById("serviceTitle");
+            if (title) title.textContent = "This service is not available";
+        }
+    } catch (error) {
+        console.warn("Could not load service from Apps Script:", error);
+        if (!cached) {
+            const title = document.getElementById("serviceTitle");
+            if (title) title.textContent = "Could not load this service";
+        }
+    } finally {
+        hideListingUploadOverlay();
+    }
+}
+
+loadServicePage();
+
+
+/* ========================================
+   LISTING UPLOAD OVERLAY
+   Floating indeterminate wait state while
+   media uploads and Apps Script responds.
+======================================== */
+
+function getListingUploadOverlay() {
+
+    let overlay =
+        document.getElementById(
+            "listingUploadOverlay"
         );
 
+    if (overlay) {
+        return overlay;
     }
+
+    overlay = document.createElement("div");
+    overlay.id = "listingUploadOverlay";
+    overlay.className = "listing-upload-overlay";
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.setAttribute("role", "status");
+    overlay.setAttribute("aria-live", "polite");
+    overlay.setAttribute("aria-busy", "false");
+
+    overlay.innerHTML =
+        '<div class="listing-upload-pill">' +
+            '<span class="payment-spinner" aria-hidden="true"></span>' +
+            '<span class="listing-upload-text">' +
+                "Uploading media, please wait for a moment" +
+            "</span>" +
+        "</div>";
+
+    document.body.appendChild(overlay);
+
+    return overlay;
+
+}
+
+function showListingUploadOverlay(message) {
+
+    const overlay = getListingUploadOverlay();
+    const textEl =
+        overlay.querySelector(
+            ".listing-upload-text"
+        );
+
+    if (textEl) {
+        textEl.textContent =
+            message ||
+            "Uploading media, please wait for a moment";
+    }
+
+    overlay.hidden = false;
+    overlay.classList.add("is-visible");
+    overlay.setAttribute("aria-hidden", "false");
+    overlay.setAttribute("aria-busy", "true");
+    document.body.classList.add("listing-upload-locked");
+
+}
+
+function hideListingUploadOverlay() {
+
+    const overlay =
+        document.getElementById(
+            "listingUploadOverlay"
+        );
+
+    if (!overlay) {
+        document.body.classList.remove(
+            "listing-upload-locked"
+        );
+        return;
+    }
+
+    overlay.classList.remove("is-visible");
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.setAttribute("aria-busy", "false");
+    document.body.classList.remove("listing-upload-locked");
 
 }
 
@@ -1781,11 +2415,17 @@ const listingForm =
 
 if (listingForm) {
 
+    let listingSubmitInFlight = false;
+
     listingForm.addEventListener(
         "submit",
         async function (event) {
 
             event.preventDefault();
+
+            if (listingSubmitInFlight) {
+                return;
+            }
 
 
             /* ---------- REQUIRED FIELDS ---------- */
@@ -2147,321 +2787,242 @@ if (listingForm) {
                 );
 /* ---------- MEDIA ---------- */
 
-            const mediaInput =
-                document.getElementById(
-                    "media"
+            const mediaInput = document.getElementById("media");
+
+            async function fileToBase64(file) {
+                return await new Promise(function (resolve, reject) {
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        const result = String(reader.result || "");
+                        const comma = result.indexOf(",");
+                        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+                    };
+                    reader.onerror = function () {
+                        reject(new Error("Could not read " + file.name + "."));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            /*
+             * The supplied backend requires the listing to exist first:
+             * uploadListingMedia(data) calls appendMediaToListing().
+             * Therefore media is uploaded only after createListing succeeds.
+             *
+             * The POST response is intentionally not read because the Apps
+             * Script Web App can redirect cross-origin. After the POST we use
+             * the backend's existing getListing GET endpoint to confirm that
+             * the media row was stored and to obtain the Drive URLs returned
+             * by uploadListingMedia().
+             */
+            async function uploadServiceHubMedia(file, listingId) {
+                const appsScriptUrl = getAppsScriptUrl();
+                if (!appsScriptUrl) throw new Error("Apps Script is not configured.");
+                if (!listingId) throw new Error("Missing Listing ID for media upload.");
+                if (!file || !file.size) throw new Error("The selected file is empty.");
+
+                const MAX_MEDIA_BYTES = 30 * 1024 * 1024;
+                if (file.size > MAX_MEDIA_BYTES) {
+                    throw new Error(file.name + " is larger than the 30 MB upload limit.");
+                }
+
+                const before = await fetchAppsScriptListing(listingId);
+                const beforeMedia = before.ok
+                    ? parseAppsScriptMediaValue(
+                        before.listing.Media !== undefined ? before.listing.Media : before.listing.media
+                    )
+                    : [];
+                const beforeCount = beforeMedia.length;
+
+                const base64 = await fileToBase64(file);
+
+                await postToExistingAppsScript({
+                    action: "uploadMedia",
+                    listingId: String(listingId),
+                    fileName: file.name,
+                    mimeType: file.type || "application/octet-stream",
+                    base64: base64
+                });
+
+                const confirmed = await waitForAppsScriptListing(
+                    listingId,
+                    function (listing) {
+                        const media = parseAppsScriptMediaValue(
+                            listing.Media !== undefined ? listing.Media : listing.media
+                        );
+                        return media.length > beforeCount && media.some(function (item) {
+                            return String(item && item.name || "") === String(file.name);
+                        });
+                    },
+                    120000
                 );
 
+                const media = parseAppsScriptMediaValue(
+                    confirmed.listing.Media !== undefined
+                        ? confirmed.listing.Media
+                        : confirmed.listing.media
+                );
 
-            const mediaFiles = [];
+                const matching = media.filter(function (item) {
+                    return String(item && item.name || "") === String(file.name);
+                });
+                const uploaded = matching.length ? matching[matching.length - 1] : null;
 
-
-            /*
-               Uploads an actual file to Supabase Storage
-               and returns the permanent public URL.
-            */
-            async function uploadServiceHubMedia(file) {
-
-                const supabase =
-                    getServiceHubSupabase();
-
-
-                if (!supabase) {
-
-                    throw new Error(
-                        "Supabase is not configured."
-                    );
-
+                if (!uploaded || !uploaded.url) {
+                    throw new Error("Apps Script stored the media but did not return its Drive URL.");
                 }
-
-
-                /*
-                   Give every upload its own unique folder.
-                   This prevents two providers uploading
-                   files with the same filename from
-                   overwriting each other.
-                */
-                const uploadFolder =
-                    crypto.randomUUID();
-
-
-                /*
-                   Make the filename Storage-safe.
-                */
-                const safeName =
-                    file.name.replace(
-                        /[^a-zA-Z0-9._-]/g,
-                        "_"
-                    );
-
-
-                const filePath =
-                    uploadFolder +
-                    "/" +
-                    Date.now() +
-                    "_" +
-                    safeName;
-
-
-                /*
-                   Upload the ACTUAL FILE.
-                */
-                const uploadResult =
-                    await supabase
-                        .storage
-                        .from("service-media")
-                        .upload(
-                            filePath,
-                            file,
-                            {
-                                cacheControl: "3600",
-                                upsert: false,
-                                contentType: file.type
-                            }
-                        );
-
-
-                if (uploadResult.error) {
-
-                    throw uploadResult.error;
-
-                }
-
-
-                /*
-                   Get the public URL of the uploaded file.
-                */
-                const publicUrlResult =
-                    supabase
-                        .storage
-                        .from("service-media")
-                        .getPublicUrl(
-                            uploadResult.data.path
-                        );
-
 
                 return {
-
-                    name:
-                        file.name,
-
-                    type:
-                        file.type,
-
-                    size:
-                        file.size,
-
-                    path:
-                        uploadResult.data.path,
-
-                    url:
-                        publicUrlResult
-                            .data
-                            .publicUrl
-
+                    name: uploaded.name || file.name,
+                    type: uploaded.type || file.type || "application/octet-stream",
+                    size: Number(uploaded.size || file.size),
+                    path: uploaded.id || "",
+                    driveId: uploaded.id || "",
+                    url: uploaded.url,
+                    previewUrl: uploaded.previewUrl || "",
+                    embedUrl: uploaded.embedUrl || "",
+                    isImage: !!uploaded.isImage,
+                    isVideo: !!uploaded.isVideo,
+                    isPdf: !!uploaded.isPdf
                 };
-
             }
 
-
-            /*
-               Upload all selected media files.
-            */
-            async function uploadAllServiceHubMedia() {
-
+            /* Upload sequentially to preserve the existing listing workflow. */
+            async function uploadAllServiceHubMedia(listingId) {
                 const uploadedMedia = [];
-
-
-                if (
-                    !mediaInput ||
-                    !mediaInput.files ||
-                    mediaInput.files.length === 0
-                ) {
-
+                if (!mediaInput || !mediaInput.files || mediaInput.files.length === 0) {
                     return uploadedMedia;
-
                 }
 
-
-                for (
-                    const file of Array.from(
-                        mediaInput.files
-                    )
-                ) {
-
+                for (const file of Array.from(mediaInput.files)) {
                     try {
-
-                        const uploadedFile =
-                            await uploadServiceHubMedia(
-                                file
-                            );
-
-
-                        uploadedMedia.push(
-                            uploadedFile
-                        );
-
-
+                        uploadedMedia.push(await uploadServiceHubMedia(file, listingId));
                     } catch (error) {
-
-                        console.error(
-                            "Media upload failed:",
-                            error
-                        );
-
-
+                        console.error("Media upload failed:", error);
                         throw new Error(
-                            "Failed to upload " +
-                            file.name +
-                            ". " +
-                            (
-                                error.message ||
-                                "Unknown upload error."
-                            )
+                            "Failed to upload " + file.name + ". " +
+                            (error.message || "Unknown upload error.")
                         );
-
                     }
-
                 }
-
-
                 return uploadedMedia;
-
             }
 
+            /* ---------- SAVE LISTING IN APPS SCRIPT FIRST ---------- */
 
-            /* ---------- UPLOAD MEDIA TO SUPABASE ---------- */
+            const submitButton =
+                listingForm.querySelector(
+                    ".listing-submit"
+                );
 
             let uploadedMediaFiles = [];
 
+            listingSubmitInFlight = true;
+
+            showListingUploadOverlay(
+                "Saving your listing, please wait for a moment"
+            );
+
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            const listingData = {
+                name: name,
+                company: company,
+                contact: contact,
+                phone: phone,
+                service: service,
+                portfolio: portfolio,
+                about: about,
+                media: [],
+                startingPrice: startingPrice,
+                pricing: pricing,
+                customPricing: customPricing,
+                savedAt: new Date().toISOString(),
+                listingId: ""
+            };
+
             try {
+                /* Ask Apps Script for the next sequential Listing ID before creation. */
+                listingData.listingId = await generateServiceHubListingId();
 
-                uploadedMediaFiles =
-                    await uploadAllServiceHubMedia();
+                /* Apps Script remains authoritative when the row is created. */
+                const result = await createAppsScriptListing(listingData);
 
-            } catch (error) {
+                if (!result.ok) {
+                    throw new Error(
+                        result.offline
+                            ? "ServiceHub Apps Script is not configured."
+                            : ((result.error && result.error.message) || "Your listing could not be saved.")
+                    );
+                }
 
-                alert(
-                    error.message ||
-                    "There was a problem uploading your media."
+                const listingId = result.id;
+                const paymentCode = result.code;
+
+                listingData.listingId = listingId;
+                listingData.paymentCode = paymentCode;
+
+                localStorage.setItem(
+                    "serviceHubListing",
+                    JSON.stringify(listingData, null, 2)
                 );
 
+                localStorage.setItem(
+                    "serviceHubListingSaved",
+                    "true"
+                );
+
+                localStorage.setItem(
+                    "serviceHubListingId",
+                    listingId
+                );
+
+                localStorage.setItem(
+                    "serviceHubPaymentCode",
+                    paymentCode
+                );
+
+                /* ---------- UPLOAD MEDIA INTO THE EXISTING LISTING ---------- */
+                if (mediaInput && mediaInput.files && mediaInput.files.length) {
+                    showListingUploadOverlay(
+                        "Uploading media, please wait for a moment"
+                    );
+
+                    uploadedMediaFiles =
+                        await uploadAllServiceHubMedia(listingId);
+
+                    listingData.media = uploadedMediaFiles;
+
+                    localStorage.setItem(
+                        "serviceHubListing",
+                        JSON.stringify(listingData, null, 2)
+                    );
+                }
+
+                /* Keep the existing navigation/UX. */
+                window.location.href = "payment.html";
+
+            } catch (error) {
+                listingSubmitInFlight = false;
+                hideListingUploadOverlay();
+
+                if (submitButton) {
+                    submitButton.disabled = false;
+                }
+
                 console.error(
-                    "ServiceHub media upload error:",
+                    "ServiceHub Apps Script listing/upload error:",
                     error
                 );
 
-                return;
-
-            }
-
-
-            /* ---------- LISTING DATA ---------- */
-
-            const listingData = {
-
-                name:
-                    name,
-
-                company:
-                    company,
-
-                contact:
-                    contact,
-
-                phone:
-                    phone,
-
-                service:
-                    service,
-
-                portfolio:
-                    portfolio,
-
-                about:
-                    about,
-
-                media:
-                    uploadedMediaFiles,
-
-                startingPrice:
-                    startingPrice,
-
-                pricing:
-                    pricing,
-
-                customPricing:
-                    customPricing,
-
-                savedAt:
-                    new Date().toISOString()
-
-            };
-
-
-            /* ---------- SAVE LISTING ---------- */
-
-            const listingText =
-                JSON.stringify(
-                    listingData,
-                    null,
-                    2
+                alert(
+                    error && error.message
+                        ? error.message
+                        : "Your listing could not be saved. Please try again."
                 );
-
-
-            localStorage.setItem(
-                "serviceHubListing",
-                listingText
-            );
-
-
-            localStorage.setItem(
-                "serviceHubListingSaved",
-                "true"
-            );
-
-            /* ---------- SEND LISTING TO LEGACY BACKEND (optional) ---------- */
-            sendToServiceHubBackend(
-                "listings",
-                listingData
-            ).then(function (result) {
-                if (!result.ok && !result.offline) {
-                    console.error("ServiceHub listing backend error:", result);
-                }
-            });
-
-
-            /* ---------- SEND LISTING TO SUPABASE ---------- */
-            /* Creates the listing as "pending" and generates the
-               6-character payment code shown on the Naira payment page. */
-
-            createSupabaseListing(listingData).then(function (result) {
-
-                if (result.ok) {
-
-                    localStorage.setItem(
-                        "serviceHubListingId",
-                        result.id
-                    );
-
-                    localStorage.setItem(
-                        "serviceHubPaymentCode",
-                        result.code
-                    );
-
-                } else if (!result.offline) {
-
-                    console.error("Supabase listing error:", result);
-
-                }
-
-                /* ---------- GO TO PAYMENT ---------- */
-
-                window.location.href =
-                    "payment.html";
-
-            });
-
+            }
         }
     );
 
@@ -2929,8 +3490,8 @@ if (featuredServices && typeof services !== "undefined") {
     /* Show a maximum of 15 */
     const selectedServices = shuffledServices.slice(0, 15);
 
-    /* Clear the container */
-    featuredServices.innerHTML = "";
+    /* Clear the container (only when there are fixed services to show) */
+    if (selectedServices.length) featuredServices.innerHTML = "";
 
     /* Create the cards */
     selectedServices.forEach(([serviceId, service]) => {
@@ -3042,58 +3603,39 @@ if (featuredServices && typeof services !== "undefined") {
 
 
 /* ========================================
-   SUPABASE REALTIME → EXPLORE PAGE CARDS
-   Watches the "listings" table for rows that
-   become "approved" and turns each one into a
-   card on the homepage / Explore grid.
+   APPS SCRIPT → EXPLORE PAGE CARDS
+   Polls the source of truth continuously.
 ======================================== */
 
-(function connectServiceHubSupabaseRealtime() {
+(function connectServiceHubAppsScriptListings() {
 
-    const supabaseClient = getServiceHubSupabase();
+    if (!getAppsScriptUrl()) return;
 
-    if (!supabaseClient) return;
-
-    // Load every already-approved listing once, on page load.
-    supabaseClient
-        .from("listings")
-        .select("*")
-        .eq("status", "approved")
-        .order("created_at", { ascending: false })
-        .then(function (result) {
-            if (result.error) {
-                console.warn("Supabase approved-listings load failed:", result.error);
-                return;
-            }
-            (result.data || []).forEach(function (row) {
-                storeServiceHubCard(mapSupabaseListingToCard(row));
-            });
+    // Paint cached approved cards immediately, then sync with the sheet.
+    try {
+        const cachedCards = JSON.parse(
+            localStorage.getItem("serviceHubBackendCards") || "{}"
+        );
+        Object.keys(cachedCards).forEach(function (id) {
+            addServiceHubCardToPage(cachedCards[id], id);
         });
+    } catch (_) {}
 
-    // Listen for listings flipping to "approved" in real time.
-    supabaseClient
-        .channel("servicehub-approved-listings")
-        .on(
-            "postgres_changes",
-            {
-                event: "*",
-                schema: "public",
-                table: "listings",
-                filter: "status=eq.approved"
-            },
-            function (payload) {
-                if (payload.new) {
-                    storeServiceHubCard(mapSupabaseListingToCard(payload.new));
-                }
-            }
-        )
-        .subscribe();
+    // Initial load.
+    reconcileServiceHubCards();
+
+    // Keep the marketplace synchronized with the Listings sheet.
+    // The backend decides what is approved; the browser only renders it.
+    setInterval(function () {
+        reconcileServiceHubCards();
+    }, 15000);
 
 })();
 
 
 /* ========================================
    NAIRA PAYMENT PAGE
+   Apps Script approval polling
 ======================================== */
 
 (function serviceHubNairaPaymentPage() {
@@ -3118,6 +3660,9 @@ if (featuredServices && typeof services !== "undefined") {
 
     const listingId = localStorage.getItem("serviceHubListingId");
     let currentCode = localStorage.getItem("serviceHubPaymentCode") || "";
+    let pollingTimer = null;
+    let stopped = false;
+    let checking = false;
 
     function renderCode() {
         codeEl.textContent = currentCode
@@ -3127,31 +3672,117 @@ if (featuredServices && typeof services !== "undefined") {
 
     renderCode();
 
+    function setWaitingStatus(message) {
+        if (statusPill) {
+            statusPill.classList.remove("payment-status-pill-rejected");
+            statusPill.textContent = message || "Waiting for payment confirmation…";
+        }
+    }
+
     function showApproved() {
+        if (stopped) return;
+
+        stopped = true;
+
+        if (pollingTimer) {
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+        }
+
         if (waitingStep) waitingStep.style.display = "none";
         if (approvedStep) approvedStep.style.display = "block";
+
+        if (statusPill) {
+            statusPill.textContent = "Payment confirmed";
+        }
+
+        window.serviceHubDebug && window.serviceHubDebug.addLog(
+            "OK",
+            "Listing approved by Apps Script",
+            {
+                listingId: listingId,
+                paymentCode: currentCode
+            }
+        );
     }
 
     function showRejected() {
         if (statusPill) {
             statusPill.classList.add("payment-status-pill-rejected");
-            statusPill.innerHTML = "Payment could not be confirmed. Please contact support.";
+            statusPill.textContent =
+                "Payment could not be confirmed. Please contact support.";
         }
     }
 
-    // Fetch the code from Supabase if it wasn't already saved locally
-    // (e.g. this page was opened fresh / on another device).
-    if (!currentCode && listingId) {
-        fetchSupabaseListingCode(listingId).then(function (result) {
-            if (result.ok && result.code) {
-                currentCode = result.code;
-                localStorage.setItem("serviceHubPaymentCode", currentCode);
-                renderCode();
+    async function recoverListingCode() {
+        if (!listingId || currentCode) return true;
+
+        const result = await fetchAppsScriptListing(listingId);
+
+        if (result.ok && result.code) {
+            currentCode = String(result.code);
+            localStorage.setItem(
+                "serviceHubPaymentCode",
+                currentCode
+            );
+            renderCode();
+            return true;
+        }
+
+        return false;
+    }
+
+    async function checkPaymentApproval() {
+        if (stopped || checking || !listingId) return;
+
+        checking = true;
+
+        try {
+            if (!currentCode) {
+                await recoverListingCode();
             }
-            if (result.ok && result.status === "approved") {
+
+            if (!currentCode) {
+                setWaitingStatus("Waiting for payment code…");
+                return;
+            }
+
+            setWaitingStatus("Checking payment confirmation…");
+
+            const result = await checkAppsScriptPayment(
+                listingId,
+                currentCode
+            );
+
+            if (result.status === "approved") {
                 showApproved();
+                return;
             }
-        });
+
+            if (result.status === "not_found") {
+                setWaitingStatus("Listing not found yet. Checking again…");
+                return;
+            }
+
+            if (result.status === "pending") {
+                setWaitingStatus("Payment received? Waiting for confirmation…");
+                return;
+            }
+
+            setWaitingStatus("Waiting for payment confirmation…");
+
+        } catch (error) {
+            console.warn("Apps Script payment polling error:", error);
+            setWaitingStatus("Connection check failed. Retrying…");
+
+            window.serviceHubDebug && window.serviceHubDebug.addLog(
+                "ERROR",
+                "Payment confirmation poll failed",
+                error
+            );
+        } finally {
+            checking = false;
+        }
     }
 
     if (copyBtn) {
@@ -3170,55 +3801,59 @@ if (featuredServices && typeof services !== "undefined") {
         });
     }
 
-    if (!listingId) return;
+    if (!listingId) {
+        setWaitingStatus("No listing ID was found. Please return and create the listing again.");
+        return;
+    }
 
-    const supabaseClient = getServiceHubSupabase();
+    /*
+       Immediately check, then continue checking every 5 seconds.
+       The browser never writes approval and never talks to Payments.
+       Apps Script only returns the state of this exact listing/code pair.
+    */
+    /*
+       Floating loader while the unique 6-character code is retrieved
+       from Apps Script. It disappears as soon as the code is on screen.
+    */
+    async function waitForPaymentCode() {
 
-    if (!supabaseClient) return;
+        if (currentCode) return true;
 
-    // Real-time: the moment the backend marks this listing "approved",
-    // this page updates without a refresh.
-    supabaseClient
-        .channel("listing-status-" + listingId)
-        .on(
-            "postgres_changes",
-            {
-                event: "UPDATE",
-                schema: "public",
-                table: "listings",
-                filter: "id=eq." + listingId
-            },
-            function (payload) {
-                if (!payload.new) return;
-                if (payload.new.status === "approved") showApproved();
-                if (payload.new.status === "rejected") showRejected();
+        showListingUploadOverlay(
+            "Generating your unique payment code, please wait…"
+        );
+
+        const startedAt = Date.now();
+
+        try {
+            while (!stopped && !currentCode && (Date.now() - startedAt) < 90000) {
+                await recoverListingCode();
+                if (currentCode) break;
+                await new Promise(function (resolve) { setTimeout(resolve, 2500); });
             }
-        )
-        .subscribe();
+        } finally {
+            hideListingUploadOverlay();
+        }
 
-    // Fallback poll in case the realtime socket doesn't connect
-    // (some networks block WebSockets).
-    const pollTimer = setInterval(function () {
-        supabaseClient
-            .from("listings")
-            .select("status")
-            .eq("id", listingId)
-            .single()
-            .then(function (result) {
-                if (result.error || !result.data) return;
-                if (result.data.status === "approved") {
-                    clearInterval(pollTimer);
-                    showApproved();
-                } else if (result.data.status === "rejected") {
-                    clearInterval(pollTimer);
-                    showRejected();
-                }
-            });
-    }, 8000);
+        return !!currentCode;
+    }
+
+    waitForPaymentCode().then(function (gotCode) {
+
+        if (!gotCode) {
+            setWaitingStatus("Could not get your payment code yet. Please refresh this page.");
+            return;
+        }
+
+        checkPaymentApproval();
+
+        pollingTimer = setInterval(
+            checkPaymentApproval,
+            5000
+        );
+    });
 
 })();
-
-
 /* ========================================
    LOGIN → BACKEND
 ======================================== */
@@ -3284,843 +3919,135 @@ if (loginForm) {
 }
 /* ========================================
    PROVIDER CHAT INBOX
+   The supplied Apps Script has no chat endpoints.
+   Keep the existing provider UI available without a
+   third-party database by reading the local chat store.
 ======================================== */
+(function initLocalProviderChat() {
+    const chatList = document.getElementById("chatList");
+    const chatWindow = document.getElementById("chatWindow");
+    if (!chatList || !chatWindow) return;
 
-const chatList =
-    document.getElementById("chatList");
+    const PROVIDER_NAME = "Service Provider";
+    const STORAGE_PREFIX = "serviceHubChat_";
 
-const chatWindow =
-    document.getElementById("chatWindow");
-
-let conversations = [];
-
-let activeConversationId = null;
-
-
-/* ========================================
-   LOAD EXISTING CONVERSATIONS
-======================================== */
-
-async function loadConversations() {
-
-    const { data, error } =
-        await supabaseClient
-            .from("conversations")
-            .select("*")
-            .eq("provider_id", PROVIDER_ID)
-            .order("updated_at", {
-                ascending: false
-            });
-
-
-    if (error) {
-
-        console.error(error);
-
-        setStatus(
-            "Database error: " + error.message,
-            false
-        );
-
-        return;
-    }
-
-
-    conversations = data || [];
-
-    renderChatList();
-}
-
-
-/* ========================================
-   RENDER CHAT LIST
-======================================== */
-
-function renderChatList() {
-
-    chatList.innerHTML = "";
-
-
-    const title =
-        document.createElement("div");
-
-    title.className =
-        "chat-list-title";
-
-    title.textContent = "Chats";
-
-    chatList.appendChild(title);
-
-
-    if (conversations.length === 0) {
-
-        const empty =
-            document.createElement("div");
-
-        empty.className = "empty";
-
-        empty.textContent =
-            "No conversations yet.";
-
-        chatList.appendChild(empty);
-
-        return;
-    }
-
-
-    conversations.forEach(
-        function (conversation) {
-
-            renderChatItem(conversation);
+    function readChats() {
+        const chats = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || key.indexOf(STORAGE_PREFIX) !== 0) continue;
+            try {
+                const value = JSON.parse(localStorage.getItem(key) || "null");
+                if (value && value.providerId) chats.push(value);
+            } catch (_) {}
         }
-    );
-}
-
-
-/* ========================================
-   RENDER CHAT ITEM
-======================================== */
-
-function renderChatItem(conversation) {
-
-    const item =
-        document.createElement("div");
-
-    item.className = "chat-item";
-
-    item.dataset.id =
-        conversation.id;
-
-
-    if (
-        conversation.id ===
-        activeConversationId
-    ) {
-
-        item.classList.add("active");
+        return chats;
     }
 
+    function render() {
+        chatList.innerHTML = "";
+        const title = document.createElement("div");
+        title.className = "chat-list-title";
+        title.textContent = "Chats";
+        chatList.appendChild(title);
 
-    const header =
-        document.createElement("div");
-
-    header.className =
-        "chat-item-header";
-
-
-    const name =
-        document.createElement("div");
-
-    name.className =
-        "chat-item-name";
-
-    name.textContent =
-        conversation.customer_name ||
-        "Customer";
-
-
-    const time =
-        document.createElement("div");
-
-    time.className =
-        "chat-item-time";
-
-    time.textContent =
-        formatTime(conversation.updated_at);
-
-
-    header.appendChild(name);
-    header.appendChild(time);
-
-
-    const service =
-        document.createElement("div");
-
-    service.className =
-        "chat-item-service";
-
-    service.textContent =
-        conversation.service_name || "";
-
-
-    const preview =
-        document.createElement("div");
-
-    preview.className =
-        "chat-item-preview";
-
-    preview.textContent =
-        "Open conversation";
-
-
-    item.appendChild(header);
-    item.appendChild(service);
-    item.appendChild(preview);
-
-
-    item.addEventListener(
-        "click",
-        function () {
-
-            openConversation(conversation);
+        const chats = readChats();
+        if (!chats.length) {
+            const empty = document.createElement("div");
+            empty.className = "empty";
+            empty.textContent = "No conversations yet.";
+            chatList.appendChild(empty);
+            return;
         }
-    );
 
-
-    chatList.appendChild(item);
-
-
-    /*
-       Load the latest message so the
-       inbox can show a preview.
-    */
-
-    loadLatestMessage(
-        conversation.id,
-        preview
-    );
-}
-
-
-/* ========================================
-   LOAD LATEST MESSAGE
-======================================== */
-
-async function loadLatestMessage(
-    conversationId,
-    previewElement
-) {
-
-    const { data, error } =
-        await supabaseClient
-            .from("messages")
-            .select("*")
-            .eq(
-                "conversation_id",
-                conversationId
-            )
-            .order("created_at", {
-                ascending: false
-            })
-            .limit(1);
-
-
-    if (error) {
-
-        console.error(error);
-
-        return;
-    }
-
-
-    if (
-        data &&
-        data.length > 0
-    ) {
-
-        previewElement.textContent =
-            data[0].message;
-    }
-}
-
-
-/* ========================================
-   OPEN CONVERSATION
-======================================== */
-
-async function openConversation(
-    conversation
-) {
-
-    activeConversationId =
-        conversation.id;
-
-
-    /*
-       Highlight the selected chat.
-    */
-
-    document
-        .querySelectorAll(".chat-item")
-        .forEach(function (item) {
-
-            item.classList.toggle(
-                "active",
-                item.dataset.id ===
-                String(conversation.id)
-            );
+        chats.sort(function (a, b) {
+            return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
         });
 
+        chats.forEach(function (conversation) {
+            const item = document.createElement("div");
+            item.className = "chat-item";
+            item.innerHTML =
+                '<div class="chat-item-header"><div class="chat-item-name"></div><div class="chat-item-time"></div></div>' +
+                '<div class="chat-item-service"></div><div class="chat-item-preview"></div>';
+            item.querySelector(".chat-item-name").textContent = conversation.customerName || "Customer";
+            item.querySelector(".chat-item-time").textContent = conversation.updatedAt ? new Date(conversation.updatedAt).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) : "";
+            item.querySelector(".chat-item-service").textContent = conversation.serviceName || "";
+            const messages = Array.isArray(conversation.messages) ? conversation.messages : [];
+            item.querySelector(".chat-item-preview").textContent = messages.length ? messages[messages.length - 1].message : "Open conversation";
+            item.addEventListener("click", function () { openConversation(conversation); });
+            chatList.appendChild(item);
+        });
+    }
 
-    /*
-       Build the chat window.
-    */
+    function openConversation(conversation) {
+        chatWindow.innerHTML = "";
+        const header = document.createElement("div");
+        header.className = "active-chat-header";
+        const customer = document.createElement("div");
+        customer.className = "active-chat-customer";
+        customer.textContent = conversation.customerName || "Customer";
+        const service = document.createElement("div");
+        service.className = "active-chat-service";
+        service.textContent = conversation.serviceName || "";
+        header.appendChild(customer);
+        header.appendChild(service);
 
-    chatWindow.innerHTML = "";
+        const messages = document.createElement("div");
+        messages.className = "active-messages";
+        (conversation.messages || []).forEach(function (message) {
+            const el = document.createElement("div");
+            el.className = "message " + (message.sender === "provider" ? "provider-message" : "customer-message");
+            const name = document.createElement("div");
+            name.className = "message-name";
+            name.textContent = message.sender === "provider" ? PROVIDER_NAME : (conversation.customerName || "Customer");
+            const text = document.createElement("div");
+            text.textContent = message.message || "";
+            el.appendChild(name);
+            el.appendChild(text);
+            messages.appendChild(el);
+        });
 
-
-    const header =
-        document.createElement("div");
-
-    header.className =
-        "active-chat-header";
-
-
-    const customer =
-        document.createElement("div");
-
-    customer.className =
-        "active-chat-customer";
-
-    customer.textContent =
-        conversation.customer_name ||
-        "Customer";
-
-
-    const service =
-        document.createElement("div");
-
-    service.className =
-        "active-chat-service";
-
-    service.textContent =
-        conversation.service_name || "";
-
-
-    header.appendChild(customer);
-    header.appendChild(service);
-
-
-    /*
-       Messages area
-    */
-
-    const messages =
-        document.createElement("div");
-
-    messages.className =
-        "active-messages";
-
-
-    /*
-       Reply box
-    */
-
-    const replyBox =
-        document.createElement("div");
-
-    replyBox.className =
-        "active-reply-box";
-
-
-    const input =
-        document.createElement("input");
-
-    input.type = "text";
-
-    input.placeholder =
-        "Reply to customer...";
-
-
-    const button =
-        document.createElement("button");
-
-    button.textContent =
-        "Send";
-
-
-    button.addEventListener(
-        "click",
-        function () {
-
-            sendReply(
-                conversation,
-                input
-            );
+        const reply = document.createElement("div");
+        reply.className = "active-reply-box";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Reply to customer...";
+        const button = document.createElement("button");
+        button.textContent = "Send";
+        function send() {
+            const value = input.value.trim();
+            if (!value) return;
+            const stored = JSON.parse(localStorage.getItem(conversation.storageKey) || "null");
+            if (!stored) return;
+            stored.messages = Array.isArray(stored.messages) ? stored.messages : [];
+            stored.messages.push({sender:"provider", message:value, createdAt:new Date().toISOString()});
+            stored.updatedAt = new Date().toISOString();
+            localStorage.setItem(conversation.storageKey, JSON.stringify(stored));
+            input.value = "";
+            openConversation(stored);
+            render();
         }
-    );
+        button.addEventListener("click", send);
+        input.addEventListener("keydown", function (event) { if (event.key === "Enter") send(); });
+        reply.appendChild(input);
+        reply.appendChild(button);
 
-
-    input.addEventListener(
-        "keydown",
-        function (event) {
-
-            if (
-                event.key === "Enter"
-            ) {
-
-                sendReply(
-                    conversation,
-                    input
-                );
-            }
-        }
-    );
-
-
-    replyBox.appendChild(input);
-    replyBox.appendChild(button);
-
-
-    chatWindow.appendChild(header);
-    chatWindow.appendChild(messages);
-    chatWindow.appendChild(replyBox);
-
-
-    /*
-       Load only this conversation's
-       messages.
-    */
-
-    await loadMessages(
-        conversation.id,
-        messages
-    );
-}
-
-
-/* ========================================
-   LOAD MESSAGES
-======================================== */
-
-async function loadMessages(
-    conversationId,
-    container
-) {
-
-    const { data, error } =
-        await supabaseClient
-            .from("messages")
-            .select("*")
-            .eq(
-                "conversation_id",
-                conversationId
-            )
-            .order("created_at", {
-                ascending: true
-            });
-
-
-    if (error) {
-
-        console.error(error);
-
-        container.textContent =
-            "Could not load messages.";
-
-        return;
+        chatWindow.appendChild(header);
+        chatWindow.appendChild(messages);
+        chatWindow.appendChild(reply);
     }
 
+    window.addEventListener("storage", render);
+    window.addEventListener("serviceHubLocalChatUpdated", render);
+    render();
+})();
 
-    container.innerHTML = "";
-
-
-    if (
-        !data ||
-        data.length === 0
-    ) {
-
-        const empty =
-            document.createElement("div");
-
-        empty.className =
-            "empty";
-
-        empty.textContent =
-            "No messages yet.";
-
-        container.appendChild(empty);
-
-        return;
-    }
-
-
-    data.forEach(function (message) {
-
-        addMessageToContainer(
-            message,
-            container
-        );
-
-    });
-
-
-    scrollMessagesToBottom(container);
+function formatTime(timestamp) {
+    if (!timestamp) return "";
+    return new Date(timestamp).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
 }
 
-
-/* ========================================
-   ADD MESSAGE TO SCREEN
-======================================== */
-
-function addMessageToContainer(
-    message,
-    container
-) {
-
-    const messageElement =
-        document.createElement("div");
-
-    messageElement.className =
-        "message";
-
-
-    /*
-       Make provider/customer messages
-       visually different.
-    */
-
-    if (
-        message.sender_type ===
-        "provider"
-    ) {
-
-        messageElement.classList.add(
-            "provider-message"
-        );
-
-    } else {
-
-        messageElement.classList.add(
-            "customer-message"
-        );
-    }
-
-
-    const name =
-        document.createElement("div");
-
-    name.className =
-        "message-name";
-
-    name.textContent =
-        message.sender_name ||
-        (
-            message.sender_type ===
-            "provider"
-                ? PROVIDER_NAME
-                : "Customer"
-        );
-
-
-    const text =
-        document.createElement("div");
-
-    text.textContent =
-        message.message;
-
-
-    messageElement.appendChild(name);
-    messageElement.appendChild(text);
-
-
-    container.appendChild(
-        messageElement
-    );
-}
-
-
-/* ========================================
-   SEND PROVIDER REPLY
-======================================== */
-
-async function sendReply(
-    conversation,
-    input
-) {
-
-    const message =
-        input.value.trim();
-
-
-    if (!message) {
-
-        return;
-    }
-
-
-    input.disabled = true;
-
-
-    const { error } =
-        await supabaseClient
-            .from("messages")
-            .insert({
-
-                conversation_id:
-                    conversation.id,
-
-                sender_type:
-                    "provider",
-
-                sender_name:
-                    PROVIDER_NAME,
-
-                message:
-                    message
-            });
-
-
-    input.disabled = false;
-
-
-    if (error) {
-
-        console.error(error);
-
-        alert(
-            "Could not send message:\n" +
-            error.message
-        );
-
-        return;
-    }
-
-
-    input.value = "";
-}
-
-
-/* ========================================
-   REALTIME
-======================================== */
-
-function startRealtime() {
-
-    const channel =
-        supabaseClient
-            .channel(
-                "provider-messages-" +
-                PROVIDER_ID
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "messages"
-                },
-                async function (payload) {
-
-                    console.log(
-                        "New message:",
-                        payload.new
-                    );
-
-
-                    const message =
-                        payload.new;
-
-
-                    /*
-                       Find which conversation
-                       this message belongs to.
-                    */
-
-                    const {
-                        data: conversation
-                    } =
-                        await supabaseClient
-                            .from(
-                                "conversations"
-                            )
-                            .select("*")
-                            .eq(
-                                "id",
-                                message.conversation_id
-                            )
-                            .eq(
-                                "provider_id",
-                                PROVIDER_ID
-                            )
-                            .maybeSingle();
-
-
-                    if (!conversation) {
-
-                        return;
-                    }
-
-
-                    /*
-                       If this is a brand-new
-                       conversation, reload
-                       the inbox.
-                    */
-
-                    const exists =
-                        conversations.some(
-                            function (item) {
-
-                                return (
-                                    item.id ===
-                                    conversation.id
-                                );
-                            }
-                        );
-
-
-                    if (!exists) {
-
-                        await loadConversations();
-
-                        return;
-                    }
-
-
-                    /*
-                       If the conversation is
-                       currently open, display
-                       the new message.
-                    */
-
-                    if (
-                        activeConversationId ===
-                        conversation.id
-                    ) {
-
-                        const messageContainer =
-                            document.querySelector(
-                                ".active-messages"
-                            );
-
-
-                        if (
-                            messageContainer
-                        ) {
-
-                            /*
-                               Remove empty message
-                               placeholder if present.
-                            */
-
-                            const empty =
-                                messageContainer
-                                    .querySelector(
-                                        ".empty"
-                                    );
-
-                            if (empty) {
-
-                                empty.remove();
-                            }
-
-
-                            addMessageToContainer(
-                                message,
-                                messageContainer
-                            );
-
-
-                            scrollMessagesToBottom(
-                                messageContainer
-                            );
-                        }
-
-                    }
-
-
-                    /*
-                       Update conversation
-                       information in memory.
-                    */
-
-                    const index =
-                        conversations.findIndex(
-                            function (item) {
-
-                                return (
-                                    item.id ===
-                                    conversation.id
-                                );
-                            }
-                        );
-
-
-                    if (index !== -1) {
-
-                        conversations[index] =
-                            conversation;
-                    }
-
-
-                    /*
-                       Refresh the inbox so
-                       latest-message previews
-                       and ordering update.
-                    */
-
-                    renderChatList();
-                }
-            )
-            .subscribe(
-                function (status) {
-
-                    console.log(
-                        "Realtime status:",
-                        status
-                    );
-
-
-                    if (
-                        status ===
-                        "SUBSCRIBED"
-                    ) {
-
-                        setStatus(
-                            "● Connected to ServiceHub",
-                            true
-                        );
-
-                    } else if (
-                        status ===
-                        "CHANNEL_ERROR"
-                    ) {
-
-                        setStatus(
-                            "Realtime connection error",
-                            false
-                        );
-                    }
-                }
-            );
-}
-
-
-/* ========================================
-   TIME FORMAT
-======================================== */
-
-function formatTime(
-    timestamp
-) {
-
-    if (!timestamp) {
-
-        return "";
-    }
-
-
-    return new Date(
-        timestamp
-    ).toLocaleTimeString(
-        [],
-        {
-            hour: "2-digit",
-            minute: "2-digit"
-        }
-    );
-}
-
-
-/* ========================================
-   SCROLL CHAT
-======================================== */
-
-function scrollMessagesToBottom(
-    container
-) {
-
-    container.scrollTop =
-        container.scrollHeight;
+function scrollMessagesToBottom(container) {
+    if (container) container.scrollTop = container.scrollHeight;
 }

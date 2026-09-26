@@ -314,7 +314,24 @@
         
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FLOATING UPLOAD / APPS SCRIPT WAIT STATE -->
+    <div
+        id="listingUploadOverlay"
+        class="listing-upload-overlay"
+        hidden
+        aria-hidden="true"
+        role="status"
+        aria-live="polite"
+        aria-busy="false"
+    >
+        <div class="listing-upload-pill">
+            <span class="payment-spinner" aria-hidden="true"></span>
+            <span class="listing-upload-text">
+                Uploading media, please wait for a moment
+            </span>
+        </div>
+    </div>
+
     
     <script src="script.js"></script>
 </body>

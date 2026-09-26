@@ -169,15 +169,13 @@
     </div>
 
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="script.js"></script>
 
     <script>
     /*
        Naira payment success redirect.
-       This only reacts to the existing approved state produced by the
-       Supabase flow in script.js. No payment status is fabricated here.
+       This reacts to the approved state produced by Apps Script.
+       No payment status is fabricated in the browser.
     */
     (function () {
         const popup = document.getElementById("nairaPaymentSuccessPopup");
@@ -209,9 +207,9 @@
         }
 
         /*
-           script.js reveals the existing approved section when Supabase
-           reports status = "approved". Observe that existing change so
-           all existing payment/realtime/polling logic remains untouched.
+           script.js reveals the existing approved section when Apps Script
+           reports status = "approved". Observe that existing UI change so
+           the success experience remains unchanged.
         */
         const observer = new MutationObserver(function () {
             if (approvedStep.style.display !== "none") {
