@@ -70,6 +70,15 @@
             <!-- HEADING -->
             <div class="listing-heading">
 
+                <p
+                    id="paymentCodeNotice"
+                    class="listing-note"
+                    style="margin: 0 0 14px; text-align: left;"
+                    aria-live="polite"
+                >
+                    Your payment code is loading…
+                </p>
+
                 <p class="eyebrow">
                     PAYMENT
                 </p>
@@ -233,9 +242,48 @@
     </main>
 
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="script.js"></script>
+
+    <script>
+    (function () {
+        const notice = document.getElementById("paymentCodeNotice");
+        if (!notice) return;
+
+        const listingId = localStorage.getItem("serviceHubListingId");
+        const savedCode = localStorage.getItem("serviceHubPaymentCode") || "";
+
+        if (!listingId) {
+            notice.textContent = "Your payment code is unavailable. Please return and create the listing again.";
+            return;
+        }
+
+        async function loadPaymentCode() {
+            notice.textContent = "Your payment code is loading…";
+
+            try {
+                /* Ask Apps Script for the stored code; localStorage is only a fallback. */
+                const result = await fetchAppsScriptListing(listingId);
+                const code = String(result.code || savedCode || "").trim();
+
+                if (!code) {
+                    throw new Error("Payment code is not available yet.");
+                }
+
+                localStorage.setItem("serviceHubPaymentCode", code);
+                notice.textContent = "Your payment code is " + code + ".";
+            } catch (error) {
+                if (savedCode) {
+                    notice.textContent = "Your payment code is " + savedCode + ".";
+                } else {
+                    notice.textContent = "Your payment code is still loading…";
+                    setTimeout(loadPaymentCode, 2500);
+                }
+            }
+        }
+
+        loadPaymentCode();
+    })();
+    </script>
 
 </body>
 </html>
