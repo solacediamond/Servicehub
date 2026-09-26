@@ -1,0 +1,33 @@
+SERVICEHUB FRONTEND — APPS SCRIPT ADAPTATION
+
+The supplied Code.gs is unchanged.
+
+Frontend now talks to the existing Web App URL directly:
+
+GET:
+- ?action=getListings
+- ?action=getListing&listingId=...
+- ?action=checkPayment&listingId=...&code=...
+- ?action=health
+- ?action=getNextListingId
+
+POST JSON body:
+- {action:"createListing", listingId, providerId, serviceName, price}
+- {action:"uploadMedia", listingId, fileName, mimeType, base64}
+
+The POST body is sent as text/plain so the browser can make a simple POST instead of first issuing an application/json CORS preflight. Code.gs still receives the exact JSON string through e.postData.contents.
+
+The previous frontend /apps-script relay path was removed from the active frontend transport. That route belonged to server.js, which is why an editor/Live Server preview returned "Error 404, file not found" before the request could reach Google Apps Script.
+
+Ordering remains:
+1. getNextListingId
+2. createListing
+3. poll getListing until the payment code is available
+4. upload each selected media file with the listing ID
+5. poll getListing until the Media column contains the uploaded Drive URL
+6. continue to payment.html
+
+No Supabase SDK, URL, key, or database/storage call is introduced.
+
+Browser limitation:
+If the browser reports a CORS/"Failed to fetch" error against the direct Apps Script URL, that means the cross-origin response cannot be read by the browser. That limitation cannot be removed by JavaScript in the frontend without a CORS-enabled endpoint or a same-origin server-side relay. The Apps Script code itself remains untouched in this build.

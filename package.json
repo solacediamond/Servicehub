@@ -1,0 +1,8 @@
+{
+  "name": "servicehub-existing-appscript-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ServiceHub frontend with a same-origin local relay to the existing Google Apps Script Web App.",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
