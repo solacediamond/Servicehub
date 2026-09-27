@@ -22,7 +22,7 @@
             </nav>
 
             <div class="nav-actions">
-                <a class="login-btn" href="login.html">Log in</a>
+                <a class="login-btn" href="login.html">List a Job</a>
                 <a class="list-btn" href="list-service.html" class="active-action">List Your Service</a>
             </div>
         </div>
@@ -77,9 +77,13 @@
         type="tel"
         id="phone"
         name="phone"
-        placeholder="e.g. 08012345678"
+        placeholder="e.g. +2348012345678"
         inputmode="tel"
         autocomplete="tel"
+        maxlength="16"
+        pattern="\+[1-9][0-9]{7,14}"
+        title="Enter the full international number with country code, for example +2348012345678"
+        required
     >
 
 </div>
@@ -128,7 +132,19 @@
                            accept="image/*,video/*,.pdf" multiple>
                     <small>Add images, videos or PDFs that showcase your work.</small>
                 </div>
-<!-- STARTING PRICE -->
+<!-- CURRENCY + STARTING PRICE -->
+
+<div class="form-group service-currency-group">
+
+    <label for="serviceCurrency">Currency</label>
+
+    <select id="serviceCurrency" name="currency">
+        <option value="">Choose currency</option>
+        <option value="USD">Dollar ($)</option>
+        <option value="NGN">Naira (₦)</option>
+    </select>
+
+</div>
 
 <div class="form-group">
 
@@ -139,7 +155,7 @@
 
     <div class="price-input">
 
-        <span class="currency">₦</span>
+        <span id="startingPriceCurrency" class="currency">—</span>
 
         <input
             type="number"
@@ -199,7 +215,7 @@
             </label>
 
             <div class="pricing-price-box">
-                <span>₦</span>
+                <span class="pricing-currency-symbol">—</span>
                 <input
                     type="number"
                     class="pricing-price"
@@ -219,7 +235,7 @@
             </label>
 
             <div class="pricing-price-box">
-                <span>₦</span>
+                <span class="pricing-currency-symbol">—</span>
                 <input
                     type="number"
                     class="pricing-price"
@@ -239,7 +255,7 @@
             </label>
 
             <div class="pricing-price-box">
-                <span>₦</span>
+                <span class="pricing-currency-symbol">—</span>
                 <input
                     type="number"
                     class="pricing-price"
@@ -259,7 +275,7 @@
             </label>
 
             <div class="pricing-price-box">
-                <span>₦</span>
+                <span class="pricing-currency-symbol">—</span>
                 <input
                     type="number"
                     class="pricing-price"

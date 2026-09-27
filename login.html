@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <title>Login | ServiceHub</title>
+    <title>List a Job | ServiceHub</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -29,7 +29,7 @@
             </nav>
 
             <div class="nav-actions">
-                <a class="login-btn" href="login.html" class="active-action">Log in</a>
+                <a class="login-btn" href="login.html">List a Job</a>
                 <a class="list-btn" href="list-service.html">List Your Service</a>
             </div>
         </div>
@@ -37,144 +37,207 @@
         <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
     </header>
 
-<!-- ========================================
-         LOGIN PAGE
+    <!-- ========================================
+         LIST A JOB PAGE
     ======================================== -->
 
-    <main class="service-page login-page">
-<button type="button" class="how-back-btn" onclick="history.back()">
-    ← Back
-</button>
+    <main class="service-page login-page job-page">
+
+        <button type="button" class="how-back-btn" onclick="history.back()">
+            ← Back
+        </button>
 
         <section class="service-header">
 
             <span class="service-category">
-                SERVICEHUB ACCOUNT
+                SERVICEHUB JOB BOARD
             </span>
 
-            <h1>Welcome Back</h1>
+            <h1>List a Job</h1>
 
             <p>
-                Enter your information to continue to ServiceHub.
+                Tell people what you need and give qualified professionals
+                the information they need to get in touch.
             </p>
 
         </section>
 
-
         <!-- ========================================
-             LOGIN FORM
+             JOB FORM
         ======================================== -->
 
         <section class="service-details">
 
-            <div class="login-card">
+            <div class="login-card job-card">
 
-                <form id="loginForm">
+                <form id="jobListingForm">
 
-                    <!-- NAME -->
-
+                    <!-- 1. NAME -->
                     <div class="form-group">
-
-                        <label for="loginName">
-                            Name
-                        </label>
-
+                        <label for="jobName">Name</label>
                         <input
                             type="text"
-                            id="loginName"
+                            id="jobName"
                             name="name"
                             placeholder="Enter your name"
+                            maxlength="80"
+                            autocomplete="name"
                             required
                         >
-
                     </div>
 
-
-                    <!-- COMPANY -->
-
+                    <!-- 2. COMPANY -->
                     <div class="form-group">
-
-                        <label for="loginCompany">
-                            Company Name
+                        <label for="jobCompany">
+                            Company
                             <span class="optional">(Optional)</span>
                         </label>
-
                         <input
                             type="text"
-                            id="loginCompany"
+                            id="jobCompany"
                             name="company"
                             placeholder="Enter your company name"
+                            maxlength="100"
+                            autocomplete="organization"
                         >
-
                     </div>
 
-
-                    <!-- CONTACT -->
-
+                    <!-- 3. JOB TYPE -->
                     <div class="form-group">
+                        <label for="jobType">Job Type</label>
+                        <select id="jobType" name="jobType" required>
+                            <option value="">Choose a job type</option>
+                            <option value="remote">Remote</option>
+                            <option value="onetime">One-time</option>
+                            <option value="contract">Contract</option>
+                            <option value="part-time">Part-time</option>
+                            <option value="fulltime">Full-time</option>
+                            <option value="others">Others</option>
+                        </select>
+                    </div>
 
-                        <label for="loginContact">
-                            Contact Information
-                        </label>
-
+                    <div id="otherJobTypeBox" class="form-group conditional-job-field" hidden>
+                        <label for="otherJobType">Specify Job Type</label>
                         <input
                             type="text"
-                            id="loginContact"
+                            id="otherJobType"
+                            name="otherJobType"
+                            placeholder="Enter your specific job type"
+                            maxlength="80"
+                        >
+                    </div>
+
+                    <!-- 4. QUALIFICATIONS / REQUIREMENTS -->
+                    <div class="form-group">
+                        <label for="jobRequirements">Expected Qualifications / Requirements</label>
+                        <textarea
+                            id="jobRequirements"
+                            name="requirements"
+                            rows="6"
+                            maxlength="3000"
+                            placeholder="Describe the qualifications, experience, skills, or requirements you expect..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <!-- 5. PAYMENT OFFER -->
+                    <div class="form-group">
+                        <label for="paymentCurrency">Payment Offer</label>
+
+                        <select id="paymentCurrency" name="currency" required>
+                            <option value="">Choose currency</option>
+                            <option value="USD">Dollar ($)</option>
+                            <option value="NGN">Naira (₦)</option>
+                        </select>
+
+                        <div id="paymentAmountBox" class="payment-input" hidden>
+                            <span id="paymentCurrencySymbol" class="currency-prefix" aria-hidden="true">$</span>
+                            <input
+                                type="number"
+                                id="paymentAmount"
+                                name="paymentOffer"
+                                min="0"
+                                step="0.01"
+                                inputmode="decimal"
+                                placeholder="Enter payment amount"
+                                aria-label="Payment amount"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- 6. CONTACT -->
+                    <div class="form-group">
+                        <label for="jobContact">Contact Info</label>
+                        <input
+                            type="text"
+                            id="jobContact"
                             name="contact"
-                            placeholder="Email, Telegram, or other contact"
+                            placeholder="Email, phone, or other contact information"
+                            maxlength="150"
                             required
                         >
-
                     </div>
 
-
-                    <!-- PHONE -->
-
+                    <!-- 7. WHATSAPP -->
                     <div class="form-group">
-
-                        <label for="loginPhone">
-                            Phone Number
+                        <label for="jobWhatsapp">
+                            WhatsApp
                             <span class="optional">(Optional)</span>
                         </label>
-
                         <input
                             type="tel"
-                            id="loginPhone"
-                            name="phone"
-                            placeholder="Enter your phone number"
+                            id="jobWhatsapp"
+                            name="whatsapp"
+                            placeholder="WhatsApp number"
+                            maxlength="40"
+                            inputmode="tel"
                         >
-
                     </div>
 
+                    <!-- 8. MEDIA (REQUIRED) -->
+                    <div class="form-group job-media-group">
+                        <label for="jobMedia">Media / Job Attachment</label>
+                        <input
+                            type="file"
+                            id="jobMedia"
+                            name="media"
+                            accept="image/*,video/*,.pdf"
+                            multiple
+                            required
+                        >
+                        <small>Upload at least one image, video, or PDF related to the job.</small>
+                        <div id="jobMediaPreview" class="job-media-preview" aria-live="polite"></div>
+                    </div>
 
-                    <!-- MESSAGE -->
+                    <!-- 9. TELEGRAM -->
+                    <div class="form-group">
+                        <label for="jobTelegram">
+                            Telegram
+                            <span class="optional">(Optional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="jobTelegram"
+                            name="telegram"
+                            placeholder="@username or Telegram contact"
+                            maxlength="100"
+                        >
+                    </div>
 
-                    <p
-                        id="loginMessage"
-                        class="form-message"
-                    ></p>
-
-
-                    <!-- CONTINUE -->
+                    <p id="jobListingMessage" class="form-message" aria-live="polite"></p>
 
                     <button
                         type="submit"
-                        class="contact-provider-btn login-submit"
+                        class="contact-provider-btn login-submit listing-submit"
                     >
-                        Continue
+                        Continue →
                     </button>
 
                 </form>
 
             </div>
 
-
-            <!-- BACK -->
-
-            <a
-                href="index.html"
-                class="back-to-services"
-            >
+            <a href="index.html" class="back-to-services">
                 ← Back to Home
             </a>
 
@@ -182,11 +245,6 @@
 
     </main>
 
-
-    <!-- ========================================
-         JAVASCRIPT
-    ======================================== -->
-    
     <script src="script.js"></script>
 
 </body>

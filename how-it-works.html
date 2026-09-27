@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <title>ServiceHub</title>
+    <title>How It Works | ServiceHub</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <!-- Navigation -->
+    <!-- NAVBAR -->
     <header class="navbar">
-        <a href="#" class="logo">
+        <a href="index.html" class="logo">
             <span class="logo-mark">ϟ</span>
             <span>ServiceHub</span>
         </a>
@@ -22,11 +22,11 @@
             <nav class="nav-links">
                 <a href="explore.html">Explore</a>
                 <a href="index.html#categories">Categories</a>
-                <a href="how-it-works.html">How It Works</a>
+                <a href="how-it-works.html" class="active">How It Works</a>
             </nav>
 
             <div class="nav-actions">
-                <a class="login-btn" href="login.html">Log in</a>
+                <a class="login-btn" href="login.html">List a Job</a>
                 <a class="list-btn" href="list-service.html">List Your Service</a>
             </div>
         </div>
@@ -34,174 +34,165 @@
         <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
     </header>
 
-<!-- Hero Section -->
-    <main>
+<!-- HOW IT WORKS -->
+    <main class="service-page how-it-works-page">
+<button type="button" class="how-back-btn" onclick="history.back()">
+    ← Back
+</button>
+        <section class="service-header">
 
-        <section class="hero">
+            <span class="service-category">
+                SERVICEHUB
+            </span>
 
-            <div class="hero-content">
+            <h1>How ServiceHub Works</h1>
 
-                <p class="eyebrow">DISCOVER • CONNECT • GET IT DONE</p>
-
-                <h1>
-                    Find the right
-                    <span>person for the job.</span>
-                </h1>
-
-                <p class="hero-description">
-                    Discover skilled people, businesses and professionals
-                    offering the services you need.
-                </p>
-
-
-                <!-- Search -->
-                <div class="search-box">
-
-                    <span class="search-icon">⌕</span>
-
-                    <input
-                        type="text"
-                        placeholder="What service are you looking for?"
-                    >
-
-                    <button type="button">Search</button>
-
-                </div>
-
-
-             <!-- Popular searches -->
-<div class="popular">
-    <span>Popular:</span>
-    <a href="#">Video Editing</a>
-    <a href="#">Graphic Design</a>
-    <a href="#">Web Design</a>
-    <a href="#">Repairs</a>
-</div>
+            <p>
+                ServiceHub is a marketplace that connects customers
+                with people and businesses offering digital services.
+            </p>
 
         </section>
 
 
-        <!-- Categories -->
-        <section class="section">
+        <section class="service-details">
 
-            <div class="section-heading">
+            <!-- STEP 1 -->
+            <div class="service-detail-card">
+
+                <div class="payment-method-icon">
+                    🔎
+                </div>
+
                 <div>
-                    <p class="eyebrow">EXPLORE</p>
-                    <h2>Browse categories</h2>
+                    <h2>Find a Service</h2>
+
+                    <p>
+                        Browse available services or use the search bar
+                        to find what you need. Explore different service
+                        categories and discover providers that match
+                        your project.
+                    </p>
                 </div>
 
-                <a href="#" class="view-all">View all →</a>
             </div>
 
 
-            <div class="category-grid" id="categories">
+            <!-- STEP 2 -->
+            <div class="service-detail-card">
 
-                <a href="#" class="category-card">
-                    <span class="category-icon">◈</span>
-                    <span>Design</span>
-                </a>
+                <div class="payment-method-icon">
+                    👀
+                </div>
 
-                <a href="#" class="category-card">
-                    <span class="category-icon">▶</span>
-                    <span>Video</span>
-                </a>
+                <div>
+                    <h2>Explore the Provider</h2>
 
-                <a href="#" class="category-card">
-                    <span class="category-icon">⌘</span>
-                    <span>Technology</span>
-                </a>
-
-                <a href="#" class="category-card">
-                    <span class="category-icon">⚒</span>
-                    <span>Repairs</span>
-                </a>
-
-                <a href="#" class="category-card">
-                    <span class="category-icon">◎</span>
-                    <span>Photography</span>
-                </a>
-
-                <a href="#" class="category-card">
-                    <span class="category-icon">✦</span>
-                    <span>Business</span>
-                </a>
+                    <p>
+                        Open a service to learn more about what the
+                        provider offers. You can view their service
+                        details, starting price, portfolio, rating,
+                        and other information they provide.
+                    </p>
+                </div>
 
             </div>
 
-        </section>
-<!-- Featured Services -->
-<section class="section" id="explore">
 
-    <div class="section-heading">
+            <!-- STEP 3 -->
+            <div class="service-detail-card">
 
-        <div>
-            <p class="eyebrow">HANDPICKED</p>
-            <h2>Featured services</h2>
-        </div>
+                <div class="payment-method-icon">
+                    💬
+                </div>
 
-        <div class="explore-all-container">
-            <a href="explore.html" class="explore-all-btn">
-                Explore All
-            </a>
-        </div>
+                <div>
+                    <h2>Contact the Provider</h2>
 
-    </div>
+                    <p>
+                        Found a service you like? Use
+                        <strong>Contact Provider</strong> to reach out
+                        and discuss your project, requirements, pricing,
+                        and other details directly with the provider.
+                    </p>
+
+                </div>
+
+            </div>
 
 
-    <div class="services-grid" id="featuredServices">
+            <!-- STEP 4 -->
+            <div class="service-detail-card">
 
-        <!-- Service cards will be randomly generated here -->
+                <div class="payment-method-icon">
+                    🧑‍💻
+                </div>
 
-    </div>
+                <div>
+                    <h2>Offer Your Services</h2>
 
-</section>
+                    <p>
+                        Are you a freelancer, creator, developer,
+                        designer, or business offering a service?
+                        Use <strong>List Your Service</strong> to create
+                        your own listing and showcase what you do.
+                    </p>
 
-        <!-- Provider CTA -->
-        <section class="provider-cta">
+                </div>
 
-            <div>
-                <p class="eyebrow">FOR SERVICE PROVIDERS</p>
+            </div>
 
-                <h2>
-                    Have a skill or service?
-                    <span>Let people find you.</span>
-                </h2>
+
+            <!-- STEP 5 -->
+            <div class="service-detail-card">
+
+                <div class="payment-method-icon">
+                    💳
+                </div>
+
+                <div>
+                    <h2>Complete Your Payment</h2>
+
+                    <p>
+                        When you're ready to proceed, follow the
+                        payment process provided for the service.
+                        ServiceHub supports payment options including
+                        Naira, USD, and cryptocurrency, depending on
+                        the available payment flow.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- SUMMARY -->
+            <div class="service-description">
+
+                <h2>In Short</h2>
+
+                <p class="service-tagline">
+                    Discover → Explore → Contact → Work Together
+                </p>
 
                 <p>
-                    Create your service listing and connect with
-                    people looking for what you offer.
+                    ServiceHub is built to make finding digital services
+                    easier while giving service providers a place to
+                    showcase their skills and connect with potential
+                    customers.
                 </p>
+
             </div>
-    <button class="list-btn" onclick="window.location.href='list-service.html'">
-        List Your Service
-    </button>
+
+
+            <!-- BACK BUTTON -->
+            <a href="index.html" class="contact-provider-btn">
+                Back to Services
+            </a>
+
         </section>
 
     </main>
-
-
-    <!-- Footer -->
-    <footer>
-
-        <div class="footer-brand">
-
-            <a href="#" class="logo">
-                <span class="logo-mark">ϟ</span>
-                <span>ServiceHub</span>
-            </a>
-
-            <p>
-                A marketplace for discovering people
-                who can get the job done.
-            </p>
-
-            <small>
-                Powered by Solaceproeditz
-            </small>
-
-        </div>
-
-    </footer>
     
     <script src="script.js"></script>
 

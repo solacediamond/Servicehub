@@ -304,6 +304,7 @@ async function createAppsScriptListing(listingData) {
         providerId: providerId,
         serviceName: listingData.service || "",
         price: parseServiceHubAmount(listingData.startingPrice),
+        currency: listingData.currency || "",
 
         /* Extra fields are retained in the request for compatibility with
            existing frontend data, but the supplied backend only requires the
@@ -430,59 +431,114 @@ function escapeServiceHubText(value) {
 }
 
 
+/*
+   Builds one <a class="service-card"> element. Shared by the Explore
+   grid (every approved listing) and the homepage Featured preview
+   (a random max-3 subset) so both stay visually identical.
+*/
+function buildServiceHubCardElement(cardData, cardId) {
+
+    const card = document.createElement("a");
+    card.href = "service.html?service=" + encodeURIComponent(cardId);
+    card.className = "service-card";
+    card.setAttribute("data-backend-card-id", cardId);
+
+    const media = Array.isArray(cardData.media) ? cardData.media : [];
+    const firstImage = media.find(function (item) {
+        const type = String(item && (item.type || item.mimeType || "")).toLowerCase();
+        return type.indexOf("image/") === 0 && (item.previewUrl || item.url);
+    });
+    const firstVideo = media.find(function (item) {
+        const type = String(item && (item.type || item.mimeType || "")).toLowerCase();
+        return type.indexOf("video/") === 0 && (item.previewUrl || item.url);
+    });
+
+    let imageHTML = '<span>' + escapeServiceHubText(cardData.title) + '</span>';
+    if (firstImage) {
+        imageHTML = '<img class="service-card-media" src="' + escapeServiceHubAttribute(firstImage.previewUrl || firstImage.url) + '" alt="' + escapeServiceHubAttribute(cardData.title) + '" loading="lazy">';
+    } else if (firstVideo) {
+        imageHTML = '<video class="service-card-media" src="' + escapeServiceHubAttribute(firstVideo.previewUrl || firstVideo.url) + '" muted playsinline preload="metadata"></video>';
+    }
+
+    card.innerHTML = `
+        <div class="service-image">
+            ${imageHTML}
+        </div>
+        <div class="service-info">
+            <p class="service-category">
+                ${escapeServiceHubText(cardData.category || "SERVICE")}
+            </p>
+            <h3>${escapeServiceHubText(cardData.title)}</h3>
+            <p class="provider">${escapeServiceHubText(cardData.provider)}</p>
+            <div class="service-bottom">
+                <span>⭐ ${escapeServiceHubText(cardData.rating)}</span>
+                <strong>From ${escapeServiceHubText(cardData.price)}</strong>
+            </div>
+        </div>
+    `;
+
+    return card;
+}
+
+/*
+   Adds a card to the Explore grid (explore.html). The homepage's
+   Featured preview is handled separately by
+   renderServiceHubFeaturedPreview(), since it needs a random max-3
+   subset rather than every approved listing.
+*/
 function addServiceHubCardToPage(cardData, cardId) {
 
-    const containers = [
-        document.getElementById("featuredServices"),
-        document.getElementById("exploreGrid")
-    ].filter(Boolean);
+    const container = document.getElementById("exploreGrid");
+    if (!container) return;
 
-    containers.forEach(function (container) {
+    if (container.querySelector('[data-backend-card-id="' + CSS.escape(String(cardId)) + '"]')) {
+        return;
+    }
 
-        if (container.querySelector('[data-backend-card-id="' + CSS.escape(String(cardId)) + '"]')) {
-            return;
-        }
+    container.prepend(buildServiceHubCardElement(cardData, cardId));
 
-        const card = document.createElement("a");
-        card.href = "service.html?service=" + encodeURIComponent(cardId);
-        card.className = "service-card";
-        card.setAttribute("data-backend-card-id", cardId);
+}
 
-        const media = Array.isArray(cardData.media) ? cardData.media : [];
-        const firstImage = media.find(function (item) {
-            const type = String(item && (item.type || item.mimeType || "")).toLowerCase();
-            return type.indexOf("image/") === 0 && (item.previewUrl || item.url);
-        });
-        const firstVideo = media.find(function (item) {
-            const type = String(item && (item.type || item.mimeType || "")).toLowerCase();
-            return type.indexOf("video/") === 0 && (item.previewUrl || item.url);
-        });
+/*
+   Homepage "Featured services" preview (inside the #explore section on
+   index.html). Picks a random subset of up to 3 approved listings and
+   renders them in random order. Only runs once per page load (guarded
+   by serviceHubFeaturedRendered) so the picks don't change under
+   someone's thumb every time the 15s reconcileServiceHubCards() poll
+   runs — a fresh page load/reload gets a new random pick.
+*/
+let serviceHubFeaturedRendered = false;
 
-        let imageHTML = '<span>' + escapeServiceHubText(cardData.title) + '</span>';
-        if (firstImage) {
-            imageHTML = '<img class="service-card-media" src="' + escapeServiceHubAttribute(firstImage.previewUrl || firstImage.url) + '" alt="' + escapeServiceHubAttribute(cardData.title) + '" loading="lazy">';
-        } else if (firstVideo) {
-            imageHTML = '<video class="service-card-media" src="' + escapeServiceHubAttribute(firstVideo.previewUrl || firstVideo.url) + '" muted playsinline preload="metadata"></video>';
-        }
+function renderServiceHubFeaturedPreview() {
 
-        card.innerHTML = `
-            <div class="service-image">
-                ${imageHTML}
-            </div>
-            <div class="service-info">
-                <p class="service-category">
-                    ${escapeServiceHubText(cardData.category || "SERVICE")}
-                </p>
-                <h3>${escapeServiceHubText(cardData.title)}</h3>
-                <p class="provider">${escapeServiceHubText(cardData.provider)}</p>
-                <div class="service-bottom">
-                    <span>⭐ ${escapeServiceHubText(cardData.rating)}</span>
-                    <strong>From ${escapeServiceHubText(cardData.price)}</strong>
-                </div>
-            </div>
-        `;
+    const container = document.getElementById("featuredServices");
+    if (!container || serviceHubFeaturedRendered) return;
 
-        container.prepend(card);
+    let cards;
+    try {
+        cards = JSON.parse(localStorage.getItem("serviceHubBackendCards") || "{}");
+    } catch (_) {
+        cards = {};
+    }
+
+    const entries = Object.entries(cards);
+    if (!entries.length) return;
+
+    serviceHubFeaturedRendered = true;
+
+    // Fisher-Yates shuffle, then take at most 3.
+    for (let i = entries.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = entries[i];
+        entries[i] = entries[j];
+        entries[j] = temp;
+    }
+
+    const picked = entries.slice(0, 3);
+
+    container.innerHTML = "";
+    picked.forEach(function ([id, cardData]) {
+        container.appendChild(buildServiceHubCardElement(cardData, id));
     });
 
 }
@@ -510,6 +566,7 @@ function storeServiceHubCard(card) {
         description: card.about || "",
         about: card.about || "",
         price: card.price || "Contact provider",
+        currency: card.currency || "NGN",
         portfolio: card.portfolio || "",
         contact: card.contact || "",
         phone: card.phone || "",
@@ -548,7 +605,8 @@ function mapLegacyBackendListingToCard(row) {
         category: row.service,
         rating: row.rating || "New",
         reviews: row.reviews || 0,
-        price: row.starting_price ? ("₦" + row.starting_price) : "Contact provider",
+        currency: String(row.currency || row.Currency || "NGN").toUpperCase(),
+        price: row.starting_price ? ((String(row.currency || row.Currency || "NGN").toUpperCase() === "USD" ? "$" : "₦") + row.starting_price) : "Contact provider",
         pricing: row.pricing || [],
         customPricing: row.custom_pricing || [],
         media: row.media || []
@@ -591,6 +649,8 @@ async function reconcileServiceHubCards() {
             approvedIds.add(String(card.id));
             storeServiceHubCard(card);
         });
+
+        renderServiceHubFeaturedPreview();
 
         const cards = JSON.parse(
             localStorage.getItem("serviceHubBackendCards") || "{}"
@@ -942,6 +1002,9 @@ function mapAppsScriptListingToCard(listing) {
         "starting_price"
     );
 
+    const currency = String(get("currency", "Currency") || "NGN").toUpperCase();
+    const currencySymbol = currency === "USD" ? "$" : "₦";
+
     return {
         id: String(id || ""),
         title: service,
@@ -955,8 +1018,9 @@ function mapAppsScriptListingToCard(listing) {
         category: service,
         rating: get("rating", "Rating") || "New",
         reviews: get("reviews", "Reviews") || 0,
+        currency: currency,
         price: price !== ""
-            ? ("₦" + (isNaN(Number(price)) ? price : Number(price).toLocaleString("en-NG")))
+            ? (currencySymbol + (isNaN(Number(price)) ? price : Number(price).toLocaleString(currency === "USD" ? "en-US" : "en-NG")))
             : "Contact provider",
         pricing: pricing,
         customPricing: customPricing,
@@ -2259,7 +2323,8 @@ function renderServiceProviderDetails(card) {
         count++;
     }
 
-    const wa = buildServiceHubWhatsAppLink(card.whatsapp || card.phone);
+    const waMessage = buildServiceHubContactMessage(card);
+    const wa = buildServiceHubWhatsAppLink(card.whatsapp || card.phone, waMessage);
     if (wa) {
         const a = link(wa, "Chat on WhatsApp", true);
         a.className = "provider-whatsapp-btn";
@@ -2602,6 +2667,39 @@ if (listingForm) {
                     )
                     ?.value || "";
 
+            const serviceCurrency =
+                document
+                    .getElementById(
+                        "serviceCurrency"
+                    )
+                    ?.value || "";
+
+            /* ---------- INTERNATIONAL PHONE NUMBER ---------- */
+
+            if (!/^\+[1-9][0-9]{7,14}$/.test(phone)) {
+                alert("Please enter your full phone number with country code, for example +2348012345678.");
+                const phoneInput = document.getElementById("phone");
+                if (phoneInput) {
+                    phoneInput.focus();
+                    phoneInput.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+                return;
+            }
+
+            const hasPricingAmount = !!startingPrice ||
+                Array.from(document.querySelectorAll(".pricing-price, .custom-price"))
+                    .some(function (input) { return String(input.value || "").trim() !== ""; });
+
+            if (hasPricingAmount && serviceCurrency !== "USD" && serviceCurrency !== "NGN") {
+                alert("Please choose a currency before entering a price.");
+                const currencyInput = document.getElementById("serviceCurrency");
+                if (currencyInput) {
+                    currencyInput.focus();
+                    currencyInput.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+                return;
+            }
+
 
             /* ---------- OTHER SERVICE ---------- */
 
@@ -2942,6 +3040,7 @@ if (listingForm) {
                 about: about,
                 media: [],
                 startingPrice: startingPrice,
+                currency: serviceCurrency,
                 pricing: pricing,
                 customPricing: customPricing,
                 savedAt: new Date().toISOString(),
@@ -3033,6 +3132,31 @@ if (listingForm) {
 
 }
 
+
+/* ========================================
+   SERVICE CURRENCY
+======================================== */
+
+const serviceCurrencySelect = document.getElementById("serviceCurrency");
+const startingPriceCurrency = document.getElementById("startingPriceCurrency");
+
+function updateServiceCurrencySymbols() {
+    const value = serviceCurrencySelect ? serviceCurrencySelect.value : "";
+    const symbol = value === "USD" ? "$" : value === "NGN" ? "₦" : "—";
+
+    if (startingPriceCurrency) {
+        startingPriceCurrency.textContent = symbol;
+    }
+
+    document.querySelectorAll(".pricing-currency-symbol").forEach(function (el) {
+        el.textContent = symbol;
+    });
+}
+
+if (serviceCurrencySelect) {
+    serviceCurrencySelect.addEventListener("change", updateServiceCurrencySymbols);
+    updateServiceCurrencySymbols();
+}
 
 /* ========================================
    PRICING RANK
@@ -3230,7 +3354,7 @@ if (
 
                 <div class="pricing-price-box">
 
-                    <span>₦</span>
+                    <span class="pricing-currency-symbol">—</span>
 
                     <input
                         type="number"
@@ -3255,6 +3379,8 @@ if (
             customPricingList.appendChild(
                 row
             );
+
+            updateServiceCurrencySymbols();
 
 
             const removeButton =
@@ -3624,6 +3750,7 @@ if (featuredServices && typeof services !== "undefined") {
         Object.keys(cachedCards).forEach(function (id) {
             addServiceHubCardToPage(cachedCards[id], id);
         });
+        renderServiceHubFeaturedPreview();
     } catch (_) {}
 
     // Initial load.
@@ -3860,68 +3987,162 @@ if (featuredServices && typeof services !== "undefined") {
 
 })();
 /* ========================================
-   LOGIN → BACKEND
+   LIST A JOB FORM
+   The current Apps Script accepts service listings,
+   not job-posting records. Keep this new form local
+   until a dedicated job endpoint is added.
 ======================================== */
 
-const loginForm = document.getElementById("loginForm");
-const loginMessage = document.getElementById("loginMessage");
+const jobListingForm = document.getElementById("jobListingForm");
 
-if (loginForm) {
+if (jobListingForm) {
 
-    loginForm.addEventListener("submit", async function (event) {
+    const jobType = document.getElementById("jobType");
+    const otherJobTypeBox = document.getElementById("otherJobTypeBox");
+    const otherJobType = document.getElementById("otherJobType");
 
+    const paymentCurrency = document.getElementById("paymentCurrency");
+    const paymentAmountBox = document.getElementById("paymentAmountBox");
+    const paymentCurrencySymbol = document.getElementById("paymentCurrencySymbol");
+    const paymentAmount = document.getElementById("paymentAmount");
+    const jobMedia = document.getElementById("jobMedia");
+    const jobMediaPreview = document.getElementById("jobMediaPreview");
+    const jobListingMessage = document.getElementById("jobListingMessage");
+
+    function updateOtherJobType() {
+        const show = jobType && jobType.value === "others";
+        if (otherJobTypeBox) otherJobTypeBox.hidden = !show;
+        if (otherJobType) {
+            otherJobType.required = show;
+            if (!show) otherJobType.value = "";
+        }
+    }
+
+    function updatePaymentCurrency() {
+        const value = paymentCurrency ? paymentCurrency.value : "";
+        const selected = value === "USD" || value === "NGN";
+        if (paymentAmountBox) paymentAmountBox.hidden = !selected;
+        if (paymentCurrencySymbol) paymentCurrencySymbol.textContent = value === "NGN" ? "₦" : "$";
+        if (paymentAmount) {
+            paymentAmount.required = selected;
+            if (!selected) paymentAmount.value = "";
+        }
+    }
+
+    function renderJobMediaPreview() {
+        if (!jobMediaPreview) return;
+        jobMediaPreview.innerHTML = "";
+        const files = jobMedia && jobMedia.files ? Array.from(jobMedia.files) : [];
+        files.forEach(function (file) {
+            const row = document.createElement("div");
+            row.className = "job-media-file";
+            const icon = document.createElement("span");
+            icon.textContent = file.type.indexOf("image/") === 0 ? "🖼️" : file.type.indexOf("video/") === 0 ? "🎥" : "📄";
+            const name = document.createElement("span");
+            name.textContent = file.name;
+            row.appendChild(icon);
+            row.appendChild(name);
+            jobMediaPreview.appendChild(row);
+        });
+    }
+
+    function openJobMediaDB() {
+        return new Promise(function (resolve, reject) {
+            const request = indexedDB.open("ServiceHubJobMedia", 1);
+            request.onupgradeneeded = function (event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("files")) {
+                    db.createObjectStore("files", { keyPath: "id" });
+                }
+            };
+            request.onsuccess = function () { resolve(request.result); };
+            request.onerror = function () { reject(request.error || new Error("Could not open local media storage.")); };
+        });
+    }
+
+    async function saveJobMediaFiles(jobId, files) {
+        const db = await openJobMediaDB();
+        return new Promise(function (resolve, reject) {
+            const tx = db.transaction("files", "readwrite");
+            const store = tx.objectStore("files");
+            files.forEach(function (file, index) {
+                store.put({
+                    id: jobId + "_" + index,
+                    jobId: jobId,
+                    name: file.name,
+                    type: file.type || "application/octet-stream",
+                    size: file.size,
+                    file: file,
+                    createdAt: new Date().toISOString()
+                });
+            });
+            tx.oncomplete = function () { db.close(); resolve(); };
+            tx.onerror = function () { db.close(); reject(tx.error || new Error("Could not save the job media.")); };
+            tx.onabort = function () { db.close(); reject(tx.error || new Error("Could not save the job media.")); };
+        });
+    }
+
+    if (jobMedia) jobMedia.addEventListener("change", renderJobMediaPreview);
+    jobType?.addEventListener("change", updateOtherJobType);
+    paymentCurrency?.addEventListener("change", updatePaymentCurrency);
+    updateOtherJobType();
+    updatePaymentCurrency();
+
+    jobListingForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
-        const name = document.getElementById("loginName")?.value.trim() || "";
-        const company = document.getElementById("loginCompany")?.value.trim() || "";
-        const contact = document.getElementById("loginContact")?.value.trim() || "";
-        const phone = document.getElementById("loginPhone")?.value.trim() || "";
+        const selectedJobType = jobType?.value || "";
+        const resolvedJobType = selectedJobType === "others" ? (otherJobType?.value.trim() || "") : selectedJobType;
+        const currency = paymentCurrency?.value || "";
+        const amount = paymentAmount?.value.trim() || "";
+        const mediaFiles = jobMedia && jobMedia.files ? Array.from(jobMedia.files) : [];
 
-        if (!name || !contact) {
-            if (loginMessage) {
-                loginMessage.textContent =
-                    "Please fill in the required information.";
+        if (!resolvedJobType || !currency || !amount || !mediaFiles.length) {
+            if (jobListingMessage) jobListingMessage.textContent = "Please complete all required job information, including at least one media attachment.";
+            if (!mediaFiles.length && jobMedia) {
+                jobMedia.focus();
+                jobMedia.scrollIntoView({ behavior: "smooth", block: "center" });
             }
             return;
         }
 
-        const payload = {
-            type: "login",
-            "Name": name,
-            "Company Name": company,
-            "Contact Information": contact,
-            "Phone Number": phone,
-            timestamp: new Date().toISOString()
-        };
+        const jobId = "JOB-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+        const submitButton = jobListingForm.querySelector(".listing-submit");
+        if (submitButton) submitButton.disabled = true;
 
-        localStorage.setItem(
-            "serviceHubLogin",
-            JSON.stringify(payload)
-        );
+        try {
+            await saveJobMediaFiles(jobId, mediaFiles);
 
-        if (loginMessage) {
-            loginMessage.textContent = "Information prepared. Sending...";
+            const jobData = {
+                type: "job",
+                jobId: jobId,
+                name: document.getElementById("jobName")?.value.trim() || "",
+                company: document.getElementById("jobCompany")?.value.trim() || "",
+                jobType: resolvedJobType,
+                expectedQualifications: document.getElementById("jobRequirements")?.value.trim() || "",
+                paymentOffer: amount,
+                currency: currency,
+                contact: document.getElementById("jobContact")?.value.trim() || "",
+                whatsapp: document.getElementById("jobWhatsapp")?.value.trim() || "",
+                telegram: document.getElementById("jobTelegram")?.value.trim() || "",
+                media: mediaFiles.map(function (file, index) {
+                    return { id: jobId + "_" + index, name: file.name, type: file.type || "application/octet-stream", size: file.size };
+                }),
+                createdAt: new Date().toISOString()
+            };
+
+            localStorage.setItem("serviceHubJobListing", JSON.stringify(jobData, null, 2));
+            if (jobListingMessage) jobListingMessage.textContent = "Job information and media saved on this device.";
+        } catch (error) {
+            console.error("ServiceHub job media save error:", error);
+            if (jobListingMessage) jobListingMessage.textContent = error && error.message ? error.message : "The job media could not be saved.";
+        } finally {
+            if (submitButton) submitButton.disabled = false;
         }
-
-        const result =
-            await sendToServiceHubBackend("login", payload);
-
-        if (loginMessage) {
-            if (result.ok) {
-                loginMessage.textContent =
-                    "Information sent successfully.";
-            } else if (result.offline) {
-                loginMessage.textContent =
-                    "Saved locally. Backend is not connected yet.";
-            } else {
-                loginMessage.textContent =
-                    "Could not reach the backend. Please try again.";
-            }
-        }
-
     });
 
 }
+
 /* ========================================
    PROVIDER CHAT INBOX
    The supplied Apps Script has no chat endpoints.
