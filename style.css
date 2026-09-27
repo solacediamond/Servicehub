@@ -3552,78 +3552,72 @@ body.listing-upload-locked {
 }
 
 
+
 /* ========================================
-   NAIRA PAYMENT SUCCESS POPUP
-   (matches the dark surface / blue-accent
-   language used by .contact-modal and
-   .approved-check elsewhere on the site)
+   HOW IT WORKS — FINAL CARD ORGANIZATION
+   Keeps the existing alternating neon pattern:
+   PINK → BLUE → PINK → BLUE → PINK → BLUE
 ======================================== */
 
-.naira-success-popup {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-
+/* Keep the How It Works cards neatly stacked */
+.how-it-works-page .service-details {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    flex-direction: column;
+    gap: 18px;
 }
 
-.naira-success-box {
-    width: min(420px, 100%);
-    padding: 32px 28px;
-    text-align: center;
+/* Remove duplicate spacing because the parent now controls the gap */
+.how-it-works-page .service-detail-card {
+    margin-bottom: 0;
+    width: 100%;
+}
 
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
+/* Make the 6th card continue the existing alternating pattern */
+.how-it-works-page .service-detail-card:nth-child(6) {
+    color: var(--blue);
+    border-color: rgba(35, 136, 255, 0.35);
 
     box-shadow:
-        0 25px 80px rgba(0, 0, 0, 0.5),
-        0 0 30px rgba(35, 136, 255, 0.08);
+        0 0 20px rgba(35, 136, 255, 0.08),
+        inset 0 0 25px rgba(35, 136, 255, 0.025);
 
-    animation: nairaFadeIn 0.4s cubic-bezier(.22, .8, .2, 1);
+    animation-delay: 0.85s;
 }
 
-.naira-success-check {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 18px;
+/* Keep the blue glow when the final card is hovered */
+.how-it-works-page .service-detail-card:nth-child(6):hover {
+    border-color: var(--blue);
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 50%;
-    background: rgba(35, 136, 255, 0.12);
-    border: 1px solid rgba(35, 136, 255, 0.35);
-    color: var(--blue);
-    font-size: 30px;
-    font-weight: 700;
+    box-shadow:
+        0 0 25px rgba(35, 136, 255, 0.18),
+        inset 0 0 30px rgba(35, 136, 255, 0.05);
 }
 
-.naira-success-box h2 {
-    margin: 0 0 10px;
+/* Consistent icon treatment for every How It Works card */
+.how-it-works-page .service-detail-card .payment-method-icon {
+    color: inherit;
+    border: 1px solid currentColor;
+    box-shadow: 0 0 14px currentColor;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+/* Keep headings/text readable while the circuit color controls
+   the card's neon accents */
+.how-it-works-page .service-detail-card h2 {
     color: var(--text);
-    font-size: 22px;
 }
 
-.naira-success-box p {
-    margin: 0 0 12px;
+.how-it-works-page .service-detail-card p {
     color: var(--muted);
-    font-size: 14px;
 }
 
-.naira-success-box p:last-child {
-    margin-bottom: 0;
-}
+/* Responsive spacing */
+@media (max-width: 650px) {
+    .how-it-works-page .service-details {
+        gap: 14px;
+    }
 
-.naira-success-box strong {
-    color: var(--text);
+    .how-it-works-page .service-detail-card {
+        padding: 20px;
+    }
 }
-
