@@ -350,7 +350,8 @@ async function createAppsScriptListing(listingData) {
             ok: true,
             id: actualListingId,
             code: String(code),
-            listing: listing
+            listing: listing,
+            manageToken: String(createResponse.manageToken || "")
         };
     } catch (error) {
         console.error("Apps Script createListing error:", error);
@@ -2214,8 +2215,13 @@ categorySearchLinks.forEach(function (card) {
                 "Continue as " + name + " →";
 
             window.location.href =
-                "chat.html?service=" +
-                encodeURIComponent(serviceId || "");
+                "chat.html?listing=" +
+                encodeURIComponent(
+                    ((typeof getCachedServiceHubCard === "function" &&
+                      getCachedServiceHubCard(serviceId)) || {}).listingId ||
+                    serviceId || ""
+                ) +
+                "&service=" + encodeURIComponent(serviceId || "");
 
         });
 
@@ -3428,6 +3434,21 @@ if (listingForm) {
                 const listingId = result.id;
                 const paymentCode = result.code;
 
+                /* Manage token: shown once by Apps Script, kept only in
+                   this browser until the provider saves the manage link. */
+                if (result.manageToken) {
+                    try {
+                        const manageTokens = JSON.parse(
+                            localStorage.getItem("serviceHubManageTokens") || "{}"
+                        ) || {};
+                        manageTokens[listingId] = result.manageToken;
+                        localStorage.setItem(
+                            "serviceHubManageTokens",
+                            JSON.stringify(manageTokens)
+                        );
+                    } catch (_) {}
+                }
+
                 listingData.listingId = listingId;
                 listingData.paymentCode = paymentCode;
 
@@ -4183,6 +4204,14 @@ if (featuredServices && typeof services !== "undefined") {
             clearInterval(pollingTimer);
             pollingTimer = null;
         }
+
+        /* Tell the homepage to show the manage-link modal after the
+           existing success popup redirects there. */
+        try {
+            if (listingId) {
+                localStorage.setItem("serviceHubManageLinkPending", listingId);
+            }
+        } catch (_) {}
 
         if (waitingStep) waitingStep.style.display = "none";
         if (approvedStep) approvedStep.style.display = "block";
