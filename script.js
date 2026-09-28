@@ -2501,7 +2501,7 @@ function renderServicePage(card) {
     setText("serviceTitle", card.title || "Service");
     setText("serviceProvider", card.provider || "Provider");
     setText("serviceRating", card.rating || "New");
-    setText("serviceReviews", card.reviews || "0 reviews");
+    setText("serviceReviews", "Reviews");
     setText(
         "serviceDescription",
         card.description ||
