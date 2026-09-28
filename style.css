@@ -292,6 +292,24 @@ textarea {
     z-index: 1;
 }
 
+
+/* Restore hero headline gradient text effect only */
+.hero h1 span {
+    display: block;
+
+    background: linear-gradient(
+        90deg,
+        var(--blue),
+        var(--purple),
+        var(--pink)
+    );
+
+    -webkit-background-clip: text;
+    background-clip: text;
+
+    color: transparent;
+}
+
 /* ========================================
    POPULAR SEARCHES
 ======================================== */
