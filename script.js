@@ -350,8 +350,7 @@ async function createAppsScriptListing(listingData) {
             ok: true,
             id: actualListingId,
             code: String(code),
-            listing: listing,
-            manageToken: String(createResponse.manageToken || "")
+            listing: listing
         };
     } catch (error) {
         console.error("Apps Script createListing error:", error);
@@ -2163,19 +2162,9 @@ categorySearchLinks.forEach(function (card) {
 
         contactButton.addEventListener("click", function () {
 
-            const number =
-                (selectedService && (selectedService.whatsapp || selectedService.phone)) || "";
-
-            const message = buildServiceHubContactMessage(selectedService);
-
-            const wa = buildServiceHubWhatsAppLink(number, message);
-
-            if (wa) {
-                window.open(wa, "_blank", "noopener");
-                return;
-            }
-
-            alert("This provider hasn't added a phone number yet.");
+            /* "Contact provider" opens this provider's in-built chat,
+               gated by the "chatting as ..." name modal below. */
+            requireServiceHubName("chat");
 
         });
 
@@ -2214,14 +2203,19 @@ categorySearchLinks.forEach(function (card) {
             continueContact.textContent =
                 "Continue as " + name + " →";
 
-            window.location.href =
-                "chat.html?listing=" +
-                encodeURIComponent(
-                    ((typeof getCachedServiceHubCard === "function" &&
-                      getCachedServiceHubCard(serviceId)) || {}).listingId ||
-                    serviceId || ""
-                ) +
-                "&service=" + encodeURIComponent(serviceId || "");
+            /* Go wherever the button that opened this modal was
+               headed: WhatsApp, or (by default) this provider's chat. */
+            const pendingAction = contactModal.dataset.pendingAction || "chat";
+            const pendingHref = contactModal.dataset.pendingHref || "";
+
+            contactModal.classList.remove("active");
+
+            if (pendingAction === "whatsapp" && pendingHref) {
+                window.open(pendingHref, "_blank", "noopener");
+                return;
+            }
+
+            goToServiceHubChat();
 
         });
 
@@ -2469,6 +2463,71 @@ categorySearchLinks.forEach(function (card) {
 const services = {};
 
 /* ========================================
+   CONTACT NAME GATE (shared by "Contact provider" and
+   the "Chat on WhatsApp" link in Provider Details)
+======================================== */
+
+function getStoredServiceHubName() {
+    try {
+        return (localStorage.getItem("customerName") || "").trim();
+    } catch (_) {
+        return "";
+    }
+}
+
+function goToServiceHubChat() {
+    window.location.href =
+        "chat.html?listing=" +
+        encodeURIComponent(
+            (selectedService && selectedService.id) || serviceId || ""
+        ) +
+        "&service=" + encodeURIComponent(serviceId || "");
+}
+
+/* action is "chat" or "whatsapp"; whatsappHref only applies to "whatsapp".
+   If a name is already saved, skips the modal and goes straight there. */
+function requireServiceHubName(action, whatsappHref) {
+
+    if (getStoredServiceHubName()) {
+        if (action === "whatsapp") {
+            window.open(whatsappHref, "_blank", "noopener");
+        } else {
+            goToServiceHubChat();
+        }
+        return;
+    }
+
+    const modal = document.querySelector("#contactModal");
+
+    if (!modal) {
+        if (action === "whatsapp") window.open(whatsappHref, "_blank", "noopener");
+        else goToServiceHubChat();
+        return;
+    }
+
+    modal.dataset.pendingAction = action;
+    modal.dataset.pendingHref = action === "whatsapp" ? String(whatsappHref || "") : "";
+
+    const identity = modal.querySelector("#contactIdentity");
+    const chatInterface = modal.querySelector("#chatInterface");
+    if (identity) identity.style.display = "";
+    if (chatInterface) chatInterface.style.display = "none";
+
+    const heading = modal.querySelector("#contactIdentity h2");
+    if (heading) {
+        heading.textContent =
+            "Contact " + ((selectedService && selectedService.provider) || "provider");
+    }
+
+    const input = modal.querySelector("#customerName");
+    if (input) input.value = "";
+
+    modal.classList.add("active");
+    if (input) input.focus();
+}
+
+
+/* ========================================
    SERVICE PAGE
    Built from an approved Google Sheets listing
 ======================================== */
@@ -2564,56 +2623,6 @@ function renderServicePage(card) {
     renderServiceProviderDetails(card);
     renderServiceMedia(card);
     renderServiceDetailLike(card);
-    renderServicePricing(card);
-}
-
-function renderServicePricing(card) {
-    const box = document.getElementById("servicePricingSection");
-    const list = document.getElementById("servicePricingList");
-    if (!box || !list) return;
-
-    list.innerHTML = "";
-
-    /* Standard tiers (Pricing column) first, then the provider's own
-       categories (Custom Pricing column). */
-    const rows = []
-        .concat(Array.isArray(card.pricing) ? card.pricing : [])
-        .concat(Array.isArray(card.customPricing) ? card.customPricing : []);
-
-    let count = 0;
-
-    rows.forEach(function (row) {
-        if (!row || typeof row !== "object") return;
-
-        const name = String(row.category || "").trim();
-        if (!name) return;
-
-        const rawPrice = row.price;
-        const hasPrice =
-            rawPrice !== undefined &&
-            rawPrice !== null &&
-            String(rawPrice).trim() !== "";
-
-        const item = document.createElement("div");
-        item.className = "service-pricing-row";
-
-        const label = document.createElement("span");
-        label.className = "service-pricing-name";
-        label.textContent = name;
-
-        const value = document.createElement("span");
-        value.className = "service-pricing-price";
-        value.textContent = hasPrice
-            ? formatServiceHubPrice(rawPrice, card.currency)
-            : "Contact provider";
-
-        item.appendChild(label);
-        item.appendChild(value);
-        list.appendChild(item);
-        count++;
-    });
-
-    box.hidden = count === 0;
 }
 
 function renderServiceDetailLike(card) {
@@ -2697,6 +2706,15 @@ function renderServiceProviderDetails(card) {
     if (wa) {
         const a = link(wa, "Chat on WhatsApp", true);
         a.className = "provider-whatsapp-btn";
+
+        /* Same "chatting as ..." name gate as Contact provider: only
+           asks once, the first time this browser has no saved name. */
+        a.addEventListener("click", function (event) {
+            if (getStoredServiceHubName()) return;
+            event.preventDefault();
+            requireServiceHubName("whatsapp", wa);
+        });
+
         addRow("WhatsApp", a);
         count++;
     }
@@ -3433,21 +3451,6 @@ if (listingForm) {
 
                 const listingId = result.id;
                 const paymentCode = result.code;
-
-                /* Manage token: shown once by Apps Script, kept only in
-                   this browser until the provider saves the manage link. */
-                if (result.manageToken) {
-                    try {
-                        const manageTokens = JSON.parse(
-                            localStorage.getItem("serviceHubManageTokens") || "{}"
-                        ) || {};
-                        manageTokens[listingId] = result.manageToken;
-                        localStorage.setItem(
-                            "serviceHubManageTokens",
-                            JSON.stringify(manageTokens)
-                        );
-                    } catch (_) {}
-                }
 
                 listingData.listingId = listingId;
                 listingData.paymentCode = paymentCode;
@@ -4204,14 +4207,6 @@ if (featuredServices && typeof services !== "undefined") {
             clearInterval(pollingTimer);
             pollingTimer = null;
         }
-
-        /* Tell the homepage to show the manage-link modal after the
-           existing success popup redirects there. */
-        try {
-            if (listingId) {
-                localStorage.setItem("serviceHubManageLinkPending", listingId);
-            }
-        } catch (_) {}
 
         if (waitingStep) waitingStep.style.display = "none";
         if (approvedStep) approvedStep.style.display = "block";
