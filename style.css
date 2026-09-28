@@ -3604,12 +3604,27 @@ body.listing-upload-locked {
 .service-detail-image[hidden] { display: none; }
 
 .provider-details,
-.service-media-section {
+.service-media-section,
+.service-pricing-section {
     margin-top: 26px;
 }
 
 .provider-details[hidden],
-.service-media-section[hidden] { display: none; }
+.service-media-section[hidden],
+.service-pricing-section[hidden] { display: none; }
+
+.service-pricing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 14px;
+}
+.service-pricing-row:last-child { border-bottom: 0; }
+.service-pricing-name { color: var(--muted); word-break: break-word; }
+.service-pricing-price { color: var(--text); font-weight: 700; text-align: right; }
 
 .provider-detail-row {
     display: flex;

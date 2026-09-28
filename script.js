@@ -2558,6 +2558,56 @@ function renderServicePage(card) {
     renderServiceProviderDetails(card);
     renderServiceMedia(card);
     renderServiceDetailLike(card);
+    renderServicePricing(card);
+}
+
+function renderServicePricing(card) {
+    const box = document.getElementById("servicePricingSection");
+    const list = document.getElementById("servicePricingList");
+    if (!box || !list) return;
+
+    list.innerHTML = "";
+
+    /* Standard tiers (Pricing column) first, then the provider's own
+       categories (Custom Pricing column). */
+    const rows = []
+        .concat(Array.isArray(card.pricing) ? card.pricing : [])
+        .concat(Array.isArray(card.customPricing) ? card.customPricing : []);
+
+    let count = 0;
+
+    rows.forEach(function (row) {
+        if (!row || typeof row !== "object") return;
+
+        const name = String(row.category || "").trim();
+        if (!name) return;
+
+        const rawPrice = row.price;
+        const hasPrice =
+            rawPrice !== undefined &&
+            rawPrice !== null &&
+            String(rawPrice).trim() !== "";
+
+        const item = document.createElement("div");
+        item.className = "service-pricing-row";
+
+        const label = document.createElement("span");
+        label.className = "service-pricing-name";
+        label.textContent = name;
+
+        const value = document.createElement("span");
+        value.className = "service-pricing-price";
+        value.textContent = hasPrice
+            ? formatServiceHubPrice(rawPrice, card.currency)
+            : "Contact provider";
+
+        item.appendChild(label);
+        item.appendChild(value);
+        list.appendChild(item);
+        count++;
+    });
+
+    box.hidden = count === 0;
 }
 
 function renderServiceDetailLike(card) {
