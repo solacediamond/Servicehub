@@ -2557,6 +2557,37 @@ function renderServicePage(card) {
 
     renderServiceProviderDetails(card);
     renderServiceMedia(card);
+    renderServiceDetailLike(card);
+}
+
+function renderServiceDetailLike(card) {
+    const button = document.getElementById("serviceDetailLikeBtn");
+    if (!button) return;
+
+    const cardId = card.id || serviceId;
+    if (!cardId) return;
+
+    const likeState = getServiceHubLikeState(card);
+    const likes = Number(likeState.likes) || 0;
+
+    button.classList.toggle("is-liked", likeState.liked);
+    button.setAttribute("aria-pressed", likeState.liked ? "true" : "false");
+    button.setAttribute(
+        "aria-label",
+        likeState.liked ? "Unlike this service" : "Like this service"
+    );
+    button.title = String(likes) + " like" + (likes === 1 ? "" : "s");
+
+    const countElement = button.querySelector(".service-like-count");
+    if (countElement) countElement.textContent = String(likes);
+
+    /* Use onclick (not addEventListener) so re-rendering the detail
+       page — e.g. once the cache is replaced by the fetched listing —
+       never stacks duplicate click handlers on the same button. */
+    button.onclick = function (event) {
+        event.preventDefault();
+        toggleServiceHubLike(String(cardId), card, button);
+    };
 }
 
 function renderServiceProviderDetails(card) {

@@ -432,6 +432,8 @@ textarea {
 }
 
 .service-card {
+    position: relative;
+
     overflow: hidden;
 
     background: var(--surface);
@@ -516,6 +518,114 @@ textarea {
 
 .service-bottom strong {
     color: var(--text);
+}
+
+
+/* ========================================
+   SERVICE CARD LIKE BUTTON
+======================================== */
+
+.service-like-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 5;
+
+    min-width: 42px;
+    height: 42px;
+    padding: 7px 9px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+
+    background: rgba(10, 15, 24, 0.78);
+    color: #fff;
+
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.service-like-btn:hover {
+    transform: scale(1.06);
+}
+
+.service-like-btn:active {
+    transform: scale(0.94);
+}
+
+.service-like-btn:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+.service-like-heart {
+    font-size: 19px;
+    line-height: 1;
+}
+
+.service-like-count {
+    min-width: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.service-like-btn.is-liked {
+    background: rgba(255, 79, 216, 0.18);
+    border-color: var(--pink);
+    color: var(--pink);
+}
+
+.service-like-btn.is-liked .service-like-heart {
+    transform: scale(1.08);
+}
+
+/* ----------------------------------------
+   Detail-page variant — sits inline beside
+   the rating/review text instead of
+   floating over the card image.
+---------------------------------------- */
+
+.detail-like-btn {
+    position: static;
+
+    min-width: 0;
+    height: auto;
+    padding: 4px 12px 4px 10px;
+
+    border-color: var(--border);
+    background: var(--surface-light);
+    color: var(--muted);
+}
+
+.detail-like-btn .service-like-heart {
+    font-size: 15px;
+}
+
+.detail-like-btn .service-like-count {
+    font-size: 13px;
+    color: var(--text);
+}
+
+.detail-like-btn.is-liked {
+    background: rgba(255, 79, 216, 0.14);
+    border-color: var(--pink);
+    color: var(--pink);
+}
+
+.detail-like-btn.is-liked .service-like-count {
+    color: var(--pink);
 }
 
 
