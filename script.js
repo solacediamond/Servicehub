@@ -436,6 +436,234 @@ function escapeServiceHubText(value) {
    grid (every approved listing) and the homepage Featured preview
    (a random max-3 subset) so both stay visually identical.
 */
+
+/* =================================
+   CURRENCY + LIKE HELPERS
+================================= */
+
+function getServiceHubCurrencySymbol(currency) {
+    const code = String(currency || "NGN").trim().toUpperCase();
+
+    const symbols = {
+        NGN: "₦",
+        USD: "$",
+        GBP: "£",
+        EUR: "€",
+        GHS: "₵",
+        KES: "KSh ",
+        ZAR: "R",
+        CAD: "C$",
+        AUD: "A$",
+        NZD: "NZ$",
+        INR: "₹",
+        JPY: "¥",
+        CNY: "¥",
+        AED: "د.إ ",
+        SAR: "﷼ ",
+        XOF: "CFA ",
+        XAF: "FCFA "
+    };
+
+    return symbols[code] || (code + " ");
+}
+
+function formatServiceHubPrice(price, currency) {
+    if (price === null || price === undefined || String(price).trim() === "") {
+        return "Contact provider";
+    }
+
+    const numeric = Number(price);
+    const code = String(currency || "NGN").trim().toUpperCase();
+
+    if (!Number.isNaN(numeric)) {
+        let locale = "en-NG";
+        if (code === "USD") locale = "en-US";
+        else if (code === "GBP") locale = "en-GB";
+        else if (code === "EUR") locale = "de-DE";
+        else if (code === "INR") locale = "en-IN";
+
+        return getServiceHubCurrencySymbol(code) +
+            numeric.toLocaleString(locale, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+    }
+
+    return getServiceHubCurrencySymbol(code) + String(price);
+}
+
+function getServiceHubLikeId() {
+    const storageKey = "serviceHubLikeId";
+
+    try {
+        let id = localStorage.getItem(storageKey);
+        if (id) return id;
+
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+            id = window.crypto.randomUUID();
+        } else {
+            id = "sh-" + Date.now().toString(36) + "-" +
+                Math.random().toString(36).slice(2) +
+                Math.random().toString(36).slice(2);
+        }
+
+        localStorage.setItem(storageKey, id);
+        return id;
+    } catch (_) {
+        return "sh-session-" + Math.random().toString(36).slice(2);
+    }
+}
+
+function parseServiceHubLikedBy(value) {
+    if (Array.isArray(value)) return value.map(String);
+
+    if (typeof value !== "string" || !value.trim()) return [];
+
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function getServiceHubLikeState(cardData) {
+    const likerId = getServiceHubLikeId();
+    const likedBy = parseServiceHubLikedBy(cardData && cardData.likedBy);
+    return {
+        liked: likedBy.indexOf(likerId) !== -1,
+        likes: Number(cardData && cardData.likes) || 0
+    };
+}
+
+async function toggleServiceHubLike(cardId, cardData, button) {
+    if (!cardId || !cardData || !button) return;
+
+    const before = getServiceHubLikeState(cardData);
+    const nextLiked = !before.liked;
+
+    /* Optimistic UI */
+    button.disabled = true;
+    button.classList.toggle("is-liked", nextLiked);
+    button.setAttribute("aria-pressed", nextLiked ? "true" : "false");
+    button.setAttribute(
+        "aria-label",
+        nextLiked ? "Unlike this service" : "Like this service"
+    );
+
+    const optimisticCount = Math.max(
+        0,
+        before.likes + (nextLiked ? 1 : -1)
+    );
+
+    const optimisticCountElement =
+        button.querySelector(".service-like-count");
+
+    if (optimisticCountElement) {
+        optimisticCountElement.textContent =
+            String(optimisticCount);
+    }
+
+    try {
+        const result = await postToExistingAppsScript({
+            action: "toggleLike",
+            listingId: String(cardId),
+            likerId: getServiceHubLikeId(),
+            liked: nextLiked
+        });
+
+        if (!result || result.success === false) {
+            throw new Error(
+                result && result.error
+                    ? result.error
+                    : "The like could not be saved."
+            );
+        }
+
+        cardData.likes = Number(result.likes) || 0;
+        cardData.liked = result.liked === true;
+
+        const currentLikedBy = parseServiceHubLikedBy(cardData.likedBy);
+        const currentLikerId = getServiceHubLikeId();
+        const currentIndex = currentLikedBy.indexOf(currentLikerId);
+
+        if (cardData.liked && currentIndex === -1) {
+            currentLikedBy.push(currentLikerId);
+        } else if (!cardData.liked && currentIndex !== -1) {
+            currentLikedBy.splice(currentIndex, 1);
+        }
+
+        cardData.likedBy = currentLikedBy;
+
+        const cards = JSON.parse(
+            localStorage.getItem("serviceHubBackendCards") || "{}"
+        );
+
+        if (cards[cardId]) {
+            cards[cardId].likes = cardData.likes;
+            cards[cardId].liked = cardData.liked;
+
+            const likedBy = parseServiceHubLikedBy(cards[cardId].likedBy);
+            const likerId = getServiceHubLikeId();
+            const index = likedBy.indexOf(likerId);
+
+            if (cards[cardId].liked && index === -1) {
+                likedBy.push(likerId);
+            } else if (!cards[cardId].liked && index !== -1) {
+                likedBy.splice(index, 1);
+            }
+
+            cards[cardId].likedBy = likedBy;
+            localStorage.setItem(
+                "serviceHubBackendCards",
+                JSON.stringify(cards)
+            );
+        }
+
+        button.classList.toggle("is-liked", result.liked === true);
+        button.setAttribute(
+            "aria-pressed",
+            result.liked === true ? "true" : "false"
+        );
+        button.setAttribute(
+            "aria-label",
+            result.liked === true ? "Unlike this service" : "Like this service"
+        );
+
+        const countElement = button.querySelector(".service-like-count");
+        if (countElement) {
+            countElement.textContent = String(result.likes || 0);
+        }
+
+        button.title = String(result.likes || 0) + " like" +
+            (Number(result.likes) === 1 ? "" : "s");
+
+    } catch (error) {
+        console.warn("ServiceHub like failed:", error);
+
+        /* Roll back the optimistic state */
+        cardData.liked = before.liked;
+        cardData.likes = before.likes;
+        button.classList.toggle("is-liked", before.liked);
+        button.setAttribute(
+            "aria-pressed",
+            before.liked ? "true" : "false"
+        );
+        button.setAttribute(
+            "aria-label",
+            before.liked ? "Unlike this service" : "Like this service"
+        );
+
+        const countElement = button.querySelector(".service-like-count");
+        if (countElement) {
+            countElement.textContent = String(before.likes);
+        }
+    } finally {
+        button.disabled = false;
+    }
+}
+
+
 function buildServiceHubCardElement(cardData, cardId) {
 
     const card = document.createElement("a");
@@ -460,6 +688,15 @@ function buildServiceHubCardElement(cardData, cardId) {
         imageHTML = '<video class="service-card-media" src="' + escapeServiceHubAttribute(firstVideo.previewUrl || firstVideo.url) + '" muted playsinline preload="metadata"></video>';
     }
 
+    const likeState = getServiceHubLikeState(cardData);
+    const likes = Number(likeState.likes) || 0;
+    const likedClass = likeState.liked ? " is-liked" : "";
+    const currency = String(cardData.currency || "NGN").toUpperCase();
+    const displayPrice = cardData.priceDisplay ||
+        formatServiceHubPrice(cardData.rawPrice, currency) ||
+        cardData.price ||
+        "Contact provider";
+
     card.innerHTML = `
         <div class="service-image">
             ${imageHTML}
@@ -472,10 +709,35 @@ function buildServiceHubCardElement(cardData, cardId) {
             <p class="provider">${escapeServiceHubText(cardData.provider)}</p>
             <div class="service-bottom">
                 <span>⭐ ${escapeServiceHubText(cardData.rating)}</span>
-                <strong>From ${escapeServiceHubText(cardData.price)}</strong>
+                <strong>From ${escapeServiceHubText(displayPrice)}</strong>
             </div>
         </div>
+        <button
+            type="button"
+            class="service-like-btn${likedClass}"
+            aria-label="${likeState.liked ? "Unlike this service" : "Like this service"}"
+            aria-pressed="${likeState.liked ? "true" : "false"}"
+            title="${likes} like${likes === 1 ? "" : "s"}"
+        >
+            <span class="service-like-heart" aria-hidden="true">♥</span>
+            <span class="service-like-count">${likes}</span>
+        </button>
     `;
+
+    const likeButton = card.querySelector(".service-like-btn");
+
+    if (likeButton) {
+        likeButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            toggleServiceHubLike(
+                String(cardId),
+                cardData,
+                likeButton
+            );
+        });
+    }
 
     return card;
 }
@@ -574,6 +836,11 @@ function storeServiceHubCard(card) {
         pricing: card.pricing || [],
         customPricing: card.customPricing || [],
         media: card.media || [],
+        rawPrice: card.rawPrice !== undefined ? card.rawPrice : "",
+        priceDisplay: card.priceDisplay || card.price || "Contact provider",
+        likes: Number(card.likes) || 0,
+        likedBy: parseServiceHubLikedBy(card.likedBy),
+        liked: card.liked === true,
         included: []
     };
 
@@ -606,7 +873,12 @@ function mapLegacyBackendListingToCard(row) {
         rating: row.rating || "New",
         reviews: row.reviews || 0,
         currency: String(row.currency || row.Currency || "NGN").toUpperCase(),
-        price: row.starting_price ? ((String(row.currency || row.Currency || "NGN").toUpperCase() === "USD" ? "$" : "₦") + row.starting_price) : "Contact provider",
+        rawPrice: row.starting_price || row.price || "",
+        price: row.starting_price
+            ? formatServiceHubPrice(row.starting_price, row.currency || row.Currency || "NGN")
+            : "Contact provider",
+        likes: Number(row.likes || row.Likes) || 0,
+        likedBy: parseServiceHubLikedBy(row.likedBy || row["Liked By"]),
         pricing: row.pricing || [],
         customPricing: row.custom_pricing || [],
         media: row.media || []
@@ -1003,7 +1275,10 @@ function mapAppsScriptListingToCard(listing) {
     );
 
     const currency = String(get("currency", "Currency") || "NGN").toUpperCase();
-    const currencySymbol = currency === "USD" ? "$" : "₦";
+    const rawPrice = price;
+    const likedBy = parseServiceHubLikedBy(get("likedBy", "Liked By"));
+    const likes = Number(get("likes", "Likes") || likedBy.length) || 0;
+    const liked = likedBy.indexOf(getServiceHubLikeId()) !== -1;
 
     return {
         id: String(id || ""),
@@ -1019,9 +1294,16 @@ function mapAppsScriptListingToCard(listing) {
         rating: get("rating", "Rating") || "New",
         reviews: get("reviews", "Reviews") || 0,
         currency: currency,
+        rawPrice: rawPrice,
         price: price !== ""
-            ? (currencySymbol + (isNaN(Number(price)) ? price : Number(price).toLocaleString(currency === "USD" ? "en-US" : "en-NG")))
+            ? formatServiceHubPrice(price, currency)
             : "Contact provider",
+        priceDisplay: price !== ""
+            ? formatServiceHubPrice(price, currency)
+            : "Contact provider",
+        likes: likes,
+        likedBy: likedBy,
+        liked: liked,
         pricing: pricing,
         customPricing: customPricing,
         media: media
