@@ -336,7 +336,11 @@ async function createAppsScriptListing(listingData) {
         providerId: providerId,
         serviceName: listingData.service || "",
         price: parseServiceHubAmount(listingData.startingPrice),
-        currency: listingData.currency || "",
+        /* Always forwarded to Apps Script as "NGN" or "USD" */
+        currency: (function (c) {
+            c = String(c || "").trim().toUpperCase();
+            return c === "USD" || c === "NGN" ? c : "";
+        })(listingData.currency),
 
         /* Extra fields are retained in the request for compatibility with
            existing frontend data, but the supplied backend only requires the
@@ -729,10 +733,13 @@ function buildServiceHubCardElement(cardData, cardId) {
     const likes = Number(likeState.likes) || 0;
     const likedClass = likeState.liked ? " is-liked" : "";
     const currency = String(cardData.currency || "NGN").toUpperCase();
-    const displayPrice = cardData.priceDisplay ||
-        formatServiceHubPrice(cardData.rawPrice, currency) ||
-        cardData.price ||
-        "Contact provider";
+    const hasRawPrice = cardData.rawPrice !== undefined &&
+        cardData.rawPrice !== null &&
+        String(cardData.rawPrice).trim() !== "";
+    /* Currency-aware: symbol comes from the listing's own currency (₦ / $) */
+    const displayPrice = hasRawPrice
+        ? formatServiceHubPrice(cardData.rawPrice, currency)
+        : (cardData.priceDisplay || cardData.price || "Contact provider");
 
     card.innerHTML = `
         <div class="service-image">
@@ -790,7 +797,17 @@ function addServiceHubCardToPage(cardData, cardId) {
     const container = document.getElementById("exploreGrid");
     if (!container) return;
 
-    if (container.querySelector('[data-backend-card-id="' + CSS.escape(String(cardId)) + '"]')) {
+    const existingCard = container.querySelector('[data-backend-card-id="' + CSS.escape(String(cardId)) + '"]');
+    const priceSig = String(cardData.currency || "NGN").toUpperCase() + "|" + String(cardData.rawPrice === undefined ? "" : cardData.rawPrice);
+
+    if (existingCard) {
+        /* If the provider changed price or currency, refresh this card in
+           place (same position) instead of waiting for a page reload. */
+        if (existingCard.dataset.priceSig !== priceSig) {
+            const refreshed = buildServiceHubCardElement(cardData, cardId);
+            refreshed.dataset.priceSig = priceSig;
+            existingCard.replaceWith(refreshed);
+        }
         return;
     }
 
@@ -798,6 +815,7 @@ function addServiceHubCardToPage(cardData, cardId) {
        load and never ordered by "last listed". Inserting each card at a
        random index yields a uniformly random order overall. */
     const cardEl = buildServiceHubCardElement(cardData, cardId);
+    cardEl.dataset.priceSig = priceSig;
     const siblings = container.children;
     const randomIndex = Math.floor(Math.random() * (siblings.length + 1));
 
@@ -2648,7 +2666,7 @@ function renderServicePage(card) {
         let items = [];
         (Array.isArray(card.customPricing) ? card.customPricing : []).forEach(function (row) {
             if (row && row.category) {
-                items.push(row.category + (row.price ? " — ₦" + row.price : ""));
+                items.push(row.category + (row.price ? " — " + getServiceHubCurrencySymbol(card.currency) + row.price : ""));
             }
         });
         if (!items.length && Array.isArray(card.included) && card.included.length) {

@@ -56,6 +56,12 @@ h3{margin:26px 0 4px;font-size:1rem}
 #composer .ib{background:var(--ac);border-color:var(--ac);width:46px;height:46px}
 body.chat{background:linear-gradient(rgba(3,7,18,.4),rgba(3,7,18,.4)),url(chat-bg.jpg) center/cover fixed no-repeat #060b16}
 body.chat header,body.chat #composer{background:rgba(6,11,22,.86)}
+select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--tx);font:inherit}
+select:focus{outline:2px solid var(--ac);outline-offset:0}
+.tile.danger{border-color:rgba(252,165,165,.35)}
+.tile.danger .ico{background:rgba(239,68,68,.16);color:var(--bad)}
+.btn.danger{background:#dc2626}
+.warnbox{margin:4px 0 0;padding:12px 14px;border-radius:12px;border:1px solid rgba(252,165,165,.35);background:rgba(239,68,68,.08);color:#fecaca;font-size:.9rem;line-height:1.5}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:#111c33;border:1px solid var(--line);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
 #toast.on{opacity:1}
 </style>
@@ -71,7 +77,8 @@ body.chat header,body.chat #composer{background:rgba(6,11,22,.86)}
   <div class="hello"><span class="chip" id="lid">Listing</span><h2 id="svc">Your service</h2><p id="who"></p></div>
   <button class="tile" data-go="portfolio"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span><b>Update portfolio</b><small>Card info, media and contact details</small></span></button>
   <button class="tile" data-go="chats"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.6A8 8 0 1 1 21 12z"/></svg></span><span><b>Chat</b><small>Messages from people asking about your service</small></span><span class="badge" id="unread" hidden></span></button>
-  <button class="tile" data-go="price"><span class="ico"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span><span><b>Update price</b><small>Change your starting price</small></span></button>
+  <button class="tile" data-go="price"><span class="ico"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span><span><b>Update price</b><small>Change your starting price or currency</small></span></button>
+  <button class="tile danger" data-go="delete"><span class="ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></span><span><b>Delete service</b><small>Remove your listing from ServiceHub</small></span></button>
 </section>
 
 <section class="view" id="v-portfolio">
@@ -92,8 +99,17 @@ body.chat header,body.chat #composer{background:rgba(6,11,22,.86)}
 <section class="view" id="v-price">
   <label>Current starting price</label>
   <div class="price" id="curPrice">-</div>
+  <label for="f-currency">Currency</label>
+  <select id="f-currency"><option value="NGN">Naira (₦)</option><option value="USD">Dollar ($)</option></select>
   <label for="f-price">New starting price</label><input id="f-price" inputmode="decimal" placeholder="e.g. 15000">
   <button class="btn" id="savePrice">Update price</button>
+</section>
+
+<section class="view" id="v-delete">
+  <div class="warnbox"><b>This removes your service from ServiceHub.</b><br>Your listing disappears from Explore straight away and your manage link stops working. This cannot be undone from here.</div>
+  <label for="f-confirm">Type <b>DELETE</b> to confirm</label>
+  <input id="f-confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="DELETE">
+  <button class="btn danger" id="doDelete">Delete my service</button>
 </section>
 
 <section class="view" id="v-chats"><div id="convs"></div></section>
@@ -128,7 +144,7 @@ var chat={
 };
 
 /* ---- navigation ---- */
-var titles={home:"Manage listing",portfolio:"Update portfolio",price:"Update price",chats:"Chat",thread:""};
+var titles={home:"Manage listing",portfolio:"Update portfolio",price:"Update price",chats:"Chat",delete:"Delete service",thread:""};
 function show(v){
   document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v)});
   $("#title").textContent=v==="thread"&&openConv?openConv.name:titles[v];
@@ -143,7 +159,9 @@ function fill(){
   $("#lid").textContent=L.listingId||"Listing";$("#svc").textContent=L.serviceName||"Your service";
   $("#who").textContent=[L.providerName,L.company].filter(Boolean).join(" · ");
   fields.forEach(function(f){$("#f-"+f).value=L[f]||""});
-  $("#curPrice").textContent=(L.currency||"NGN")+" "+Number(L.price||0).toLocaleString();
+  var cur=String(L.currency||"NGN").toUpperCase()==="USD"?"USD":"NGN";
+  $("#curPrice").textContent=(cur==="USD"?"$":"₦")+Number(L.price||0).toLocaleString();
+  $("#f-currency").value=cur;
   $("#f-price").value="";media=Array.isArray(L.media)?L.media.slice():[];drawMedia();
 }
 function drawMedia(){
@@ -183,11 +201,21 @@ $("#saveCard").onclick=function(){
    .catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
 };
 $("#savePrice").onclick=function(){
-  var b=this,o=b.textContent,v=parseFloat($("#f-price").value.replace(/,/g,""));
-  if(!(v>0)){toast("Enter a valid price");return}
+  var b=this,o=b.textContent,v=parseFloat($("#f-price").value.replace(/,/g,"")),c=$("#f-currency").value,oldC=String(L.currency||"NGN").toUpperCase()==="USD"?"USD":"NGN";
+  if(!(v>0)){toast(c!==oldC?"Enter the price in "+(c==="USD"?"dollars":"naira"):"Enter a valid price");return}
   busy(b,true,"Updating...");
-  api("updateManagePrice",{price:v}).then(function(){L.price=v;fill();toast("Price updated")})
+  api("updateManagePrice",{price:v,currency:c}).then(function(){L.price=v;L.currency=c;fill();toast("Price updated")})
    .catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
+};
+$("#doDelete").onclick=function(){
+  var b=this,o=b.textContent;
+  if($("#f-confirm").value.trim().toUpperCase()!=="DELETE"){toast("Type DELETE to confirm");return}
+  busy(b,true,"Deleting...");
+  api("deleteManageListing").then(function(){
+    try{localStorage.removeItem("serviceHubManageLinkPending")}catch(_){}
+    location.hash="";
+    document.body.innerHTML='<div class="wrap"><div class="hello"><h2>Service deleted</h2><p>Your listing has been removed from ServiceHub.</p></div><a class="btn" href="index.html" style="display:block;text-align:center;text-decoration:none">Back to home</a></div>';
+  }).catch(function(e){toast(e.message);busy(b,false,o)});
 };
 $("#addMedia").onclick=function(){$("#pick").click()};
 $("#pick").onchange=function(){
