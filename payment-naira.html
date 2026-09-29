@@ -121,6 +121,28 @@
                     will update automatically — no need to refresh.
                 </p>
 
+                <!-- 7-MINUTE CONFIRMATION TIMER -->
+                <div class="payment-timer" id="nairaTimer" aria-live="off">
+                    <span class="payment-timer-label" id="nairaTimerLabel">Time remaining</span>
+                    <strong class="payment-timer-value" id="nairaTimerValue">07:00</strong>
+                </div>
+
+                <!-- BANK SUPPORT WARNING -->
+                <div class="bank-warning-box" role="note">
+                    <span class="bank-warning-icon" aria-hidden="true">⚠</span>
+                    <div class="bank-warning-text">
+                        <strong>Doesn't support all banks for now</strong>
+                        <p>
+                            Transfers from SmartCash and other online banks
+                            provided by a network provider may not be
+                            matched, and neither will any bank or app that
+                            doesn't have a dedicated narration/description
+                            field for transfers.
+                            note that that this is temporary and would be resolved soon
+                        </p>
+                    </div>
+                </div>
+
             </div>
 
 
@@ -151,6 +173,42 @@
         </section>
 
     </main>
+
+    <!-- NOT-CONFIRMED-YET MODAL (sits BELOW the success popup so success always wins) -->
+    <div
+        id="nairaTimeoutModal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nairaTimeoutTitle"
+        class="naira-timeout-modal"
+        style="display:none;"
+    >
+        <div class="naira-timeout-box">
+            <div class="naira-timeout-icon">!</div>
+            <h2 id="nairaTimeoutTitle">Have you paid?</h2>
+            <p>
+                If you've made the transfer but it hasn't been confirmed yet,
+                please contact support on WhatsApp and we'll sort it out.
+            </p>
+
+            <a
+                id="nairaSupportWhatsapp"
+                class="naira-whatsapp-btn"
+                href="#"
+                target="_blank"
+                rel="noopener"
+            >
+                <svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true" fill="currentColor">
+                    <path d="M16.04 3C9.4 3 4 8.4 4 15.03c0 2.12.55 4.19 1.6 6.02L4 29l8.13-1.56a12.03 12.03 0 0 0 3.9.65h.01C22.68 28.09 28 22.69 28 16.06 28 9.4 22.68 3 16.04 3Zm0 22.1h-.01c-1.2 0-2.38-.32-3.4-.93l-.24-.15-4.83.93.96-4.7-.16-.25a9.96 9.96 0 0 1-1.53-5.3c0-5.5 4.5-9.98 10.04-9.98 5.53 0 10.03 4.48 10.03 9.98 0 5.5-4.5 10.4-10.86 10.4Zm5.5-7.5c-.3-.15-1.78-.88-2.05-.98-.28-.1-.48-.15-.68.15-.2.3-.78.98-.95 1.18-.18.2-.35.22-.65.08-.3-.15-1.27-.47-2.42-1.5-.9-.8-1.5-1.78-1.67-2.08-.18-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.68-1.63-.93-2.23-.25-.58-.5-.5-.68-.5h-.58c-.2 0-.53.08-.8.38-.28.3-1.05 1.03-1.05 2.5s1.08 2.9 1.23 3.1c.15.2 2.1 3.2 5.08 4.5.7.3 1.26.48 1.7.62.72.23 1.37.2 1.88.12.58-.09 1.78-.73 2.03-1.43.25-.7.25-1.3.18-1.43-.08-.12-.28-.2-.58-.35Z"/>
+                </svg>
+                Contact Support on WhatsApp
+            </a>
+
+            <button type="button" class="naira-timeout-close" id="nairaTimeoutClose">
+                Keep waiting
+            </button>
+        </div>
+    </div>
 
     <!-- PAYMENT SUCCESS POPUP -->
     <div
@@ -226,6 +284,102 @@
         if (approvedStep.style.display !== "none") {
             startSuccessCountdown();
         }
+    })();
+    </script>
+
+    <script>
+    /*
+       7-minute confirmation timer + "not confirmed yet" modal.
+       - Purely additive: it never touches payment status or polling.
+       - The modal's z-index is BELOW the success popup, and polling in
+         script.js keeps running, so a late confirmation still shows the
+         success popup and redirects home.
+    */
+    (function () {
+        /* >>> SET YOUR SUPPORT WHATSAPP NUMBER HERE (digits only, with country code) <<< */
+        const SUPPORT_WHATSAPP_NUMBER = window.SERVICEHUB_SUPPORT_WHATSAPP || "+2348073410722";
+        const SUPPORT_MESSAGE = "Hi I made a payment on service hub and it's not confirmed yet";
+        const TOTAL_SECONDS = 7 * 60;
+
+        const timerEl = document.getElementById("nairaTimer");
+        const valueEl = document.getElementById("nairaTimerValue");
+        const labelEl = document.getElementById("nairaTimerLabel");
+        const modal = document.getElementById("nairaTimeoutModal");
+        const closeBtn = document.getElementById("nairaTimeoutClose");
+        const waBtn = document.getElementById("nairaSupportWhatsapp");
+        const approvedStep = document.getElementById("nairaApprovedStep");
+
+        if (!timerEl || !valueEl || !modal || !approvedStep) return;
+
+        if (waBtn) {
+            waBtn.href = "https://wa.me/" +
+                String(SUPPORT_WHATSAPP_NUMBER).replace(/\D/g, "") +
+                "?text=" + encodeURIComponent(SUPPORT_MESSAGE);
+        }
+
+        /* Keep the deadline across refreshes so reloading can't reset the clock */
+        const KEY = "serviceHubNairaTimerDeadline";
+        let deadline = 0;
+        try { deadline = parseInt(sessionStorage.getItem(KEY) || "0", 10) || 0; } catch (e) {}
+        if (!deadline || deadline < Date.now() - TOTAL_SECONDS * 1000) {
+            deadline = Date.now() + TOTAL_SECONDS * 1000;
+            try { sessionStorage.setItem(KEY, String(deadline)); } catch (e) {}
+        }
+
+        let timer = null;
+        let modalShown = false;
+
+        function isApproved() {
+            return approvedStep.style.display !== "none";
+        }
+
+        function fmt(sec) {
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+        }
+
+        function stopAll() {
+            if (timer) { clearInterval(timer); timer = null; }
+            modal.style.display = "none";
+            timerEl.style.display = "none";
+            try { sessionStorage.removeItem(KEY); } catch (e) {}
+        }
+
+        function showModal() {
+            if (modalShown || isApproved()) return;
+            modalShown = true;
+            modal.style.display = "flex";
+        }
+
+        function tick() {
+            if (isApproved()) { stopAll(); return; }
+
+            const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            valueEl.textContent = fmt(left);
+
+            if (left <= 0) {
+                if (timer) { clearInterval(timer); timer = null; }
+                timerEl.classList.add("payment-timer-expired");
+                if (labelEl) labelEl.textContent = "Taking longer than expected";
+                showModal();
+            }
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener("click", function () {
+                modal.style.display = "none";
+            });
+        }
+
+        /* If payment is confirmed, drop the timer and modal immediately.
+           The success popup (higher z-index) handles the rest. */
+        new MutationObserver(function () {
+            if (isApproved()) stopAll();
+        }).observe(approvedStep, { attributes: true, attributeFilter: ["style"] });
+
+        tick();
+        if (!isApproved()) timer = setInterval(tick, 1000);
     })();
     </script>
 

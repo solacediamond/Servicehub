@@ -3970,3 +3970,184 @@ body.listing-upload-locked {
         transform: none;
     }
 }
+
+
+/* ========================================
+   NAIRA PAYMENT: BANK WARNING, TIMER,
+   NOT-CONFIRMED MODAL
+======================================== */
+
+/* Warning box (sits under the waiting status) */
+.bank-warning-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 16px 18px;
+    border: 1px solid rgba(255, 79, 216, 0.3);
+    border-radius: 14px;
+    background: rgba(255, 79, 216, 0.07);
+}
+
+.bank-warning-icon {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 79, 216, 0.14);
+    border: 1px solid rgba(255, 79, 216, 0.35);
+    color: var(--pink);
+    font-size: 15px;
+    line-height: 1;
+}
+
+.bank-warning-text strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--pink);
+    font-size: 13.5px;
+}
+
+.bank-warning-text p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+/* Countdown timer */
+.payment-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.payment-timer-value {
+    padding: 5px 11px;
+    border-radius: 8px;
+    background: var(--surface-light);
+    border: 1px solid rgba(35, 136, 255, 0.35);
+    color: var(--blue);
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 14px;
+    letter-spacing: 0.8px;
+}
+
+.payment-timer-expired .payment-timer-value {
+    color: var(--pink);
+    border-color: rgba(255, 79, 216, 0.4);
+}
+
+/* "Have you paid?" modal. z-index is deliberately BELOW
+   .naira-success-popup (9999) so success always shows on top. */
+.naira-timeout-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.naira-timeout-box {
+    width: min(420px, 100%);
+    padding: 32px 28px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(255, 79, 216, 0.08);
+    animation: nairaFadeIn 0.4s cubic-bezier(.22, .8, .2, 1);
+}
+
+.naira-timeout-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 79, 216, 0.12);
+    border: 1px solid rgba(255, 79, 216, 0.35);
+    color: var(--pink);
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.naira-timeout-box h2 {
+    margin: 0 0 10px;
+    color: var(--text);
+    font-size: 22px;
+}
+
+.naira-timeout-box p {
+    margin: 0 0 22px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.naira-whatsapp-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: #25d366;
+    color: #06210f;
+    font-size: 14.5px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: 0.2s ease;
+}
+
+.naira-whatsapp-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+.naira-timeout-close {
+    width: 100%;
+    margin-top: 10px;
+    padding: 13px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.naira-timeout-close:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+}
+
+@media (max-width: 480px) {
+    .bank-warning-box {
+        padding: 14px;
+    }
+
+    .naira-timeout-box {
+        padding: 28px 20px;
+    }
+}
