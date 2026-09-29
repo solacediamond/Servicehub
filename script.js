@@ -289,6 +289,38 @@ async function waitForAppsScriptListing(listingId, predicate, timeoutMs) {
    createListingWithPaymentCode() function. The frontend generates the ID,
    then Apps Script creates the row and owns the payment code.
 */
+/*
+   Manage-link token helpers.
+   Apps Script returns the plain manage token ONCE in the createListing
+   response (only its SHA-256 hash is stored server-side). We look for a
+   64-hex-character string anywhere in the response so this keeps working
+   whatever the field is called (manageToken, token, data.manageToken...).
+*/
+function findServiceHubManageToken(value, depth) {
+    depth = depth || 0;
+    if (depth > 3 || value == null) return "";
+    if (typeof value === "string") {
+        return /^[a-f0-9]{64}$/i.test(value.trim()) ? value.trim().toLowerCase() : "";
+    }
+    if (typeof value === "object") {
+        const keys = Object.keys(value);
+        for (let i = 0; i < keys.length; i++) {
+            const found = findServiceHubManageToken(value[keys[i]], depth + 1);
+            if (found) return found;
+        }
+    }
+    return "";
+}
+
+function saveServiceHubManageToken(listingId, token) {
+    if (!listingId || !token) return;
+    try {
+        const tokens = JSON.parse(localStorage.getItem("serviceHubManageTokens") || "{}") || {};
+        tokens[String(listingId)] = String(token);
+        localStorage.setItem("serviceHubManageTokens", JSON.stringify(tokens));
+    } catch (_) { /* storage unavailable: popup simply won't show */ }
+}
+
 async function createAppsScriptListing(listingData) {
     const baseUrl = getAppsScriptUrl();
     if (!baseUrl) return { ok: false, offline: true };
@@ -329,6 +361,10 @@ async function createAppsScriptListing(listingData) {
             listingId
         ).trim();
 
+        /* The plain manage token is only ever sent here, once. Keep it. */
+        const manageToken = findServiceHubManageToken(createResponse);
+        saveServiceHubManageToken(actualListingId, manageToken);
+
         const confirmed = await waitForAppsScriptListing(
             actualListingId,
             function () { return true; },
@@ -350,6 +386,7 @@ async function createAppsScriptListing(listingData) {
             ok: true,
             id: actualListingId,
             code: String(code),
+            manageToken: manageToken,
             listing: listing
         };
     } catch (error) {
@@ -4207,6 +4244,13 @@ if (featuredServices && typeof services !== "undefined") {
             clearInterval(pollingTimer);
             pollingTimer = null;
         }
+
+        /* Tell index.html (manage-link-modal.js) to show the manage link
+           after the success popup redirects home. Set BEFORE the reveal
+           below, because the redirect countdown starts on reveal. */
+        try {
+            if (listingId) localStorage.setItem("serviceHubManageLinkPending", String(listingId));
+        } catch (_) {}
 
         if (waitingStep) waitingStep.style.display = "none";
         if (approvedStep) approvedStep.style.display = "block";
