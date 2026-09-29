@@ -794,7 +794,18 @@ function addServiceHubCardToPage(cardData, cardId) {
         return;
     }
 
-    container.prepend(buildServiceHubCardElement(cardData, cardId));
+    /* Random position instead of prepend, so the grid is shuffled on every
+       load and never ordered by "last listed". Inserting each card at a
+       random index yields a uniformly random order overall. */
+    const cardEl = buildServiceHubCardElement(cardData, cardId);
+    const siblings = container.children;
+    const randomIndex = Math.floor(Math.random() * (siblings.length + 1));
+
+    if (randomIndex >= siblings.length) {
+        container.appendChild(cardEl);
+    } else {
+        container.insertBefore(cardEl, siblings[randomIndex]);
+    }
 
 }
 
@@ -3979,7 +3990,15 @@ const exploreGrid = document.getElementById("exploreGrid");
 
 if (exploreGrid && typeof services !== "undefined") {
 
-    Object.entries(services).forEach(([serviceId, service]) => {
+    /* Fisher-Yates shuffle so static services are random on every load too */
+    const shuffledServiceEntries = Object.entries(services);
+    for (let i = shuffledServiceEntries.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledServiceEntries[i], shuffledServiceEntries[j]] =
+            [shuffledServiceEntries[j], shuffledServiceEntries[i]];
+    }
+
+    shuffledServiceEntries.forEach(([serviceId, service]) => {
 
         const card = document.createElement("a");
 
@@ -4528,6 +4547,21 @@ if (jobListingForm) {
         const amount = paymentAmount?.value.trim() || "";
         const mediaFiles = jobMedia && jobMedia.files ? Array.from(jobMedia.files) : [];
 
+        const googleFormInput = document.getElementById("jobGoogleForm");
+        const googleFormLink = googleFormInput ? googleFormInput.value.trim() : "";
+
+        /* Accept docs.google.com/forms/..., forms.gle/... or forms.google.com/... */
+        const validGoogleForm = /^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/|forms\.google\.com\/)\S+$/i.test(googleFormLink);
+
+        if (!validGoogleForm) {
+            if (jobListingMessage) jobListingMessage.textContent = "Please paste a valid Google Form link (it should start with https://docs.google.com/forms or https://forms.gle).";
+            if (googleFormInput) {
+                googleFormInput.focus();
+                googleFormInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+            return;
+        }
+
         if (!resolvedJobType || !currency || !amount || !mediaFiles.length) {
             if (jobListingMessage) jobListingMessage.textContent = "Please complete all required job information, including at least one media attachment.";
             if (!mediaFiles.length && jobMedia) {
@@ -4556,6 +4590,7 @@ if (jobListingForm) {
                 contact: document.getElementById("jobContact")?.value.trim() || "",
                 whatsapp: document.getElementById("jobWhatsapp")?.value.trim() || "",
                 telegram: document.getElementById("jobTelegram")?.value.trim() || "",
+                googleFormLink: googleFormLink,
                 media: mediaFiles.map(function (file, index) {
                     return { id: jobId + "_" + index, name: file.name, type: file.type || "application/octet-stream", size: file.size };
                 }),

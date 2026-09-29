@@ -224,6 +224,33 @@
                         >
                     </div>
 
+                    <!-- 10. GOOGLE FORM -->
+                    <div class="form-group google-form-group">
+                        <label for="jobGoogleForm">Google Form Link</label>
+                        <input
+                            type="url"
+                            id="jobGoogleForm"
+                            name="googleForm"
+                            placeholder="Paste the link to your Google form here"
+                            maxlength="500"
+                            inputmode="url"
+                            autocomplete="off"
+                            required
+                        >
+
+                        <div class="google-form-help">
+                            <span>Don't have one yet? Create one now</span>
+                            <a
+                                class="google-form-create-btn"
+                                href="https://forms.google.com/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Create ↗
+                            </a>
+                        </div>
+                    </div>
+
                     <p id="jobListingMessage" class="form-message" aria-live="polite"></p>
 
                     <button
