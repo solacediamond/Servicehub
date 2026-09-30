@@ -6,7 +6,7 @@
 <title>Chat — ServiceHub</title>
 <style>
 :root{--bg:#080b12;--surface:#101522;--surface2:#151c2b;--blue:#2388ff;--text:#f3f6fa;--muted:#8993a5;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%}body{background:linear-gradient(rgba(3,7,18,.28),rgba(3,7,18,.28)),var(--bg) url("chat-bg.jpg") center center / cover fixed no-repeat;color:var(--text);font-family:Arial,Helvetica,sans-serif;overflow:hidden}.chat-page{height:100vh;height:100dvh;background:transparent;display:flex;flex-direction:column}.chat-header{height:58px;min-height:58px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;padding-top:env(safe-area-inset-top,0px);position:relative}.avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#2388ff,#a855f7,#ff4fd8);font-weight:700;margin-right:10px}.provider-info h1{font-size:14px}.provider-info p{font-size:10px;color:var(--muted);margin-top:2px}.edit-name{position:absolute;right:8px;top:7px;border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;opacity:.7}.messages{flex:1;overflow:auto;padding:20px 16px;display:flex;flex-direction:column;gap:9px}.empty{margin:auto;text-align:center;color:var(--muted);font-size:12px;line-height:1.5}.empty strong{display:block;color:var(--text);font-size:16px;margin-bottom:5px}.bubble{max-width:min(75%,650px);padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.45}.bubble.user{align-self:flex-end;background:var(--blue);border-bottom-right-radius:4px}.bubble.provider{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-bottom-left-radius:4px}.time{display:block;font-size:8px;opacity:.55;margin-top:4px}.composer-area{background:var(--surface);border-top:1px solid var(--border);padding:8px 10px calc(3px + env(safe-area-inset-bottom,0px));flex-shrink:0}.composer{display:flex;gap:8px;align-items:center}.composer input{flex:1;min-width:0;height:42px;border-radius:21px;border:1px solid var(--border);background:var(--surface2);color:var(--text);outline:none;padding:0 13px;font-size:13px}.composer input:focus{border-color:rgba(35,136,255,.55)}.send{width:38px;height:38px;border:0;border-radius:50%;background:var(--blue);color:#fff;cursor:pointer;font-size:17px}.as{font-size:9px;color:var(--muted);padding:3px 13px;opacity:.7}.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:20px}.modal.active{display:flex}.modal-box{width:min(400px,100%);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px}.modal-box h2{font-size:18px;margin-bottom:7px}.modal-box p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:17px}.modal-box input{width:100%;height:42px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;padding:0 12px;font-size:13px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.actions button{height:36px;padding:0 15px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text);cursor:pointer;font-size:12px}.actions .primary{border:0;background:var(--blue)}@media(max-width:600px){.chat-header{height:54px;min-height:54px;padding:0 12px}.messages{padding:15px 11px}.bubble{max-width:82%;font-size:12px}.composer-area{padding:7px 8px 3px}.composer input{font-size:12px;height:40px}.send{width:36px;height:36px}}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;width:100%}body{background:linear-gradient(rgba(3,7,18,.28),rgba(3,7,18,.28)),var(--bg) url("chat-bg.jpg") center center / cover fixed no-repeat;color:var(--text);font-family:Arial,Helvetica,sans-serif;overflow:hidden}.chat-page{height:100vh;height:100dvh;background:transparent;display:flex;flex-direction:column}.chat-header{height:58px;min-height:58px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;padding-top:env(safe-area-inset-top,0px);position:relative}.avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#2388ff,#a855f7,#ff4fd8);font-weight:700;margin-right:10px}.provider-info h1{font-size:14px}.provider-info p{font-size:10px;color:var(--muted);margin-top:2px}.edit-name{position:absolute;right:8px;top:7px;border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;opacity:.7}.messages{flex:1;overflow:auto;padding:20px 16px;display:flex;flex-direction:column;gap:9px}.empty{margin:auto;text-align:center;color:var(--muted);font-size:12px;line-height:1.5}.empty strong{display:block;color:var(--text);font-size:16px;margin-bottom:5px}.bubble{max-width:min(75%,650px);padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.45}.bubble.user{align-self:flex-end;background:var(--blue);border-bottom-right-radius:4px}.bubble.provider{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-bottom-left-radius:4px}.time{display:block;font-size:8px;opacity:.55;margin-top:4px}.composer-area{background:var(--surface);border-top:1px solid var(--border);padding:8px 10px calc(3px + env(safe-area-inset-bottom,0px));flex-shrink:0}.composer{display:flex;gap:8px;align-items:center}.composer input{flex:1;min-width:0;height:42px;border-radius:21px;border:1px solid var(--border);background:var(--surface2);color:var(--text);outline:none;padding:0 13px;font-size:13px}.composer input:focus{border-color:rgba(35,136,255,.55)}.send{width:38px;height:38px;border:0;border-radius:50%;background:var(--blue);color:#fff;cursor:pointer;font-size:17px}.as{font-size:9px;color:var(--muted);padding:3px 13px;opacity:.7}.as.err{color:#fca5a5;opacity:1}.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:20px}.modal.active{display:flex}.modal-box{width:min(400px,100%);background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px}.modal-box h2{font-size:18px;margin-bottom:7px}.modal-box p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:17px}.modal-box input{width:100%;height:42px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;padding:0 12px;font-size:13px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.actions button{height:36px;padding:0 15px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text);cursor:pointer;font-size:12px}.actions .primary{border:0;background:var(--blue)}@media(max-width:600px){.chat-header{height:54px;min-height:54px;padding:0 12px}.messages{padding:15px 11px}.bubble{max-width:82%;font-size:12px}.composer-area{padding:7px 8px 3px}.composer input{font-size:12px;height:40px}.send{width:36px;height:36px}}
 </style>
 <script src="backend-config.js"></script>
 </head>
@@ -32,7 +32,6 @@ const card=cards[listingId]||{};
 let providerId=String(card.providerId||card["Provider ID"]||"");
 let providerName=String(card.provider||card.providerName||"");
 let serviceName=String(card.title||card.serviceName||"");
-const key="serviceHubChat_"+listingId;
 providerNameEl.textContent=providerName||"Loading..."; serviceNameEl.textContent=serviceName;
 if(!listingId){empty.innerHTML="<strong>Listing not found</strong>Go back and tap Contact provider again.";input.disabled=true;send.disabled=true;providerNameEl.textContent="Service provider";}
 function loadListing(){
@@ -49,16 +48,49 @@ function loadListing(){
   }).catch(function(){});
 }
 function getName(){return (localStorage.getItem(NAME_KEY)||"").trim();}
-function updateName(){chattingAs.textContent=getName()?"chatting as "+getName():"";}
+function updateName(){chattingAs.classList.remove("err");chattingAs.textContent=getName()?"chatting as "+getName():"";}
+function flash(msg){chattingAs.classList.add("err");chattingAs.textContent=msg;setTimeout(updateName,2600);}
 function openModal(){nameInput.value=getName();nameModal.classList.add("active");setTimeout(function(){nameInput.focus();nameInput.select();},50);}
 function closeModal(){nameModal.classList.remove("active");}
 document.getElementById("editName").onclick=openModal; document.getElementById("cancelName").onclick=closeModal;
 nameForm.addEventListener("submit",function(e){e.preventDefault();const n=nameInput.value.trim();if(!n)return;localStorage.setItem(NAME_KEY,n);updateName();closeModal();});
-function read(){try{return JSON.parse(localStorage.getItem(key)||"null");}catch(_){return null;}}
-function ensure(){let chat=read();if(!chat){chat={listingId,providerId,providerName,serviceId,serviceName,customerName:getName()||"Customer",messages:[],updatedAt:new Date().toISOString(),storageKey:key};localStorage.setItem(key,JSON.stringify(chat));}else{chat.storageKey=key;}return chat;}
-function render(){const chat=read();messages.innerHTML="";if(!chat||!chat.messages||!chat.messages.length){messages.innerHTML='<div class="empty"><strong>Start a conversation</strong>Send a message to the provider about this service.</div>';return;}chat.messages.forEach(function(m){const b=document.createElement("div");b.className="bubble "+(m.sender==="customer"?"user":"provider");b.textContent=m.message||"";const time=document.createElement("span");time.className="time";time.textContent=m.createdAt?new Date(m.createdAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):"";b.appendChild(time);messages.appendChild(b);});messages.scrollTop=messages.scrollHeight;}
-function submit(){const value=input.value.trim();if(!value)return;const chat=ensure();chat.customerName=getName()||"Customer";chat.messages.push({sender:"customer",senderName:chat.customerName,message:value,createdAt:new Date().toISOString()});chat.updatedAt=new Date().toISOString();chat.storageKey=key;localStorage.setItem(key,JSON.stringify(chat));input.value="";render();window.dispatchEvent(new Event("serviceHubLocalChatUpdated"));}
-send.onclick=submit;input.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();submit();}});window.addEventListener("storage",function(e){if(e.key===key){render();}});window.addEventListener("serviceHubLocalChatUpdated",render);updateName();render();loadListing();
+
+/* ---- Supabase: every message is scoped to this exact listingId, so two
+   providers' chats can never mix, even if a customer messages several
+   providers from the same browser. ---- */
+function sb(fn,params){
+  var url=String(window.SERVICEHUB_SUPABASE_URL||"").replace(/\/$/,"");
+  var key=String(window.SERVICEHUB_SUPABASE_ANON_KEY||"");
+  if(!url||!key)return Promise.reject(new Error("Chat isn't set up yet."));
+  return fetch(url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{"Content-Type":"application/json","apikey":key,"Authorization":"Bearer "+key},body:JSON.stringify(params||{})})
+    .then(function(r){return r.text().then(function(t){var data=t?JSON.parse(t):null;if(!r.ok){throw new Error((data&&data.message)||"Chat request failed.");}return data;});});
+}
+var lastId=0, sending=false;
+function renderRows(rows){
+  if(!rows||!rows.length){if(!messages.querySelector(".bubble"))messages.innerHTML='<div class="empty"><strong>Start a conversation</strong>Send a message to the provider about this service.</div>';return;}
+  var atBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<40;
+  if(!messages.querySelector(".bubble"))messages.innerHTML="";
+  rows.forEach(function(m){
+    if(m.id<=lastId)return;
+    lastId=m.id;
+    var b=document.createElement("div");b.className="bubble "+(m.sender==="customer"?"user":"provider");b.textContent=m.body||"";
+    var time=document.createElement("span");time.className="time";time.textContent=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+    b.appendChild(time);messages.appendChild(b);
+  });
+  if(atBottom)messages.scrollTop=messages.scrollHeight;
+}
+function pull(){if(!listingId)return;sb("customer_messages",{p_listing:listingId,p_client:token,p_after:lastId}).then(renderRows).catch(function(){});}
+function submit(){
+  var value=input.value.trim();if(!value||sending||!listingId)return;
+  sending=true;send.disabled=true;
+  sb("customer_send",{p_listing:listingId,p_client:token,p_name:getName()||"Customer",p_body:value})
+    .then(function(){input.value="";return pull();})
+    .catch(function(e){flash(e.message||"Message failed - try again");})
+    .then(function(){sending=false;send.disabled=false;});
+}
+send.onclick=submit;input.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();submit();}});
+updateName();loadListing();
+if(listingId){pull();setInterval(function(){if(!document.hidden)pull();},4000);}
 if(!getName())setTimeout(openModal,120);
 })();
 </script>

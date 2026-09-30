@@ -71,6 +71,7 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 <header>
   <button class="ib" id="back" hidden aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
   <h1 id="title">Manage listing</h1>
+  <button class="ib" id="deleteIcon" data-go="delete" hidden aria-label="Delete service"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>
 </header>
 
 <section class="view on" id="v-home">
@@ -78,7 +79,7 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
   <button class="tile" data-go="portfolio"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span><b>Update portfolio</b><small>Card info, media and contact details</small></span></button>
   <button class="tile" data-go="chats"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.6A8 8 0 1 1 21 12z"/></svg></span><span><b>Chat</b><small>Messages from people asking about your service</small></span><span class="badge" id="unread" hidden></span></button>
   <button class="tile" data-go="price"><span class="ico"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span><span><b>Update price</b><small>Change your starting price or currency</small></span></button>
-  <button class="tile danger" data-go="delete"><span class="ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></span><span><b>Delete service</b><small>Remove your listing from ServiceHub</small></span></button>
+  <button class="tile" id="secondaryTile"><span class="ico"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg></span><span><b id="secLabel">Secondary</b><small id="secSmall">Link another service to manage it from here too</small></span></button>
 </section>
 
 <section class="view" id="v-portfolio">
@@ -105,6 +106,13 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
   <button class="btn" id="savePrice">Update price</button>
 </section>
 
+<section class="view" id="v-secondary">
+  <div class="hello"><h2>Link a second service</h2><p>Paste that listing's manage link to switch between both from here.</p></div>
+  <label for="f-seclink">Manage link</label>
+  <input id="f-seclink" placeholder="Paste the other listing's manage link" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <button class="btn" id="linkSecondary">Link this service</button>
+</section>
+
 <section class="view" id="v-delete">
   <div class="warnbox"><b>This removes your service from ServiceHub.</b><br>Your listing disappears from Explore straight away and your manage link stops working. This cannot be undone from here.</div>
   <label for="f-confirm">Type <b>DELETE</b> to confirm</label>
@@ -125,30 +133,44 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 "use strict";
 var $=function(s){return document.querySelector(s)};
 var token=location.hash.slice(1), API=window.SERVICEHUB_APPS_SCRIPT_URL||"";
+var activeToken=token, secondary=null, primaryListing=null;
 var L=null, media=[], openConv=null, fields=["providerName","company","about","portfolio","contact","phone"];
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function toast(t){var e=$("#toast");e.textContent=t;e.classList.add("on");setTimeout(function(){e.classList.remove("on")},2400)}
 
 /* ---- Apps Script API (token is the only credential) ---- */
-function api(action,data){
+function api(action,data,tokenOverride){
   return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify(Object.assign({action:action,token:token},data||{}))})
+    body:JSON.stringify(Object.assign({action:action,token:tokenOverride||activeToken},data||{}))})
   .then(function(r){return r.json()}).then(function(j){if(j.success===false)throw new Error(j.error||"Request failed");return j});
 }
 
-/* ---- Chat adapter: swap these 3 functions for Supabase later ---- */
+/* ---- Supabase chat, scoped to whichever listing is active. A provider's
+   token only ever resolves (server-side) to their own listing_id, so
+   switching Secondary can never leak another provider's chats. ---- */
+function sb(fn,params){
+  var url=String(window.SERVICEHUB_SUPABASE_URL||"").replace(/\/$/,"");
+  var key=String(window.SERVICEHUB_SUPABASE_ANON_KEY||"");
+  if(!url||!key)return Promise.reject(new Error("Chat isn't set up yet."));
+  return fetch(url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{"Content-Type":"application/json","apikey":key,"Authorization":"Bearer "+key},body:JSON.stringify(params||{})})
+    .then(function(r){return r.text().then(function(t){var data=t?JSON.parse(t):null;if(!r.ok){throw new Error((data&&data.message)||"Chat request failed.");}return data;});});
+}
 var chat={
-  list:function(){return Promise.resolve([])},
-  messages:function(c){return Promise.resolve(c.msgs||[])},
-  send:function(c,text){c.msgs.push({me:1,t:text,at:"now"});return Promise.resolve()}
+  list:function(){return sb("provider_conversations",{p_token:activeToken}).then(function(rows){return rows||[]})},
+  open:function(c){return sb("provider_mark_read",{p_token:activeToken,p_conversation:c.id}).catch(function(){})},
+  messages:function(c){return sb("provider_messages",{p_token:activeToken,p_conversation:c.id,p_after:0}).then(function(rows){return rows||[]})},
+  send:function(c,text){return sb("provider_send",{p_token:activeToken,p_conversation:c.id,p_body:text})}
 };
+function refreshUnreadBadge(){
+  chat.list().then(function(cs){var n=0;cs.forEach(function(c){n+=c.unread||0});var u=$("#unread");u.hidden=!n;u.textContent=n}).catch(function(){});
+}
 
 /* ---- navigation ---- */
 var titles={home:"Manage listing",portfolio:"Update portfolio",price:"Update price",chats:"Chat",delete:"Delete service",thread:""};
 function show(v){
   document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v)});
   $("#title").textContent=v==="thread"&&openConv?openConv.name:titles[v];
-  document.body.classList.toggle("chat",v==="thread");$("#back").hidden=v==="home";$("#composer").hidden=v!=="thread";
+  document.body.classList.toggle("chat",v==="thread");$("#back").hidden=v==="home";$("#deleteIcon").hidden=v!=="home";$("#composer").hidden=v!=="thread";
   $("#back").dataset.to=v==="thread"?"chats":"home";window.scrollTo(0,0);
 }
 $("#back").onclick=function(){show(this.dataset.to)};
@@ -156,6 +178,7 @@ document.querySelectorAll("[data-go]").forEach(function(b){b.onclick=function(){
 
 /* ---- render ---- */
 function fill(){
+  if(activeToken===token&&!primaryListing)primaryListing=L;
   $("#lid").textContent=L.listingId||"Listing";$("#svc").textContent=L.serviceName||"Your service";
   $("#who").textContent=[L.providerName,L.company].filter(Boolean).join(" · ");
   fields.forEach(function(f){$("#f-"+f).value=L[f]||""});
@@ -176,18 +199,20 @@ function drawMedia(){
 function renderConvs(){
   chat.list().then(function(cs){
     var h=$("#convs"),n=0;h.innerHTML=cs.length?"":'<div class="empty">No messages yet. When someone messages you, it shows up here.</div>';
-    cs.forEach(function(c){n+=c.unread||0;var last=(c.msgs||[]).slice(-1)[0]||{},b=document.createElement("button");b.className="conv";
-      b.innerHTML='<span class="av">'+esc(c.name.charAt(0))+'</span><span class="t"><b>'+esc(c.name)+'</b><span>'+esc(last.t||"")+'</span></span>'+(c.unread?'<span class="dot"></span>':"");
-      b.onclick=function(){openConv=c;c.unread=0;drawThread();show("thread")};h.appendChild(b)});
+    cs.forEach(function(c){n+=c.unread||0;var name=c.customer_name||"Customer",b=document.createElement("button");b.className="conv";
+      b.innerHTML='<span class="av">'+esc(name.charAt(0))+'</span><span class="t"><b>'+esc(name)+'</b><span>'+esc(c.last_message||"")+'</span></span>'+(c.unread?'<span class="dot"></span>':"");
+      b.onclick=function(){openConv=c;chat.open(c);drawThread();show("thread")};h.appendChild(b)});
     var u=$("#unread");u.hidden=!n;u.textContent=n;
-  });
+  }).catch(function(e){$("#convs").innerHTML='<div class="empty">'+esc(e.message)+'</div>'});
 }
 function drawThread(){
   chat.messages(openConv).then(function(ms){
     var h=$("#msgs");h.innerHTML="";
-    ms.forEach(function(m){var d=document.createElement("div");d.className="b"+(m.me?" me":"");d.innerHTML=esc(m.t)+"<small>"+esc(m.at)+"</small>";h.appendChild(d)});
+    ms.forEach(function(m){var d=document.createElement("div");d.className="b"+(m.sender==="provider"?" me":"");
+      var t=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+      d.innerHTML=esc(m.body)+"<small>"+esc(t)+"</small>";h.appendChild(d)});
     window.scrollTo(0,document.body.scrollHeight);
-  });
+  }).catch(function(e){toast(e.message)});
 }
 function sendMsg(){var i=$("#say"),t=i.value.trim();if(!t||!openConv)return;i.value="";chat.send(openConv,t).then(drawThread)}
 $("#send").onclick=sendMsg;$("#say").onkeydown=function(e){if(e.key==="Enter")sendMsg()};
@@ -212,7 +237,15 @@ $("#doDelete").onclick=function(){
   if($("#f-confirm").value.trim().toUpperCase()!=="DELETE"){toast("Type DELETE to confirm");return}
   busy(b,true,"Deleting...");
   api("deleteManageListing").then(function(){
+    if(activeToken!==token){
+      /* Deleting the SECONDARY service: drop it and return to the main one. */
+      try{localStorage.removeItem("serviceHubSecondary_"+token)}catch(_){}
+      secondary=null;activeToken=token;L=primaryListing;
+      updateSecondaryTile();fill();$("#f-confirm").value="";busy(b,false,o);
+      toast("Secondary service deleted");show("home");return;
+    }
     try{localStorage.removeItem("serviceHubManageLinkPending")}catch(_){}
+    try{localStorage.removeItem("serviceHubSecondary_"+token)}catch(_){}
     location.hash="";
     document.body.innerHTML='<div class="wrap"><div class="hello"><h2>Service deleted</h2><p>Your listing has been removed from ServiceHub.</p></div><a class="btn" href="index.html" style="display:block;text-align:center;text-decoration:none">Back to home</a></div>';
   }).catch(function(e){toast(e.message);busy(b,false,o)});
@@ -229,6 +262,40 @@ $("#pick").onchange=function(){
   })},Promise.resolve()).then(function(){toast("Tap Save changes to keep media edits")});
 };
 
+/* ---- Secondary: link a second listing and flip between the two ---- */
+function updateSecondaryTile(){
+  if(!secondary){$("#secLabel").textContent="Secondary";$("#secSmall").textContent="Link another service to manage it from here too";return}
+  var other=activeToken===token?secondary.listing:primaryListing;
+  $("#secLabel").textContent="Switch to "+(other.serviceName||"other service");
+  $("#secSmall").textContent=(other.listingId||"")+" - tap to switch";
+}
+function swapActive(){
+  if(!secondary)return;
+  if(activeToken===token){primaryListing=L;activeToken=secondary.token;L=secondary.listing}
+  else{secondary.listing=L;activeToken=token;L=primaryListing}
+  fill();updateSecondaryTile();refreshUnreadBadge();toast("Now managing "+(L.serviceName||"this service"));show("home");
+}
+$("#secondaryTile").onclick=function(){secondary?swapActive():show("secondary")};
+$("#linkSecondary").onclick=function(){
+  var b=this,o=b.textContent,v=$("#f-seclink").value.trim();
+  var t=(v.indexOf("#")>-1?v.slice(v.lastIndexOf("#")+1):v).trim().toLowerCase();
+  if(!/^[a-f0-9]{64}$/.test(t)){toast("That doesn't look like a valid manage link.");return}
+  if(t===token){toast("That's already your main service.");return}
+  busy(b,true,"Linking...");
+  api("getManageListing",null,t).then(function(j){
+    secondary={token:t,listing:j.listing};
+    try{localStorage.setItem("serviceHubSecondary_"+token,t)}catch(_){}
+    updateSecondaryTile();$("#f-seclink").value="";toast("Linked "+(j.listing.serviceName||"service"));show("home");
+  }).catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
+};
+function loadSavedSecondary(){
+  var saved;try{saved=localStorage.getItem("serviceHubSecondary_"+token)}catch(_){saved=null}
+  if(!saved)return;
+  api("getManageListing",null,saved).then(function(j){
+    secondary={token:saved,listing:j.listing};updateSecondaryTile();
+  }).catch(function(){try{localStorage.removeItem("serviceHubSecondary_"+token)}catch(_){}});
+}
+
 /* ---- start ---- */
 function msg(t,retry){document.body.innerHTML='<div class="wrap"><div class="empty">'+esc(t)+(retry?'<br><br><button class="btn" onclick="location.reload()">Try again</button>':'')+'</div></div>'}
 function gate(note){
@@ -240,7 +307,7 @@ function gate(note){
 }
 if(!token){gate()}
 else if(!API){msg("ServiceHub is not configured yet. Please try again later.")}
-else api("getManageListing").then(function(j){L=j.listing;fill()}).catch(function(e){var bad=/invalid/i.test(e.message);if(bad)gate("This link is not valid. Check it and try again.");else msg("Could not load your listing. Check your connection and try again.",true)});
+else api("getManageListing").then(function(j){L=j.listing;primaryListing=L;fill();refreshUnreadBadge();loadSavedSecondary()}).catch(function(e){var bad=/invalid/i.test(e.message);if(bad)gate("This link is not valid. Check it and try again.");else msg("Could not load your listing. Check your connection and try again.",true)});
 })();
 </script>
 </body>
