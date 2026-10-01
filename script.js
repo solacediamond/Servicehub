@@ -733,6 +733,9 @@ function buildServiceHubCardElement(cardData, cardId) {
     const likes = Number(likeState.likes) || 0;
     const likedClass = likeState.liked ? " is-liked" : "";
     const currency = String(cardData.currency || "NGN").toUpperCase();
+    /* Region is derived purely from the listing's own currency: a
+       Dollar listing is shown as Global, everything else as Nigeria. */
+    const region = currency === "USD" ? "Global" : "Nigeria";
     const hasRawPrice = cardData.rawPrice !== undefined &&
         cardData.rawPrice !== null &&
         String(cardData.rawPrice).trim() !== "";
@@ -744,6 +747,7 @@ function buildServiceHubCardElement(cardData, cardId) {
     card.innerHTML = `
         <div class="service-image">
             ${imageHTML}
+            <span class="service-region-badge">📍 ${escapeServiceHubText(region)}</span>
         </div>
         <div class="service-info">
             <p class="service-category">
@@ -751,6 +755,7 @@ function buildServiceHubCardElement(cardData, cardId) {
             </p>
             <h3>${escapeServiceHubText(cardData.title)}</h3>
             <p class="provider">${escapeServiceHubText(cardData.provider)}</p>
+            <p class="service-region-text">📍 ${escapeServiceHubText(region)}</p>
             <div class="service-bottom">
                 <span>⭐ ${escapeServiceHubText(cardData.rating)}</span>
                 <strong>From ${escapeServiceHubText(displayPrice)}</strong>

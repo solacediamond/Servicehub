@@ -41,6 +41,15 @@ h3{margin:26px 0 4px;font-size:1rem}
 .m button{position:absolute;top:4px;right:4px;width:26px;height:26px;border:0;border-radius:50%;background:rgba(3,7,18,.8);color:#fff;cursor:pointer;display:grid;place-items:center}
 .m button svg{width:14px;height:14px}
 .price{font-size:2rem;font-weight:700;margin:6px 0 0}
+.tierRow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.tierRow input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--ac)}
+.tierRow label{flex:1;margin:0;color:var(--tx);font-size:.98rem}
+.tierRow input[type=text],.tierRow input[type=number]{width:120px;padding:9px 10px}
+.tierRow input:disabled{opacity:.45}
+.customRow{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.customRow input[type=text]{flex:1}
+.customRow input[type=number]{width:110px}
+.customRow button{flex:none;width:36px;border:0;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--bad);cursor:pointer}
 .conv{display:flex;align-items:center;gap:12px;width:100%;padding:14px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--tx);text-align:left;font:inherit;cursor:pointer}
 .av{width:42px;height:42px;border-radius:50%;background:rgba(37,99,235,.22);color:var(--ac2);display:grid;place-items:center;font-weight:700;flex:none}
 .conv .t{flex:1;min-width:0}.conv b{display:block}.conv span{display:block;color:var(--mut);font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -104,6 +113,15 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
   <select id="f-currency"><option value="NGN">Naira (₦)</option><option value="USD">Dollar ($)</option></select>
   <label for="f-price">New starting price</label><input id="f-price" inputmode="decimal" placeholder="e.g. 15000">
   <button class="btn" id="savePrice">Update price</button>
+
+  <h3>Package pricing (optional)</h3>
+  <p class="empty" style="padding:0 0 4px;text-align:left">Offer Basic, Standard, Medium and Premium packages, or add your own.</p>
+  <div id="tiers"></div>
+
+  <h3>Custom categories</h3>
+  <div id="customTiers"></div>
+  <button class="btn alt" id="addCustomTier">+ Add custom category</button>
+  <button class="btn" id="saveTiers">Save pricing tiers</button>
 </section>
 
 <section class="view" id="v-secondary">
@@ -186,7 +204,63 @@ function fill(){
   $("#curPrice").textContent=(cur==="USD"?"$":"₦")+Number(L.price||0).toLocaleString();
   $("#f-currency").value=cur;
   $("#f-price").value="";media=Array.isArray(L.media)?L.media.slice():[];drawMedia();
+  drawTiers();
 }
+
+var FIXED_TIERS=["Basic","Standard","Medium","Premium"];
+
+function tierPrice(list,name){
+  var hit=(Array.isArray(list)?list:[]).find(function(r){return String(r&&r.category||"").toLowerCase()===name.toLowerCase()});
+  return hit?String(hit.price||""):"";
+}
+function drawTiers(){
+  var pricing=Array.isArray(L.pricing)?L.pricing:[];
+  var t=$("#tiers");t.innerHTML="";
+  FIXED_TIERS.forEach(function(name){
+    var val=tierPrice(pricing,name),on=val!=="";
+    var row=document.createElement("div");row.className="tierRow";
+    var cb=document.createElement("input");cb.type="checkbox";cb.checked=on;cb.id="tier-"+name;
+    var lb=document.createElement("label");lb.htmlFor=cb.id;lb.textContent=name;
+    var pr=document.createElement("input");pr.type="number";pr.min="0";pr.placeholder="Price";pr.value=val;pr.disabled=!on;
+    cb.onchange=function(){pr.disabled=!cb.checked;if(cb.checked)pr.focus()};
+    row.appendChild(cb);row.appendChild(lb);row.appendChild(pr);t.appendChild(row);
+  });
+  var customPricing=Array.isArray(L.customPricing)?L.customPricing:[];
+  var ct=$("#customTiers");ct.innerHTML="";
+  customPricing.forEach(function(row){addCustomTierRow(row.category||"",row.price||"")});
+}
+function addCustomTierRow(name,price){
+  var ct=$("#customTiers"),row=document.createElement("div");row.className="customRow";
+  var n=document.createElement("input");n.type="text";n.placeholder="Category name";n.value=name||"";
+  var p=document.createElement("input");p.type="number";p.min="0";p.placeholder="Price";p.value=price||"";
+  var x=document.createElement("button");x.type="button";x.setAttribute("aria-label","Remove");x.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  x.onclick=function(){row.remove()};
+  row.appendChild(n);row.appendChild(p);row.appendChild(x);ct.appendChild(row);
+}
+$("#addCustomTier").onclick=function(){addCustomTierRow("","")};
+function collectTiers(){
+  var pricing=[];
+  FIXED_TIERS.forEach(function(name){
+    var cb=$("#tier-"+name);
+    if(cb&&cb.checked){
+      var pr=cb.parentNode.querySelector("input[type=number]").value.trim();
+      pricing.push({category:name,price:pr});
+    }
+  });
+  var customPricing=[];
+  $("#customTiers").querySelectorAll(".customRow").forEach(function(row){
+    var inputs=row.querySelectorAll("input"),name=inputs[0].value.trim(),price=inputs[1].value.trim();
+    if(name)customPricing.push({category:name,price:price});
+  });
+  return{pricing:pricing,customPricing:customPricing};
+}
+$("#saveTiers").onclick=function(){
+  var b=this,o=b.textContent,t=collectTiers();
+  busy(b,true,"Saving...");
+  api("updateManageTiers",t).then(function(j){
+    L.pricing=j.pricing;L.customPricing=j.customPricing;toast("Pricing tiers saved")
+  }).catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
+};
 function drawMedia(){
   var g=$("#media");g.innerHTML="";
   if(!media.length){g.innerHTML='<div class="empty" style="grid-column:1/-1;padding:16px 0">No media yet</div>';return}
