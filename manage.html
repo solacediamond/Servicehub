@@ -226,8 +226,13 @@ $("#saveCard").onclick=function(){
    .catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
 };
 $("#savePrice").onclick=function(){
-  var b=this,o=b.textContent,v=parseFloat($("#f-price").value.replace(/,/g,"")),c=$("#f-currency").value,oldC=String(L.currency||"NGN").toUpperCase()==="USD"?"USD":"NGN";
-  if(!(v>0)){toast(c!==oldC?"Enter the price in "+(c==="USD"?"dollars":"naira"):"Enter a valid price");return}
+  var b=this,o=b.textContent;
+  var raw=$("#f-price").value.replace(/,/g,"").trim();
+  var c=$("#f-currency").value,oldC=String(L.currency||"NGN").toUpperCase()==="USD"?"USD":"NGN";
+  /* Blank price box means "keep the current price" - this is what lets
+     switching currency alone (with no new price typed) still save. */
+  var v=raw===""?Number(L.price||0):parseFloat(raw);
+  if(!(v>0)){toast(raw===""?"No price on file yet - enter one":"Enter a valid price");return}
   busy(b,true,"Updating...");
   api("updateManagePrice",{price:v,currency:c}).then(function(){L.price=v;L.currency=c;fill();toast("Price updated")})
    .catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
