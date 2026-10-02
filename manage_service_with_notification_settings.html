@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Manage your listing</title>
+<script src="backend-config.js"></script>
+<style>
+:root{--bg:#060b16;--card:#0b1220;--line:rgba(148,163,184,.22);--tx:#e8eefc;--mut:#94a3c4;--ac:#2563eb;--ac2:#93c5fd;--ok:#86efac;--bad:#fca5a5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 40px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:1.1rem;flex:1}
+.ib{width:40px;height:40px;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:12px;display:grid;place-items:center;cursor:pointer;flex:none}
+.ib[hidden]{display:none}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.banner{margin:12px 0 0;padding:9px 12px;border-radius:10px;background:rgba(147,197,253,.1);color:var(--ac2);font-size:.85rem}
+.chip{display:inline-block;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mut);font-size:.8rem}
+.hello{padding:22px 0 8px}.hello h2{margin:8px 0 2px;font-size:1.5rem}.hello p{margin:0;color:var(--mut)}
+.tile{display:flex;align-items:center;gap:14px;width:100%;margin-top:12px;padding:18px 16px;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:16px;cursor:pointer;font:inherit}
+.tile:active{border-color:var(--ac)}
+.tile .ico{width:44px;height:44px;border-radius:12px;background:rgba(37,99,235,.18);color:var(--ac2);display:grid;place-items:center;flex:none}
+.tile b{display:block;font-size:1.02rem}.tile small{color:var(--mut)}
+.badge{margin-left:auto;min-width:24px;padding:2px 8px;border-radius:99px;background:var(--ac);font-size:.8rem;text-align:center}
+.view{display:none;padding-top:16px}.view.on{display:block}
+label{display:block;margin:14px 0 6px;color:var(--mut);font-size:.85rem}
+input,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--tx);font:inherit}
+input:focus,textarea:focus{outline:2px solid var(--ac);outline-offset:0}
+textarea{min-height:110px;resize:vertical}
+h3{margin:26px 0 4px;font-size:1rem}
+.btn{width:100%;margin-top:18px;padding:13px;border:0;border-radius:12px;background:var(--ac);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.btn.alt{background:var(--card);border:1px solid var(--line);color:var(--tx);margin-top:10px}
+.btn:disabled{opacity:.55}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.m{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--mut);font-size:.72rem;padding:6px;text-align:center;word-break:break-all}
+.m img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.m button{position:absolute;top:4px;right:4px;width:26px;height:26px;border:0;border-radius:50%;background:rgba(3,7,18,.8);color:#fff;cursor:pointer;display:grid;place-items:center}
+.m button svg{width:14px;height:14px}
+.price{font-size:2rem;font-weight:700;margin:6px 0 0}
+.tierRow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.tierRow input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--ac)}
+.tierRow label{flex:1;margin:0;color:var(--tx);font-size:.98rem}
+.tierRow input[type=text],.tierRow input[type=number]{width:120px;padding:9px 10px}
+.tierRow input:disabled{opacity:.45}
+.customRow{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.customRow input[type=text]{flex:1}
+.customRow input[type=number]{width:110px}
+.customRow button{flex:none;width:36px;border:0;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--bad);cursor:pointer}
+.conv{display:flex;align-items:center;gap:12px;width:100%;padding:14px 4px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--tx);text-align:left;font:inherit;cursor:pointer}
+.av{width:42px;height:42px;border-radius:50%;background:rgba(37,99,235,.22);color:var(--ac2);display:grid;place-items:center;font-weight:700;flex:none}
+.conv .t{flex:1;min-width:0}.conv b{display:block}.conv span{display:block;color:var(--mut);font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ac);flex:none}
+.empty{color:var(--mut);text-align:center;padding:40px 0}
+#msgs{display:flex;flex-direction:column;gap:8px;padding-bottom:84px}
+.b{max-width:80%;padding:10px 13px;border-radius:16px;background:var(--card);border:1px solid var(--line);word-wrap:break-word}
+.b.me{align-self:flex-end;background:var(--ac);border-color:var(--ac)}
+.b small{display:block;margin-top:3px;opacity:.65;font-size:.72rem}
+#composer{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+#composer .in{max-width:560px;margin:0 auto;display:flex;gap:8px}
+#composer input{flex:1}
+#composer .ib{background:var(--ac);border-color:var(--ac);width:46px;height:46px}
+body.chat{background:linear-gradient(rgba(3,7,18,.4),rgba(3,7,18,.4)),url(chat-bg.jpg) center/cover fixed no-repeat #060b16}
+body.chat header,body.chat #composer{background:rgba(6,11,22,.86)}
+select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--tx);font:inherit}
+select:focus{outline:2px solid var(--ac);outline-offset:0}
+
+.settings-wrap{display:flex;justify-content:flex-end;margin:18px 0 0;padding-top:5px}
+.settings-btn{position:relative;width:54px;height:54px;border:1px solid rgba(96,165,250,.22);background:linear-gradient(145deg,rgba(37,99,235,.13),rgba(168,85,247,.10)),var(--card);color:#9fb9e9;border-radius:16px;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);transition:transform .22s ease,border-color .22s ease,color .22s ease,box-shadow .22s ease}
+.settings-btn:before{content:"";position:absolute;inset:-1px;border-radius:17px;padding:1px;background:linear-gradient(135deg,rgba(37,136,255,.75),rgba(168,85,247,.38),rgba(255,79,216,.55));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.45;pointer-events:none;transition:opacity .22s ease}
+.settings-btn:hover{transform:translateY(-2px) rotate(2deg);border-color:rgba(147,197,253,.48);color:#d7e7ff;box-shadow:0 13px 34px rgba(37,99,235,.18),0 0 24px rgba(168,85,247,.10),inset 0 1px 0 rgba(255,255,255,.05)}
+.settings-btn:active{transform:scale(.94) rotate(0deg)}
+.settings-btn:focus-visible{outline:2px solid var(--ac2);outline-offset:3px}
+.settings-btn:hover:before{opacity:.95}
+.settings-icon{position:relative;z-index:1;display:grid;place-items:center}
+.settings-btn svg{width:23px;height:23px;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.settings-btn:hover svg{transform:rotate(38deg)}
+.settings-pulse{position:absolute;right:9px;top:8px;width:6px;height:6px;border-radius:50%;background:#ff4fd8;box-shadow:0 0 9px rgba(255,79,216,.75);opacity:.82}
+@media (prefers-reduced-motion:reduce){.settings-btn,.settings-btn svg{transition:none}}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
+.modal-backdrop.on{display:flex}
+.sound-modal{width:min(100%,520px);max-height:min(88vh,680px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 70px rgba(0,0,0,.45);padding:18px}
+.sound-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.sound-head h2{margin:0;font-size:1.12rem;flex:1}
+.sound-close{width:38px;height:38px;border:1px solid var(--line);border-radius:11px;background:transparent;color:var(--tx);display:grid;place-items:center;cursor:pointer}
+.sound-note{margin:0 0 14px;color:var(--mut);font-size:.86rem}
+.sound-group{margin-top:16px}
+.sound-group h3{margin:0 0 8px;font-size:.92rem}
+.sound-option{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:13px;margin-top:8px;cursor:pointer}
+.sound-option input{width:18px;height:18px;flex:none}
+.sound-option .sound-name{flex:1}
+.sound-option small{color:var(--mut);font-size:.76rem}
+.sound-preview{width:36px;height:36px;border:1px solid var(--line);border-radius:10px;background:rgba(37,99,235,.10);color:var(--ac2);display:grid;place-items:center;cursor:pointer}
+.sound-preview svg{width:17px;height:17px}
+.file-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.file-row .btn{margin-top:0;flex:1}
+.file-name{color:var(--mut);font-size:.78rem;word-break:break-word}
+.sound-save{margin-top:16px}
+.tile.danger{border-color:rgba(252,165,165,.35)}
+.tile.danger .ico{background:rgba(239,68,68,.16);color:var(--bad)}
+.btn.danger{background:#dc2626}
+.warnbox{margin:4px 0 0;padding:12px 14px;border-radius:12px;border:1px solid rgba(252,165,165,.35);background:rgba(239,68,68,.08);color:#fecaca;font-size:.9rem;line-height:1.5}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:#111c33;border:1px solid var(--line);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <button class="ib" id="back" hidden aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <h1 id="title">Manage listing</h1>
+  <button class="ib" id="deleteIcon" data-go="delete" hidden aria-label="Delete service"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>
+</header>
+
+<section class="view on" id="v-home">
+  <div class="hello"><span class="chip" id="lid">Listing</span><h2 id="svc">Your service</h2><p id="who"></p></div>
+  <button class="tile" data-go="portfolio"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span><b>Update portfolio</b><small>Card info, media and contact details</small></span></button>
+  <button class="tile" data-go="chats"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.6A8 8 0 1 1 21 12z"/></svg></span><span><b>Chat</b><small>Messages from people asking about your service</small></span><span class="badge" id="unread" hidden></span></button>
+  <button class="tile" data-go="price"><span class="ico"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span><span><b>Update price</b><small>Change your starting price or currency</small></span></button>
+  <button class="tile" id="secondaryTile"><span class="ico"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg></span><span><b id="secLabel">Secondary</b><small id="secSmall">Link another service to manage it from here too</small></span></button>
+  <div class="settings-wrap" id="settingsWrap">
+    <button class="settings-btn" id="soundSettingsBtn" aria-label="Notification sound settings" title="Notification sound settings">
+      <span class="settings-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.64 5.64l1.42 1.42M16.94 16.94l1.42 1.42M5.64 18.36l1.42-1.42M16.94 7.06l1.42-1.42"/><circle cx="12" cy="12" r="4"/></svg></span>
+      <span class="settings-pulse" aria-hidden="true"></span>
+    </button>
+  </div>
+</section>
+
+<section class="view" id="v-portfolio">
+  <label for="f-providerName">Your name</label><input id="f-providerName" autocomplete="name">
+  <label for="f-company">Company / brand</label><input id="f-company">
+  <label for="f-about">About your service</label><textarea id="f-about"></textarea>
+  <label for="f-portfolio">Portfolio link</label><input id="f-portfolio" inputmode="url" placeholder="https://">
+  <h3>Contact info</h3>
+  <label for="f-contact">Contact (email, Telegram, etc.)</label><input id="f-contact">
+  <label for="f-phone">Phone / WhatsApp</label><input id="f-phone" inputmode="tel">
+  <h3>Media</h3>
+  <div class="grid" id="media"></div>
+  <input type="file" id="pick" accept="image/*,video/*" multiple hidden>
+  <button class="btn alt" id="addMedia">Add photos or videos</button>
+  <button class="btn" id="saveCard">Save changes</button>
+</section>
+
+<section class="view" id="v-price">
+  <label>Current starting price</label>
+  <div class="price" id="curPrice">-</div>
+  <label for="f-currency">Currency</label>
+  <select id="f-currency"><option value="NGN">Naira (₦)</option><option value="USD">Dollar ($)</option></select>
+  <label for="f-price">New starting price</label><input id="f-price" inputmode="decimal" placeholder="e.g. 15000">
+  <button class="btn" id="savePrice">Update price</button>
+
+  <h3>Package pricing (optional)</h3>
+  <p class="empty" style="padding:0 0 4px;text-align:left">Offer Basic, Standard, Medium and Premium packages, or add your own.</p>
+  <div id="tiers"></div>
+
+  <h3>Custom categories</h3>
+  <div id="customTiers"></div>
+  <button class="btn alt" id="addCustomTier">+ Add custom category</button>
+  <button class="btn" id="saveTiers">Save pricing tiers</button>
+</section>
+
+<section class="view" id="v-secondary">
+  <div class="hello"><h2>Link a second service</h2><p>Paste that listing's manage link to switch between both from here.</p></div>
+  <label for="f-seclink">Manage link</label>
+  <input id="f-seclink" placeholder="Paste the other listing's manage link" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <button class="btn" id="linkSecondary">Link this service</button>
+</section>
+
+<section class="view" id="v-delete">
+  <div class="warnbox"><b>This removes your service from ServiceHub.</b><br>Your listing disappears from Explore straight away and your manage link stops working. This cannot be undone from here.</div>
+  <label for="f-confirm">Type <b>DELETE</b> to confirm</label>
+  <input id="f-confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="DELETE">
+  <button class="btn danger" id="doDelete">Delete my service</button>
+</section>
+
+<section class="view" id="v-chats"><div id="convs"></div></section>
+
+<section class="view" id="v-thread"><div id="msgs"></div></section>
+</div>
+
+
+<div class="modal-backdrop" id="soundModal" aria-hidden="true">
+  <div class="sound-modal" role="dialog" aria-modal="true" aria-labelledby="soundModalTitle">
+    <div class="sound-head">
+      <h2 id="soundModalTitle">Notification sounds</h2>
+      <button class="sound-close" id="soundModalClose" aria-label="Close notification sound settings">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <p class="sound-note">Choose the sound used when a new message arrives outside the conversation you are currently viewing.</p>
+
+    <div class="sound-group">
+      <h3>New-message notification</h3>
+      <label class="sound-option"><input type="radio" name="notifySound" value="short"><span class="sound-name">Short notification</span><small>Quick beep</small><button type="button" class="sound-preview" data-preview="short" aria-label="Preview short notification"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="ring"><span class="sound-name">Classic ringtone</span><small>Long repeating ring</small><button type="button" class="sound-preview" data-preview="ring" aria-label="Preview classic ringtone"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="digital"><span class="sound-name">Digital ringtone</span><small>Longer modern alert</small><button type="button" class="sound-preview" data-preview="digital" aria-label="Preview digital ringtone"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="soft"><span class="sound-name">Soft ringtone</span><small>Long gentle chime</small><button type="button" class="sound-preview" data-preview="soft" aria-label="Preview soft ringtone"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="pulse"><span class="sound-name">Pulse</span><small>Short three-note alert</small><button type="button" class="sound-preview" data-preview="pulse" aria-label="Preview pulse"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="song1"><span class="sound-name">Aurora Song</span><small>18-second musical ringtone</small><button type="button" class="sound-preview" data-preview="song1" aria-label="Preview Aurora Song"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="song2"><span class="sound-name">Neon Journey</span><small>20-second musical ringtone</small><button type="button" class="sound-preview" data-preview="song2" aria-label="Preview Neon Journey"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="oldPhone"><span class="sound-name">Old Telephone Bell</span><small>Classic mechanical trrring-trrring</small><button type="button" class="sound-preview" data-preview="oldPhone" aria-label="Preview old telephone bell"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+    </div>
+
+    <div class="sound-group">
+      <h3>Custom sound</h3>
+      <p class="sound-note" style="margin-bottom:8px">Optional. A custom audio file is stored only on this device/browser.</p>
+      <div class="file-row">
+        <button class="btn alt" type="button" id="pickSound">Choose audio file</button>
+        <input type="file" id="customSoundFile" accept="audio/*" hidden>
+      </div>
+      <div class="file-name" id="customSoundName">No custom sound selected</div>
+      <label class="sound-option" style="margin-top:10px"><input type="radio" name="notifySound" value="custom"><span class="sound-name">Use my custom sound</span><small>Only if one is saved</small></label>
+    </div>
+
+    <button class="btn sound-save" id="saveSoundSettings">Save notification settings</button>
+  </div>
+</div>
+<div id="composer" hidden><div class="in"><input id="say" placeholder="Type a reply" autocomplete="off"><button class="ib" id="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var token=location.hash.slice(1), API=window.SERVICEHUB_APPS_SCRIPT_URL||"";
+var activeToken=token, secondary=null, primaryListing=null;
+var L=null, media=[], openConv=null, fields=["providerName","company","about","portfolio","contact","phone"];
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function toast(t){var e=$("#toast");e.textContent=t;e.classList.add("on");setTimeout(function(){e.classList.remove("on")},2400)}
+
+/* ---- Apps Script API (token is the only credential) ---- */
+function api(action,data,tokenOverride){
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify(Object.assign({action:action,token:tokenOverride||activeToken},data||{}))})
+  .then(function(r){return r.json()}).then(function(j){if(j.success===false)throw new Error(j.error||"Request failed");return j});
+}
+
+/* ---- Supabase chat, scoped to whichever listing is active. A provider's
+   token only ever resolves (server-side) to their own listing_id, so
+   switching Secondary can never leak another provider's chats. ---- */
+function sb(fn,params){
+  var url=String(window.SERVICEHUB_SUPABASE_URL||"").replace(/\/$/,"");
+  var key=String(window.SERVICEHUB_SUPABASE_ANON_KEY||"");
+  if(!url||!key)return Promise.reject(new Error("Chat isn't set up yet."));
+  return fetch(url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{"Content-Type":"application/json","apikey":key,"Authorization":"Bearer "+key},body:JSON.stringify(params||{})})
+    .then(function(r){return r.text().then(function(t){var data=t?JSON.parse(t):null;if(!r.ok){throw new Error((data&&data.message)||"Chat request failed.");}return data;});});
+}
+var chat={
+  list:function(){return sb("provider_conversations",{p_token:activeToken}).then(function(rows){return rows||[]})},
+  open:function(c){return sb("provider_mark_read",{p_token:activeToken,p_conversation:c.id}).catch(function(){})},
+  messages:function(c){return sb("provider_messages",{p_token:activeToken,p_conversation:c.id,p_after:0}).then(function(rows){return rows||[]})},
+  send:function(c,text){return sb("provider_send",{p_token:activeToken,p_conversation:c.id,p_body:text})}
+};
+
+  /* ---- Local notification sounds ---- */
+  var SOUND_KEY="serviceHubNotificationSound";
+  var CUSTOM_SOUND_KEY="serviceHubCustomNotificationAudio";
+  var SOUND_DB_NAME="ServiceHubNotificationSounds";
+  var SOUND_DB_VERSION=1;
+  var SOUND_STORE="sounds";
+  var soundSettings={type:"short",customData:"",customBlob:null,customName:""};
+  var audioCtx=null, customAudio=null, customObjectUrl="";
+  var lastUnreadSnapshot={};
+  var lastThreadMessageId=null;
+  var soundSettingsReady=Promise.resolve();
+
+  function openSoundDB(){
+    return new Promise(function(resolve,reject){
+      if(!window.indexedDB){reject(new Error("IndexedDB unavailable"));return;}
+      var req=indexedDB.open(SOUND_DB_NAME,SOUND_DB_VERSION);
+      req.onupgradeneeded=function(e){
+        var db=e.target.result;
+        if(!db.objectStoreNames.contains(SOUND_STORE))db.createObjectStore(SOUND_STORE);
+      };
+      req.onsuccess=function(){resolve(req.result)};
+      req.onerror=function(){reject(req.error||new Error("Could not open sound storage"))};
+    });
+  }
+
+  function idbGet(key){
+    return openSoundDB().then(function(db){
+      return new Promise(function(resolve,reject){
+        var tx=db.transaction(SOUND_STORE,"readonly"),req=tx.objectStore(SOUND_STORE).get(key);
+        req.onsuccess=function(){resolve(req.result||null)};
+        req.onerror=function(){reject(req.error||new Error("Could not read sound storage"))};
+        tx.oncomplete=function(){try{db.close()}catch(_) {}};
+      });
+    });
+  }
+
+  function idbPut(key,value){
+    return openSoundDB().then(function(db){
+      return new Promise(function(resolve,reject){
+        var tx=db.transaction(SOUND_STORE,"readwrite");
+        tx.objectStore(SOUND_STORE).put(value,key);
+        tx.oncomplete=function(){try{db.close()}catch(_){};resolve()};
+        tx.onerror=function(){reject(tx.error||new Error("Could not save sound storage"))};
+        tx.onabort=function(){reject(tx.error||new Error("Could not save sound storage"))};
+      });
+    });
+  }
+
+  function idbDelete(key){
+    return openSoundDB().then(function(db){
+      return new Promise(function(resolve,reject){
+        var tx=db.transaction(SOUND_STORE,"readwrite");
+        tx.objectStore(SOUND_STORE).delete(key);
+        tx.oncomplete=function(){try{db.close()}catch(_){};resolve()};
+        tx.onerror=function(){reject(tx.error||new Error("Could not remove sound storage"))};
+      });
+    });
+  }
+
+  function loadSoundSettings(){
+    soundSettingsReady=(function(){
+      try{
+        var s=JSON.parse(localStorage.getItem(SOUND_KEY)||"{}");
+        if(s&&["short","ring","digital","soft","pulse","song1","song2","oldPhone","custom"].indexOf(s.type)>-1)soundSettings.type=s.type;
+      }catch(_){}
+
+      /* IndexedDB stores the actual audio file safely instead of putting a
+         multi-megabyte Base64 string into localStorage. */
+      return idbGet("custom").then(function(custom){
+        if(custom&&custom.blob){
+          soundSettings.customBlob=custom.blob;
+          soundSettings.customName=custom.name||"Custom sound";
+          return;
+        }
+        /* Compatibility with the previous Base64 implementation. Convert it once to a Blob. */
+        if(custom&&custom.data){
+          soundSettings.customData=custom.data;
+          soundSettings.customName=custom.name||"Custom sound";
+          try{
+            var parts=String(custom.data).split(",");
+            var mime=(parts[0].match(/data:([^;]+);/)||[])[1]||"audio/mpeg";
+            var raw=atob(parts[1]||"");
+            var bytes=new Uint8Array(raw.length);
+            for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+            soundSettings.customBlob=new Blob([bytes],{type:mime});
+            return idbPut("custom",{blob:soundSettings.customBlob,name:soundSettings.customName}).then(function(){
+              soundSettings.customData="";
+              try{localStorage.removeItem(CUSTOM_SOUND_KEY)}catch(_){}
+            });
+          }catch(_){}
+        }
+        /* One-time compatibility with the older localStorage implementation. */
+        try{
+          var old=JSON.parse(localStorage.getItem(CUSTOM_SOUND_KEY)||"{}");
+          if(old&&old.data){
+            soundSettings.customData=old.data;
+            soundSettings.customName=old.name||"Custom sound";
+            var parts2=String(old.data).split(",");
+            var mime2=(parts2[0].match(/data:([^;]+);/)||[])[1]||"audio/mpeg";
+            var raw2=atob(parts2[1]||"");
+            var bytes2=new Uint8Array(raw2.length);
+            for(var j=0;j<raw2.length;j++)bytes2[j]=raw2.charCodeAt(j);
+            soundSettings.customBlob=new Blob([bytes2],{type:mime2});
+            return idbPut("custom",{blob:soundSettings.customBlob,name:soundSettings.customName}).then(function(){
+              soundSettings.customData="";
+              try{localStorage.removeItem(CUSTOM_SOUND_KEY)}catch(_){}
+            });
+          }
+        }catch(_){}
+      }).catch(function(){
+        /* IndexedDB failure: retain the legacy localStorage fallback when available. */
+        try{
+          var old=JSON.parse(localStorage.getItem(CUSTOM_SOUND_KEY)||"{}");
+          if(old&&old.data){soundSettings.customData=old.data;soundSettings.customName=old.name||"Custom sound";}
+        }catch(_){}
+      }).then(function(){
+        var radio=document.querySelector('input[name="notifySound"][value="'+soundSettings.type+'"]');
+        if(radio)radio.checked=true;
+        $("#customSoundName").textContent=soundSettings.customName||"No custom sound selected";
+      });
+    })();
+    return soundSettingsReady;
+  }
+
+  function ensureAudio(){
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return null;
+    if(!audioCtx)audioCtx=new AC();
+    if(audioCtx.state==="suspended")audioCtx.resume().catch(function(){});
+    return audioCtx;
+  }
+
+  function tone(freq,start,duration,volume,type){
+    var ctx=ensureAudio();if(!ctx)return;
+    var o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type||"sine";
+    o.frequency.setValueAtTime(freq,ctx.currentTime+start);
+    var peak=Math.min(Number(volume)||0.35,0.48);
+    var t0=ctx.currentTime+start;
+    var t1=t0+Math.max(0.008,duration-0.025);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(peak,t0+0.006);
+    g.gain.setValueAtTime(peak,t1);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+duration);
+    o.connect(g);g.connect(ctx.destination);
+    o.start(t0);o.stop(t0+duration+0.04);
+  }
+
+  function playBuiltIn(type){
+    if(type==="ring"){
+      [0,0.16,0.32,0.48,1.05,1.21,1.37,1.53,2.10,2.26,2.42,2.58].forEach(function(t,i){var f=i%4<2?880:660;tone(f,t,.125,.34,"sine");tone(f*2,t,.09,.12,"triangle")});
+    }else if(type==="digital"){
+      [0,0.12,0.24,0.48,0.60,0.72,0.96,1.08,1.20,1.44,1.56,1.68,1.92,2.04,2.16].forEach(function(t,i){var f=i%3===0?1047:(i%3===1?784:988);tone(f,t,.095,.34,"square");tone(f*2,t,.065,.10,"triangle")});
+    }else if(type==="soft"){
+      [0,0.18,0.36,0.82,1.00,1.18,1.64,1.82,2.00,2.46,2.64,2.82].forEach(function(t,i){var f=i%3===0?740:(i%3===1?880:988);tone(f,t,.16,.31,"sine");tone(f*2,t,.10,.09,"triangle")});
+    }else if(type==="pulse"){
+      tone(820,0,.10,.30,"triangle");tone(980,.12,.10,.30,"triangle");tone(820,.24,.15,.30,"triangle");tone(1640,.12,.055,.08,"sine");
+    }else if(type==="song1"){
+      var melody1=[[523.25,0],[659.25,.32],[783.99,.64],[659.25,.96],[587.33,1.35],[698.46,1.67],[880,1.99],[698.46,2.31],[523.25,2.70],[659.25,3.02],[783.99,3.34],[987.77,3.66],[880,4.05],[783.99,4.37],[659.25,4.69],[523.25,5.01],[659.25,5.70],[783.99,6.02],[1046.50,6.34],[783.99,6.66],[698.46,7.05],[880,7.37],[1046.50,7.69],[880,8.01],[659.25,8.40],[783.99,8.72],[987.77,9.04],[1174.66,9.36],[1046.50,9.75],[880,10.07],[783.99,10.39],[659.25,10.71],[523.25,11.40],[659.25,11.72],[783.99,12.04],[659.25,12.36],[587.33,12.75],[698.46,13.07],[880,13.39],[698.46,13.71],[523.25,14.10],[659.25,14.42],[783.99,14.74],[987.77,15.06],[783.99,15.45],[659.25,15.77],[523.25,16.09],[783.99,16.41],[1046.50,16.80],[783.99,17.12],[659.25,17.44],[523.25,17.76]];
+      melody1.forEach(function(n){tone(n[0],n[1],.27,.34,"sine");tone(n[0]*2,n[1]+.015,.12,.075,"triangle")});
+      [0,1.35,2.70,4.05,5.70,7.05,8.40,9.75,11.40,12.75,14.10,15.45,16.80].forEach(function(t){tone(130.81,t,.38,.10,"triangle")});
+    }else if(type==="song2"){
+      var melody2=[[392,0],[494,.25],[587.33,.50],[659.25,.75],[587.33,1.00],[494,1.25],[392,1.50],[440,1.90],[523.25,2.15],[659.25,2.40],[783.99,2.65],[659.25,2.90],[523.25,3.15],[440,3.40],[392,3.80],[494,4.05],[587.33,4.30],[783.99,4.55],[880,4.80],[783.99,5.05],[587.33,5.30],[494,5.55],[523.25,5.95],[659.25,6.20],[783.99,6.45],[987.77,6.70],[783.99,6.95],[659.25,7.20],[523.25,7.45],[440,7.85],[523.25,8.10],[659.25,8.35],[880,8.60],[1046.50,8.85],[880,9.10],[659.25,9.35],[523.25,9.60],[392,10.00],[494,10.25],[587.33,10.50],[659.25,10.75],[587.33,11.00],[494,11.25],[392,11.50],[440,11.90],[523.25,12.15],[659.25,12.40],[783.99,12.65],[659.25,12.90],[523.25,13.15],[440,13.40],[392,13.80],[494,14.05],[587.33,14.30],[783.99,14.55],[880,14.80],[783.99,15.05],[587.33,15.30],[494,15.55],[523.25,15.95],[659.25,16.20],[783.99,16.45],[987.77,16.70],[1174.66,16.95],[987.77,17.20],[783.99,17.45],[659.25,17.70],[523.25,18.00],[659.25,18.35],[783.99,18.70],[1046.50,19.05],[783.99,19.40]];
+      melody2.forEach(function(n){tone(n[0],n[1],.21,.34,"triangle");tone(n[0]*2,n[1]+.012,.09,.07,"sine")});
+      [0,1.9,3.8,5.95,7.85,10,11.9,13.8,15.95,18].forEach(function(t){tone(98,t,.30,.11,"sine")});
+    }else if(type==="oldPhone"){
+      var cycles=[0,1.45,2.90,4.35,5.80,7.25,8.70,10.15,11.60,13.05];
+      cycles.forEach(function(t){[0,.13].forEach(function(off,j){var base=j===0?930:760;tone(base,t+off,.22,.39,"square");tone(base*2.03,t+off+.008,.18,.16,"triangle");tone(base*3.01,t+off+.014,.13,.10,"sine");tone(base*.51,t+off,.26,.16,"sine")})});
+      [14.65,14.78,14.91].forEach(function(t,i){var f=i===1?760:930;tone(f,t,.24,.39,"square");tone(f*2.03,t+.008,.18,.16,"triangle");tone(f*3.01,t+.014,.13,.10,"sine");tone(f*.51,t,.27,.16,"sine")});
+    }else{
+      tone(1040,0,.12,.30,"sine");tone(2080,.018,.075,.08,"triangle");
+    }
+  }
+
+  function playInChatBeep(){tone(1040,0,.12,.30,"sine");tone(2080,.018,.075,.08,"triangle")}
+
+  function playCustomSound(){
+    try{
+      var source="";
+      if(soundSettings.customBlob){
+        if(customObjectUrl){try{URL.revokeObjectURL(customObjectUrl)}catch(_){}}
+        customObjectUrl=URL.createObjectURL(soundSettings.customBlob);
+        source=customObjectUrl;
+      }else if(soundSettings.customData){
+        source=soundSettings.customData;
+      }
+      if(!source)return Promise.reject(new Error("No custom sound is available."));
+      if(customAudio){try{customAudio.pause();customAudio.currentTime=0}catch(_){}}
+      customAudio=new Audio();
+      customAudio.preload="auto";
+      customAudio.volume=1;
+      customAudio.src=source;
+      customAudio.load();
+      var p=customAudio.play();
+      return p&&typeof p.then==="function"?p:Promise.resolve();
+    }catch(e){
+      return Promise.reject(e);
+    }
+  }
+
+  function playNotification(){
+    soundSettingsReady.then(function(){
+      if(soundSettings.type==="custom"&&(soundSettings.customBlob||soundSettings.customData)){
+        playCustomSound().catch(function(err){
+          console.warn("ServiceHub custom notification sound could not play:",err);
+          playBuiltIn("short");
+        });
+        return;
+      }
+      playBuiltIn(soundSettings.type==="custom"?"short":soundSettings.type);
+    });
+  }
+
+  function currentThreadIs(c){return !!(openConv&&c&&String(openConv.id)===String(c.id)&&document.querySelector("#v-thread").classList.contains("on"))}
+  function snapshotUnread(cs){var now={};cs.forEach(function(c){var n=Number(c.unread||0);now[String(c.id)]=n;var old=Object.prototype.hasOwnProperty.call(lastUnreadSnapshot,String(c.id))?lastUnreadSnapshot[String(c.id)]:0;if(n>old&&!currentThreadIs(c))playNotification()});lastUnreadSnapshot=now}
+  function notificationPoll(){
+    chat.list().then(function(cs){snapshotUnread(cs);var total=0;cs.forEach(function(c){total+=Number(c.unread||0)});var u=$("#unread");u.hidden=!total;u.textContent=total}).catch(function(){});
+    if(openConv&&document.querySelector("#v-thread").classList.contains("on")){chat.messages(openConv).then(function(ms){if(!ms||!ms.length)return;var newest=ms[ms.length-1],id=String(newest.id||newest.created_at||newest.body||"");if(lastThreadMessageId!==null&&id!==lastThreadMessageId&&newest.sender!=="provider")playInChatBeep();lastThreadMessageId=id}).catch(function(){})}
+  }
+
+  function saveSoundSettings(){
+    var checked=document.querySelector('input[name="notifySound"]:checked');
+    if(!checked)return;
+    if(checked.value==="custom"&&!soundSettings.customData){toast("Choose a custom audio file first");return}
+    var previous=soundSettings.type;
+    soundSettings.type=checked.value;
+    try{localStorage.setItem(SOUND_KEY,JSON.stringify({type:soundSettings.type}))}catch(_){toast("Could not save the selected sound on this device");soundSettings.type=previous;return}
+
+    var savePromise=soundSettings.type==="custom"&&(soundSettings.customBlob||soundSettings.customData)
+      ?idbPut("custom",{blob:soundSettings.customBlob||null,data:soundSettings.customBlob?undefined:soundSettings.customData,name:soundSettings.customName})
+      :Promise.resolve();
+
+    savePromise.then(function(){
+      try{localStorage.removeItem(CUSTOM_SOUND_KEY)}catch(_){}
+      toast("Notification sound saved");
+      closeSoundSettings();
+    }).catch(function(){
+      soundSettings.type=previous;
+      try{localStorage.setItem(SOUND_KEY,JSON.stringify({type:previous}))}catch(_){}
+      toast("Could not save the custom sound on this device");
+    });
+  }
+
+  function openSoundSettings(){if(!document.querySelector("#v-home").classList.contains("on"))return;$("#soundModal").classList.add("on");$("#soundModal").setAttribute("aria-hidden","false")}
+  function closeSoundSettings(){$("#soundModal").classList.remove("on");$("#soundModal").setAttribute("aria-hidden","true")}
+
+  $("#soundSettingsBtn").onclick=openSoundSettings;
+  $("#soundModalClose").onclick=closeSoundSettings;
+  $("#soundModal").addEventListener("click",function(e){if(e.target===this)closeSoundSettings()});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeSoundSettings()});
+  document.querySelectorAll("[data-preview]").forEach(function(b){b.onclick=function(e){e.preventDefault();e.stopPropagation();playBuiltIn(b.dataset.preview)}});
+  $("#saveSoundSettings").onclick=saveSoundSettings;
+  $("#pickSound").onclick=function(){$("#customSoundFile").click()};
+  $("#customSoundFile").onchange=function(){
+    var f=this.files&&this.files[0];if(!f)return;
+    if(f.size>15*1024*1024){toast("Custom sound must be 15MB or smaller");this.value="";return}
+    if(!/^audio\//i.test(f.type)){toast("Please choose an audio file");this.value="";return}
+    soundSettings.customBlob=f;
+    soundSettings.customData="";
+    soundSettings.customName=f.name;
+    $("#customSoundName").textContent=f.name;
+    var radio=document.querySelector('input[name="notifySound"][value="custom"]');if(radio)radio.checked=true;
+    /* Save the actual File immediately so it survives even if the modal is closed. */
+    idbPut("custom",{blob:f,name:f.name}).then(function(){
+      toast("Custom sound saved — tap Save notification settings");
+    }).catch(function(){
+      toast("Could not store that custom sound on this device");
+    });
+  };
+function refreshUnreadBadge(){
+  chat.list().then(function(cs){var n=0;cs.forEach(function(c){n+=c.unread||0});var u=$("#unread");u.hidden=!n;u.textContent=n}).catch(function(){});
+}
+
+/* ---- navigation ---- */
+var titles={home:"Manage listing",portfolio:"Update portfolio",price:"Update price",chats:"Chat",delete:"Delete service",thread:""};
+function show(v){
+  document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v)});
+  $("#title").textContent=v==="thread"&&openConv?openConv.name:titles[v];
+  document.body.classList.toggle("chat",v==="thread");$("#back").hidden=v==="home";$("#deleteIcon").hidden=v!=="home";$("#composer").hidden=v!=="thread";
+  $("#back").dataset.to=v==="thread"?"chats":"home";window.scrollTo(0,0);
+}
+$("#back").onclick=function(){show(this.dataset.to)};
+document.querySelectorAll("[data-go]").forEach(function(b){b.onclick=function(){var v=b.dataset.go;show(v);if(v==="chats")renderConvs()}});
+
+/* ---- render ---- */
+function fill(){
+  if(activeToken===token&&!primaryListing)primaryListing=L;
+  $("#lid").textContent=L.listingId||"Listing";$("#svc").textContent=L.serviceName||"Your service";
+  $("#who").textContent=[L.providerName,L.company].filter(Boolean).join(" · ");
+  fields.forEach(function(f){$("#f-"+f).value=L[f]||""});
+  var cur=String(L.currency||"NGN").toUpperCase()==="USD"?"USD":"NGN";
+  $("#curPrice").textContent=(cur==="USD"?"$":"₦")+Number(L.price||0).toLocaleString();
+  $("#f-currency").value=cur;
+  $("#f-price").value="";media=Array.isArray(L.media)?L.media.slice():[];drawMedia();
+  drawTiers();
+}
+
+var FIXED_TIERS=["Basic","Standard","Medium","Premium"];
+
+function tierPrice(list,name){
+  var hit=(Array.isArray(list)?list:[]).find(function(r){return String(r&&r.category||"").toLowerCase()===name.toLowerCase()});
+  return hit?String(hit.price||""):"";
+}
+function drawTiers(){
+  var pricing=Array.isArray(L.pricing)?L.pricing:[];
+  var t=$("#tiers");t.innerHTML="";
+  FIXED_TIERS.forEach(function(name){
+    var val=tierPrice(pricing,name),on=val!=="";
+    var row=document.createElement("div");row.className="tierRow";
+    var cb=document.createElement("input");cb.type="checkbox";cb.checked=on;cb.id="tier-"+name;
+    var lb=document.createElement("label");lb.htmlFor=cb.id;lb.textContent=name;
+    var pr=document.createElement("input");pr.type="number";pr.min="0";pr.placeholder="Price";pr.value=val;pr.disabled=!on;
+    cb.onchange=function(){pr.disabled=!cb.checked;if(cb.checked)pr.focus()};
+    row.appendChild(cb);row.appendChild(lb);row.appendChild(pr);t.appendChild(row);
+  });
+  var customPricing=Array.isArray(L.customPricing)?L.customPricing:[];
+  var ct=$("#customTiers");ct.innerHTML="";
+  customPricing.forEach(function(row){addCustomTierRow(row.category||"",row.price||"")});
+}
+function addCustomTierRow(name,price){
+  var ct=$("#customTiers"),row=document.createElement("div");row.className="customRow";
+  var n=document.createElement("input");n.type="text";n.placeholder="Category name";n.value=name||"";
+  var p=document.createElement("input");p.type="number";p.min="0";p.placeholder="Price";p.value=price||"";
+  var x=document.createElement("button");x.type="button";x.setAttribute("aria-label","Remove");x.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  x.onclick=function(){row.remove()};
+  row.appendChild(n);row.appendChild(p);row.appendChild(x);ct.appendChild(row);
+}
+$("#addCustomTier").onclick=function(){addCustomTierRow("","")};
+function collectTiers(){
+  var pricing=[];
+  FIXED_TIERS.forEach(function(name){
+    var cb=$("#tier-"+name);
+    if(cb&&cb.checked){
+      var pr=cb.parentNode.querySelector("input[type=number]").value.trim();
+      pricing.push({category:name,price:pr});
+    }
+  });
+  var customPricing=[];
+  $("#customTiers").querySelectorAll(".customRow").forEach(function(row){
+    var inputs=row.querySelectorAll("input"),name=inputs[0].value.trim(),price=inputs[1].value.trim();
+    if(name)customPricing.push({category:name,price:price});
+  });
+  return{pricing:pricing,customPricing:customPricing};
+}
+$("#saveTiers").onclick=function(){
+  var b=this,o=b.textContent,t=collectTiers();
+  busy(b,true,"Saving...");
+  api("updateManageTiers",t).then(function(j){
+    L.pricing=j.pricing;L.customPricing=j.customPricing;toast("Pricing tiers saved")
+  }).catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
+};
+function drawMedia(){
+  var g=$("#media");g.innerHTML="";
+  if(!media.length){g.innerHTML='<div class="empty" style="grid-column:1/-1;padding:16px 0">No media yet</div>';return}
+  media.forEach(function(m,i){
+    var src=typeof m==="string"?m:(m.thumbnail||m.url||m.link||""),d=document.createElement("div");d.className="m";
+    d.innerHTML=esc(m.name||"file")+(src?'<img alt="" src="'+esc(src)+'" onerror="this.remove()">':"")+
+      '<button aria-label="Remove"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+    d.querySelector("button").onclick=function(){media.splice(i,1);drawMedia()};g.appendChild(d)});
+}
+function renderConvs(){
+  chat.list().then(function(cs){
+    var h=$("#convs"),n=0;h.innerHTML=cs.length?"":'<div class="empty">No messages yet. When someone messages you, it shows up here.</div>';
+    cs.forEach(function(c){n+=c.unread||0;var name=c.customer_name||"Customer",b=document.createElement("button");b.className="conv";
+      b.innerHTML='<span class="av">'+esc(name.charAt(0))+'</span><span class="t"><b>'+esc(name)+'</b><span>'+esc(c.last_message||"")+'</span></span>'+(c.unread?'<span class="dot"></span>':"");
+      b.onclick=function(){openConv=c;lastThreadMessageId=null;chat.open(c);drawThread();show("thread")};h.appendChild(b)});
+    var u=$("#unread");u.hidden=!n;u.textContent=n;
+  }).catch(function(e){$("#convs").innerHTML='<div class="empty">'+esc(e.message)+'</div>'});
+}
+function drawThread(){
+  chat.messages(openConv).then(function(ms){
+    if(ms&&ms.length){var latest=ms[ms.length-1];lastThreadMessageId=String(latest.id||latest.created_at||latest.body||"");}
+    var h=$("#msgs");h.innerHTML="";
+    ms.forEach(function(m){var d=document.createElement("div");d.className="b"+(m.sender==="provider"?" me":"");
+      var t=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+      d.innerHTML=esc(m.body)+"<small>"+esc(t)+"</small>";h.appendChild(d)});
+    window.scrollTo(0,document.body.scrollHeight);
+  }).catch(function(e){toast(e.message)});
+}
+function sendMsg(){var i=$("#say"),t=i.value.trim();if(!t||!openConv)return;i.value="";chat.send(openConv,t).then(drawThread)}
+$("#send").onclick=sendMsg;$("#say").onkeydown=function(e){if(e.key==="Enter")sendMsg()};
+
+/* ---- save actions ---- */
+function busy(b,on,txt){b.disabled=on;if(txt)b.textContent=txt}
+$("#saveCard").onclick=function(){
+  var b=this,o=b.textContent,p={media:JSON.stringify(media)};fields.forEach(function(f){p[f]=$("#f-"+f).value.trim()});
+  busy(b,true,"Saving...");
+  api("updateManageListing",{fields:p}).then(function(){fields.forEach(function(f){L[f]=p[f]});fill();toast("Saved")})
+   .catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
+};
+$("#savePrice").onclick=function(){
+  var b=this,o=b.textContent;
+  var raw=$("#f-price").value.replace(/,/g,"").trim();
+  var c=$("#f-currency").value,oldC=String(L.currency||"NGN").toUpperCase()==="USD"?"USD":"NGN";
+  /* Blank price box means "keep the current price" - this is what lets
+     switching currency alone (with no new price typed) still save. */
+  var v=raw===""?Number(L.price||0):parseFloat(raw);
+  if(!(v>0)){toast(raw===""?"No price on file yet - enter one":"Enter a valid price");return}
+  busy(b,true,"Updating...");
+  api("updateManagePrice",{price:v,currency:c}).then(function(){L.price=v;L.currency=c;fill();toast("Price updated")})
+   .catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
+};
+$("#doDelete").onclick=function(){
+  var b=this,o=b.textContent;
+  if($("#f-confirm").value.trim().toUpperCase()!=="DELETE"){toast("Type DELETE to confirm");return}
+  busy(b,true,"Deleting...");
+  api("deleteManageListing").then(function(){
+    if(activeToken!==token){
+      /* Deleting the SECONDARY service: drop it and return to the main one. */
+      try{localStorage.removeItem("serviceHubSecondary_"+token)}catch(_){}
+      secondary=null;activeToken=token;L=primaryListing;
+      updateSecondaryTile();fill();$("#f-confirm").value="";busy(b,false,o);
+      toast("Secondary service deleted");show("home");return;
+    }
+    try{localStorage.removeItem("serviceHubManageLinkPending")}catch(_){}
+    try{localStorage.removeItem("serviceHubSecondary_"+token)}catch(_){}
+    location.hash="";
+    document.body.innerHTML='<div class="wrap"><div class="hello"><h2>Service deleted</h2><p>Your listing has been removed from ServiceHub.</p></div><a class="btn" href="index.html" style="display:block;text-align:center;text-decoration:none">Back to home</a></div>';
+  }).catch(function(e){toast(e.message);busy(b,false,o)});
+};
+$("#addMedia").onclick=function(){$("#pick").click()};
+$("#pick").onchange=function(){
+  var files=Array.prototype.slice.call(this.files);this.value="";
+  files.reduce(function(chain,f){return chain.then(function(){
+    if(f.size>8*1024*1024){toast(f.name+" is over 8MB");return}
+    toast("Uploading "+f.name+"...");
+    return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(",")[1])};r.onerror=rej;r.readAsDataURL(f)})
+    .then(function(b64){return api("uploadManageMedia",{name:f.name,mimeType:f.type,data:b64})})
+    .then(function(j){media.push(j.media||{name:f.name});drawMedia()}).catch(function(e){toast(e.message)});
+  })},Promise.resolve()).then(function(){toast("Tap Save changes to keep media edits")});
+};
+
+/* ---- Secondary: link a second listing and flip between the two ---- */
+function updateSecondaryTile(){
+  if(!secondary){$("#secLabel").textContent="Secondary";$("#secSmall").textContent="Link another service to manage it from here too";return}
+  var other=activeToken===token?secondary.listing:primaryListing;
+  $("#secLabel").textContent="Switch to "+(other.serviceName||"other service");
+  $("#secSmall").textContent=(other.listingId||"")+" - tap to switch";
+}
+function swapActive(){
+  if(!secondary)return;
+  if(activeToken===token){primaryListing=L;activeToken=secondary.token;L=secondary.listing}
+  else{secondary.listing=L;activeToken=token;L=primaryListing}
+  fill();updateSecondaryTile();refreshUnreadBadge();toast("Now managing "+(L.serviceName||"this service"));show("home");
+}
+$("#secondaryTile").onclick=function(){secondary?swapActive():show("secondary")};
+$("#linkSecondary").onclick=function(){
+  var b=this,o=b.textContent,v=$("#f-seclink").value.trim();
+  var t=(v.indexOf("#")>-1?v.slice(v.lastIndexOf("#")+1):v).trim().toLowerCase();
+  if(!/^[a-f0-9]{64}$/.test(t)){toast("That doesn't look like a valid manage link.");return}
+  if(t===token){toast("That's already your main service.");return}
+  busy(b,true,"Linking...");
+  api("getManageListing",null,t).then(function(j){
+    secondary={token:t,listing:j.listing};
+    try{localStorage.setItem("serviceHubSecondary_"+token,t)}catch(_){}
+    updateSecondaryTile();$("#f-seclink").value="";toast("Linked "+(j.listing.serviceName||"service"));show("home");
+  }).catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
+};
+function loadSavedSecondary(){
+  var saved;try{saved=localStorage.getItem("serviceHubSecondary_"+token)}catch(_){saved=null}
+  if(!saved)return;
+  api("getManageListing",null,saved).then(function(j){
+    secondary={token:saved,listing:j.listing};updateSecondaryTile();
+  }).catch(function(){try{localStorage.removeItem("serviceHubSecondary_"+token)}catch(_){}});
+}
+
+/* ---- start ---- */
+function msg(t,retry){document.body.innerHTML='<div class="wrap"><div class="empty">'+esc(t)+(retry?'<br><br><button class="btn" onclick="location.reload()">Try again</button>':'')+'</div></div>'}
+function gate(note){
+  document.body.innerHTML='<div class="wrap"><div class="hello"><h2>Access your listing</h2><p>Paste the manage link you saved to open your dashboard.</p></div>'+(note?'<p style="color:var(--bad);margin:8px 0 0">'+esc(note)+'</p>':'')+'<label for="pl">Your manage link</label><input id="pl" placeholder="Paste your link here" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="go">Open my listing</button><p class="empty" style="padding:24px 0 0;font-size:.85rem">Lost your link? <a href="https://wa.me/2348073410722?text=hi%20I%27m%20a%20service%20hub%20provider%20I%20lost%20my%20link%20can%20I%20get%20help%20%3F" target="_blank" rel="noopener" style="color:var(--ac2);font-weight:600">Contact support</a> and we will help you get it back.</p></div>';
+  function go(){var v=$("#pl").value.trim(),t=(v.indexOf("#")>-1?v.slice(v.lastIndexOf("#")+1):v).trim().toLowerCase();
+    if(!/^[a-f0-9]{64}$/.test(t)){gate("That doesn't look like a valid manage link.");return}
+    location.hash=t;location.reload()}
+  $("#go").onclick=go;$("#pl").onkeydown=function(e){if(e.key==="Enter")go()};
+}
+loadSoundSettings();
+if(!token){gate()}
+else if(!API){msg("ServiceHub is not configured yet. Please try again later.")}
+else api("getManageListing").then(function(j){
+  L=j.listing;primaryListing=L;fill();refreshUnreadBadge();loadSavedSecondary();
+  chat.list().then(function(cs){lastUnreadSnapshot={};cs.forEach(function(c){lastUnreadSnapshot[String(c.id)]=Number(c.unread||0)});}).catch(function(){});
+  setInterval(notificationPoll,5000);
+}).catch(function(e){var bad=/invalid/i.test(e.message);if(bad)gate("This link is not valid. Check it and try again.");else msg("Could not load your listing. Check your connection and try again.",true)});
+})();
+</script>
+</body>
+</html>
