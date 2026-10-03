@@ -68,6 +68,7 @@ body.chat header,body.chat #composer{background:rgba(6,11,22,.86)}
 select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--tx);font:inherit}
 select:focus{outline:2px solid var(--ac);outline-offset:0}
 
+.chat-disabled{opacity:.38!important;filter:saturate(.35);cursor:not-allowed!important;pointer-events:none}.chat-disabled small:after{content:" · Not available for job listings";color:var(--mut)}
 .settings-wrap{display:flex;justify-content:flex-end;margin:18px 0 0;padding-top:5px}
 .settings-btn{position:relative;width:54px;height:54px;border:1px solid rgba(96,165,250,.22);background:linear-gradient(145deg,rgba(37,99,235,.13),rgba(168,85,247,.10)),var(--card);color:#9fb9e9;border-radius:16px;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04);transition:transform .22s ease,border-color .22s ease,color .22s ease,box-shadow .22s ease}
 .settings-btn:before{content:"";position:absolute;inset:-1px;border-radius:17px;padding:1px;background:linear-gradient(135deg,rgba(37,136,255,.75),rgba(168,85,247,.38),rgba(255,79,216,.55));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.45;pointer-events:none;transition:opacity .22s ease}
@@ -118,7 +119,7 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 <section class="view on" id="v-home">
   <div class="hello"><span class="chip" id="lid">Listing</span><h2 id="svc">Your service</h2><p id="who"></p></div>
   <button class="tile" data-go="portfolio"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span><b>Update portfolio</b><small>Card info, media and contact details</small></span></button>
-  <button class="tile" data-go="chats"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.6A8 8 0 1 1 21 12z"/></svg></span><span><b>Chat</b><small>Messages from people asking about your service</small></span><span class="badge" id="unread" hidden></span></button>
+  <button class="tile" id="chatTile" data-go="chats"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.6A8 8 0 1 1 21 12z"/></svg></span><span><b>Chat</b><small>Messages from people asking about your service</small></span><span class="badge" id="unread" hidden></span></button>
   <button class="tile" data-go="price"><span class="ico"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span><span><b>Update price</b><small>Change your starting price or currency</small></span></button>
   <button class="tile" id="secondaryTile"><span class="ico"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg></span><span><b id="secLabel">Secondary</b><small id="secSmall">Link another service to manage it from here too</small></span></button>
   <div class="settings-wrap" id="settingsWrap">
@@ -133,7 +134,13 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
   <label for="f-providerName">Your name</label><input id="f-providerName" autocomplete="name">
   <label for="f-company">Company / brand</label><input id="f-company">
   <label for="f-about">About your service</label><textarea id="f-about"></textarea>
-  <label for="f-portfolio">Portfolio link</label><input id="f-portfolio" inputmode="url" placeholder="https://">
+  <label for="f-portfolio" id="portfolioFieldLabel">Portfolio link</label><input id="f-portfolio" inputmode="url" placeholder="https://">
+  <div id="jobManageFields" hidden>
+    <label for="f-jobType">Job type</label><input id="f-jobType">
+    <label for="f-jobRequirements">Requirements</label><textarea id="f-jobRequirements"></textarea>
+    <label for="f-googleForm">Google Form link</label><input id="f-googleForm" inputmode="url" placeholder="https://docs.google.com/forms/...">
+    <label for="f-telegram">Telegram</label><input id="f-telegram" placeholder="@username">
+  </div>
   <h3>Contact info</h3>
   <label for="f-contact">Contact (email, Telegram, etc.)</label><input id="f-contact">
   <label for="f-phone">Phone / WhatsApp</label><input id="f-phone" inputmode="tel">
@@ -537,14 +544,29 @@ function show(v){
   $("#back").dataset.to=v==="thread"?"chats":"home";window.scrollTo(0,0);
 }
 $("#back").onclick=function(){show(this.dataset.to)};
-document.querySelectorAll("[data-go]").forEach(function(b){b.onclick=function(){var v=b.dataset.go;show(v);if(v==="chats")renderConvs()}});
+document.querySelectorAll("[data-go]").forEach(function(b){b.onclick=function(){var v=b.dataset.go;if(v==="chats"&&String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job")return;show(v);if(v==="chats")renderConvs()}});
+function updateJobChatState(){var isJob=String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job";var tile=$("#chatTile");if(!tile)return;tile.classList.toggle("chat-disabled",isJob);tile.setAttribute("aria-disabled",isJob?"true":"false");tile.title=isJob?"Chat is not available for job listings":"Open chats";}
 
 /* ---- render ---- */
 function fill(){
   if(activeToken===token&&!primaryListing)primaryListing=L;
-  $("#lid").textContent=L.listingId||"Listing";$("#svc").textContent=L.serviceName||"Your service";
-  $("#who").textContent=[L.providerName,L.company].filter(Boolean).join(" · ");
+  $("#lid").textContent=L.listingId||"Listing";
+  var isJob=String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job";
+  $("#svc").textContent=L.serviceName||"Your listing";
+  $("#who").textContent=[isJob?"Job listing":L.providerName,L.company].filter(Boolean).join(" · ");
+  var portfolioTile=document.querySelector('[data-go="portfolio"]');
+  if(portfolioTile){var b=portfolioTile.querySelector("b"),sm=portfolioTile.querySelector("small");if(b)b.textContent=isJob?"Update job information":"Update portfolio";if(sm)sm.textContent=isJob?"Job details, form link, contact and media":"Card info, media and contact details";}
+  var priceTile=document.querySelector('[data-go="price"]');
+  if(priceTile){var pb=priceTile.querySelector("b"),ps=priceTile.querySelector("small");if(pb)pb.textContent=isJob?"Update payment offer":"Update price";if(ps)ps.textContent=isJob?"Change the amount or currency offered":"Change your starting price or currency";}
   fields.forEach(function(f){$("#f-"+f).value=L[f]||""});
+  if($("#f-jobType"))$("#f-jobType").value=L.jobType||L["Job Type"]||"";
+  if($("#f-jobRequirements"))$("#f-jobRequirements").value=L.jobRequirements||L["Job Requirements"]||"";
+  if($("#f-googleForm"))$("#f-googleForm").value=L.googleFormLink||L["Google Form Link"]||"";
+  if($("#f-telegram"))$("#f-telegram").value=L.telegram||L.Telegram||"";
+  var isJob=String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job";
+  $("#jobManageFields").hidden=!isJob;
+  $("#portfolioFieldLabel").hidden=isJob;
+  $("#f-portfolio").hidden=isJob;
   var cur=String(L.currency||"NGN").toUpperCase()==="USD"?"USD":"NGN";
   $("#curPrice").textContent=(cur==="USD"?"$":"₦")+Number(L.price||0).toLocaleString();
   $("#f-currency").value=cur;
@@ -641,8 +663,15 @@ $("#send").onclick=sendMsg;$("#say").onkeydown=function(e){if(e.key==="Enter")se
 function busy(b,on,txt){b.disabled=on;if(txt)b.textContent=txt}
 $("#saveCard").onclick=function(){
   var b=this,o=b.textContent,p={media:JSON.stringify(media)};fields.forEach(function(f){p[f]=$("#f-"+f).value.trim()});
+  if(String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job"){p.jobType=$("#f-jobType").value.trim();p.jobRequirements=$("#f-jobRequirements").value.trim();p.googleFormLink=$("#f-googleForm").value.trim();p.telegram=$("#f-telegram").value.trim();}
   busy(b,true,"Saving...");
-  api("updateManageListing",{fields:p}).then(function(){fields.forEach(function(f){L[f]=p[f]});fill();toast("Saved")})
+  var savePromise;
+  if(String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job"){
+    savePromise=api("updateManageJobDetails",{jobType:p.jobType,jobRequirements:p.jobRequirements,googleFormLink:p.googleFormLink,telegram:p.telegram,providerName:p.providerName,company:p.company,contact:p.contact,phone:p.phone});
+  }else{
+    savePromise=api("updateManageListing",{fields:p});
+  }
+  savePromise.then(function(){fields.forEach(function(f){L[f]=p[f]});if(String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job"){L.jobType=p.jobType;L.jobRequirements=p.jobRequirements;L.googleFormLink=p.googleFormLink;L.telegram=p.telegram;}fill();toast("Saved")})
    .catch(function(e){toast(e.message)}).then(function(){busy(b,false,o)});
 };
 $("#savePrice").onclick=function(){
@@ -698,7 +727,7 @@ function swapActive(){
   if(!secondary)return;
   if(activeToken===token){primaryListing=L;activeToken=secondary.token;L=secondary.listing}
   else{secondary.listing=L;activeToken=token;L=primaryListing}
-  fill();updateSecondaryTile();refreshUnreadBadge();toast("Now managing "+(L.serviceName||"this service"));show("home");
+  fill();updateJobChatState();updateSecondaryTile();refreshUnreadBadge();toast("Now managing "+(L.serviceName||"this service"));show("home");
 }
 $("#secondaryTile").onclick=function(){secondary?swapActive():show("secondary")};
 $("#linkSecondary").onclick=function(){
@@ -734,7 +763,7 @@ loadSoundSettings();
 if(!token){gate()}
 else if(!API){msg("ServiceHub is not configured yet. Please try again later.")}
 else api("getManageListing").then(function(j){
-  L=j.listing;primaryListing=L;fill();refreshUnreadBadge();loadSavedSecondary();
+  L=j.listing;primaryListing=L;fill();updateJobChatState();refreshUnreadBadge();loadSavedSecondary();
   chat.list().then(function(cs){lastUnreadSnapshot={};cs.forEach(function(c){lastUnreadSnapshot[String(c.id)]=Number(c.unread||0)});}).catch(function(){});
   setInterval(notificationPoll,5000);
 }).catch(function(e){var bad=/invalid/i.test(e.message);if(bad)gate("This link is not valid. Check it and try again.");else msg("Could not load your listing. Check your connection and try again.",true)});

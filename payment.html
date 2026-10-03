@@ -83,13 +83,11 @@
                     PAYMENT
                 </p>
 
-                <h1>
-                    Complete Your Listing
-                </h1>
+                <h1 id="paymentPageTitle">Complete Your Listing</h1>
 
                 <p>
                     Choose your preferred payment method to continue
-                    publishing your service on ServiceHub.
+                    publishing your listing on ServiceHub.
                 </p>
 
             </div>
@@ -103,9 +101,7 @@
                         Listing fee
                     </span>
 
-                    <strong>
-                        Service Listing
-                    </strong>
+                    <strong id="paymentListingTypeLabel">Service Listing</strong>
                 </div>
 
                 <span class="payment-status">
@@ -243,6 +239,9 @@
 
 
     <script src="script.js"></script>
+<script>
+(function(){try{var l=JSON.parse(localStorage.getItem("serviceHubListing")||"{}");if(String(l.listingType||l.type||"").toLowerCase()==="job"){var a=document.getElementById("paymentListingTypeLabel"),b=document.getElementById("paymentPageTitle");if(a)a.textContent="Job Listing";if(b)b.textContent="Complete Your Job Listing";}}catch(_) {}})();
+</script>
 
     <script>
     (function () {

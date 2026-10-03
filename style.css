@@ -435,6 +435,12 @@ textarea {
 
 
 /* ========================================
+   BROWSE JOBS OPENER
+======================================== */
+.browse-jobs-opener{width:100%;margin-top:22px;min-height:54px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;gap:15px;text-decoration:none;color:var(--text);background:linear-gradient(90deg,rgba(35,136,255,.07),rgba(168,85,247,.06));border:1px solid rgba(148,163,184,.18);border-radius:12px;font-weight:600;transition:.22s ease}.browse-jobs-opener span:last-child{color:var(--blue);font-size:20px}.browse-jobs-opener:hover{border-color:rgba(35,136,255,.4);transform:translateY(-1px);background:linear-gradient(90deg,rgba(35,136,255,.11),rgba(168,85,247,.09))}
+@media (min-width:651px){.browse-jobs-opener{width:min(62%,620px);margin-left:auto;margin-right:auto}}
+
+/* ========================================
    SERVICES
 ======================================== */
 
@@ -793,6 +799,11 @@ footer {
 
 
 /* ========================================
+   JOB BOARD
+======================================== */
+.jobs-page{padding-bottom:70px}.job-results-section{width:90%;max-width:1200px;margin:0 auto}.jobs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}.job-card-rendered{overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:14px;transition:.25s ease}.job-card-rendered:hover{transform:translateY(-3px);border-color:rgba(35,136,255,.4)}.job-card-media{height:150px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 30%,rgba(35,136,255,.18),transparent 50%),linear-gradient(135deg,#111827,#0b0f18);overflow:hidden;color:var(--blue);font-weight:700;letter-spacing:2px}.job-card-media img{width:100%;height:100%;object-fit:cover}.job-card-body{padding:16px}.job-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.job-type-pill{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);border:1px solid rgba(35,136,255,.28);padding:5px 8px;border-radius:999px}.job-payment{font-weight:700;font-size:13px}.job-card-rendered h2{margin:0;font-size:18px;line-height:1.3}.job-company{margin:7px 0 0;color:var(--muted);font-size:13px}.job-excerpt{color:var(--muted);font-size:13px;line-height:1.55;min-height:40px}.apply-job-btn{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:10px 12px;border-radius:10px;background:rgba(35,136,255,.09);border:1px solid rgba(35,136,255,.24);color:var(--text);text-decoration:none;font-size:13px;font-weight:700}.apply-job-btn span{color:var(--blue);font-size:17px}.job-loading,.job-empty{grid-column:1/-1;text-align:center;padding:45px 20px;color:var(--muted);border:1px dashed var(--border);border-radius:14px}.job-page .job-card{max-width:760px;margin:0 auto}
+
+/* ========================================
    MOBILE
 ======================================== */
 
@@ -874,6 +885,11 @@ footer {
         padding: 17px;
     }
 
+
+    .browse-jobs-opener{min-height:52px;margin-top:18px}
+
+    .jobs-grid{grid-template-columns:1fr}
+    .job-card-media{height:145px}
 
     /* Services */
 

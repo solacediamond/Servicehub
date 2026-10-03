@@ -72,7 +72,20 @@
 
                 <form id="jobListingForm">
 
-                    <!-- 1. NAME -->
+                    <!-- 1. JOB TITLE -->
+                    <div class="form-group">
+                        <label for="jobTitle">Job Title</label>
+                        <input
+                            type="text"
+                            id="jobTitle"
+                            name="jobTitle"
+                            placeholder="e.g. Need a video editor for a promo"
+                            maxlength="140"
+                            required
+                        >
+                    </div>
+
+                    <!-- 2. NAME -->
                     <div class="form-group">
                         <label for="jobName">Name</label>
                         <input
@@ -86,7 +99,7 @@
                         >
                     </div>
 
-                    <!-- 2. COMPANY -->
+                    <!-- 3. COMPANY -->
                     <div class="form-group">
                         <label for="jobCompany">
                             Company
@@ -102,7 +115,7 @@
                         >
                     </div>
 
-                    <!-- 3. JOB TYPE -->
+                    <!-- 4. JOB TYPE -->
                     <div class="form-group">
                         <label for="jobType">Job Type</label>
                         <select id="jobType" name="jobType" required>
@@ -127,7 +140,7 @@
                         >
                     </div>
 
-                    <!-- 4. QUALIFICATIONS / REQUIREMENTS -->
+                    <!-- 5. QUALIFICATIONS / REQUIREMENTS -->
                     <div class="form-group">
                         <label for="jobRequirements">Expected Qualifications / Requirements</label>
                         <textarea
@@ -140,7 +153,7 @@
                         ></textarea>
                     </div>
 
-                    <!-- 5. PAYMENT OFFER -->
+                    <!-- 6. PAYMENT OFFER -->
                     <div class="form-group">
                         <label for="paymentCurrency">Payment Offer</label>
 
@@ -165,7 +178,7 @@
                         </div>
                     </div>
 
-                    <!-- 6. CONTACT -->
+                    <!-- 7. CONTACT -->
                     <div class="form-group">
                         <label for="jobContact">Contact Info</label>
                         <input
@@ -178,7 +191,7 @@
                         >
                     </div>
 
-                    <!-- 7. WHATSAPP -->
+                    <!-- 8. WHATSAPP -->
                     <div class="form-group">
                         <label for="jobWhatsapp">
                             WhatsApp
@@ -194,7 +207,7 @@
                         >
                     </div>
 
-                    <!-- 8. MEDIA (REQUIRED) -->
+                    <!-- 9. MEDIA (REQUIRED) -->
                     <div class="form-group job-media-group">
                         <label for="jobMedia">Media / Job Attachment</label>
                         <input
@@ -209,7 +222,7 @@
                         <div id="jobMediaPreview" class="job-media-preview" aria-live="polite"></div>
                     </div>
 
-                    <!-- 9. TELEGRAM -->
+                    <!-- 10. TELEGRAM -->
                     <div class="form-group">
                         <label for="jobTelegram">
                             Telegram
@@ -224,7 +237,7 @@
                         >
                     </div>
 
-                    <!-- 10. GOOGLE FORM -->
+                    <!-- 11. GOOGLE FORM -->
                     <div class="form-group google-form-group">
                         <label for="jobGoogleForm">Google Form Link</label>
                         <input

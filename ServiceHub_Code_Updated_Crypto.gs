@@ -939,6 +939,52 @@ function appendMediaToListing(listingId, media) {
 }
 
 /*****
+ * JOB MANAGEMENT UPDATE
+ * Uses the existing manage-token verification and the same Listings row.
+ *****/
+function updateManageJobDetails(data) {
+  const found = verifyManageToken_(data.listingId, data.token);
+  if (!found) return { success: false, error: 'Invalid link' };
+
+  const sheet = found.sheet;
+  const headers = found.headers;
+  const rowIndex = found.rowIndex;
+  const fields = {
+    'Job Type': cleanString(data.jobType),
+    'Job Requirements': cleanString(data.jobRequirements),
+    'Google Form Link': cleanString(data.googleFormLink),
+    'Telegram': cleanString(data.telegram),
+    'Provider Name': cleanString(data.providerName),
+    'Company': cleanString(data.company),
+    'Contact': cleanString(data.contact),
+    'WhatsApp': cleanString(data.phone)
+  };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const refreshed = verifyManageToken_(data.listingId, data.token);
+    if (!refreshed) return { success: false, error: 'Invalid link' };
+
+    Object.keys(fields).forEach(function(name) {
+      ensureColumn(sheet, refreshed.headers, name);
+      sheet.getRange(refreshed.rowIndex, refreshed.headers[name] + 1).setValue(fields[name]);
+    });
+
+    ensureColumn(sheet, refreshed.headers, 'Listing Type');
+    sheet.getRange(refreshed.rowIndex, refreshed.headers['Listing Type'] + 1).setValue('job');
+
+    if (refreshed.headers['Updated At'] !== undefined) {
+      sheet.getRange(refreshed.rowIndex, refreshed.headers['Updated At'] + 1).setValue(new Date());
+    }
+
+    return { success: true, updated: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/*****
  * POST REQUEST
  *****/
 
@@ -1019,6 +1065,10 @@ function doPost(e) {
 
     if (data.action === 'getManageListing') {
       return jsonResponse(getManageListing(data));
+    }
+
+    if (data.action === 'updateManageJobDetails') {
+      return jsonResponse(updateManageJobDetails(data));
     }
 
     if (data.action === 'updateManageListing') {
@@ -1126,8 +1176,18 @@ function createListingWithPaymentCode(data) {
   const serviceName =
     cleanString(data.serviceName);
 
+  const listingType =
+    cleanString(data.listingType || data.type).toLowerCase() === 'job'
+      ? 'job'
+      : 'service';
+
   const price =
     normalizeAmount(data.price);
+
+  const jobType = cleanString(data.jobType);
+  const jobRequirements = cleanString(data.expectedQualifications || data.jobRequirements);
+  const googleFormLink = cleanString(data.googleFormLink || data.googleForm);
+  const telegram = cleanString(data.telegram);
 
   /* EXTRA LIST-SERVICE FORM FIELDS
    * 
@@ -1400,6 +1460,12 @@ function createListingWithPaymentCode(data) {
 
     /* Auto-create columns for the extra form fields if the
      * sheet doesn't have them yet (same pattern as "Media"). */
+    ensureColumn(sheet, freshHeaders, 'Listing Type');
+    ensureColumn(sheet, freshHeaders, 'Job Type');
+    ensureColumn(sheet, freshHeaders, 'Job Requirements');
+    ensureColumn(sheet, freshHeaders, 'Google Form Link');
+    ensureColumn(sheet, freshHeaders, 'Telegram');
+    ensureColumn(sheet, freshHeaders, 'Currency');
     ensureColumn(sheet, freshHeaders, 'Provider Name');
     ensureColumn(sheet, freshHeaders, 'Company');
     ensureColumn(sheet, freshHeaders, 'Contact');
@@ -1494,6 +1560,24 @@ function createListingWithPaymentCode(data) {
 
     newRow[freshHeaders['Updated At']] =
       now;
+
+    newRow[freshHeaders['Listing Type']] =
+      listingType;
+
+    newRow[freshHeaders['Job Type']] =
+      jobType;
+
+    newRow[freshHeaders['Job Requirements']] =
+      jobRequirements;
+
+    newRow[freshHeaders['Google Form Link']] =
+      googleFormLink;
+
+    newRow[freshHeaders['Telegram']] =
+      telegram;
+
+    newRow[freshHeaders['Currency']] =
+      cleanString(data.currency).toUpperCase();
 
     newRow[freshHeaders['Provider Name']] =
       providerName;

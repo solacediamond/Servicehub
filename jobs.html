@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Browse Jobs | ServiceHub</title>
+<link rel="stylesheet" href="style.css">
+<script src="backend-config.js"></script>
+</head>
+<body>
+<header class="navbar">
+<a href="index.html" class="logo"><span class="logo-mark">ϟ</span><span>ServiceHub</span></a>
+<div id="mobile-nav-panel" class="nav-panel"><nav class="nav-links"><a href="explore.html">Explore</a><a href="manage.html">Manage Your Service</a><a href="how-it-works.html">How It Works</a></nav><div class="nav-actions"><a class="login-btn" href="login.html">List a Job</a><a class="list-btn" href="list-service.html">List Your Service</a></div></div>
+<button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+</header>
+<main class="service-page jobs-page"><button type="button" class="how-back-btn" onclick="history.back()">← Back</button>
+<section class="service-header"><span class="service-category">SERVICEHUB JOB BOARD</span><h1>Browse Jobs</h1><p>Find people and businesses looking for someone to get a job done.</p></section>
+<section class="job-results-section"><div id="jobResults" class="jobs-grid"><div class="job-loading">Loading jobs…</div></div></section>
+</main>
+<script src="script.js"></script>
+<script>
+(function(){
+ const grid=document.getElementById('jobResults');
+ const api=window.SERVICEHUB_APPS_SCRIPT_URL||'';
+ function esc(v){const d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
+ function money(v,c){if(v==null||String(v).trim()==='')return 'Payment not specified'; const n=Number(v); const sym=String(c||'NGN').toUpperCase()==='USD'?'$':'₦'; return Number.isFinite(n)?sym+n.toLocaleString(undefined,{maximumFractionDigits:2}):esc(v);}
+ function card(j){
+   const title=j['Service Name']||j.serviceName||'Job'; const company=j.Company||j.company||''; const type=j['Job Type']||j.jobType||'Job';
+   const req=j['Job Requirements']||j.jobRequirements||j.About||j.about||''; const form=j['Google Form Link']||j.googleFormLink||'';
+   const price=j.Price??j.price??''; const cur=j.Currency||j.currency||'NGN'; const media=(()=>{try{return Array.isArray(j.Media)?j.Media:JSON.parse(j.Media||'[]')}catch(_){return []}})();
+   let mediaHtml='<div class="job-card-media"><span>JOB</span></div>'; const first=media.find(x=>x&&(x.previewUrl||x.url||x.embedUrl)); if(first) mediaHtml='<div class="job-card-media"><img src="'+esc(first.previewUrl||first.url||first.embedUrl)+'" alt="" loading="lazy"></div>';
+   const a=document.createElement('article'); a.className='job-card-rendered'; a.innerHTML=mediaHtml+'<div class="job-card-body"><div class="job-card-top"><span class="job-type-pill">'+esc(type)+'</span><span class="job-payment">'+money(price,cur)+'</span></div><h2>'+esc(title)+'</h2>'+(company?'<p class="job-company">'+esc(company)+'</p>':'')+'<p class="job-excerpt">'+esc(req).slice(0,180)+(String(req).length>180?'…':'')+'</p><a class="apply-job-btn" href="'+esc(form)+'" target="_blank" rel="noopener">Apply via Form <span>↗</span></a></div>'; return a;
+ }
+ fetch(api+'?action=getListings',{cache:'no-store'}).then(r=>r.json()).then(data=>{const all=Array.isArray(data.listings)?data.listings:[]; const jobs=all.filter(j=>String(j['Listing Type']||j.listingType||j.type||'').toLowerCase()==='job'); grid.innerHTML=''; if(!jobs.length){grid.innerHTML='<div class="job-empty">No jobs have been posted yet.</div>';return;} jobs.reverse().forEach(j=>grid.appendChild(card(j)));}).catch(e=>{console.error(e);grid.innerHTML='<div class="job-empty">Could not load jobs right now. Please try again.</div>';});
+})();
+</script>
+</body>
+</html>

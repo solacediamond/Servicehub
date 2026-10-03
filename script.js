@@ -334,8 +334,14 @@ async function createAppsScriptListing(listingData) {
         action: "createListing",
         listingId: listingId,
         providerId: providerId,
-        serviceName: listingData.service || "",
-        price: parseServiceHubAmount(listingData.startingPrice),
+        serviceName: listingData.service || listingData.jobTitle || "",
+        listingType: listingData.listingType || "service",
+        type: listingData.listingType || "service",
+        jobType: listingData.jobType || "",
+        expectedQualifications: listingData.expectedQualifications || "",
+        googleFormLink: listingData.googleFormLink || "",
+        telegram: listingData.telegram || "",
+        price: parseServiceHubAmount(listingData.startingPrice || listingData.paymentOffer),
         /* Always forwarded to Apps Script as "NGN" or "USD" */
         currency: (function (c) {
             c = String(c || "").trim().toUpperCase();
@@ -976,11 +982,18 @@ async function reconcileServiceHubCards() {
         const listings = Array.isArray(data.listings) ? data.listings : [];
 
         const approvedListings = listings.filter(function (listing) {
-            return String(
+            const status = String(
                 listing.status ||
                 listing.Status ||
                 ""
-            ).toLowerCase() === "approved";
+            ).toLowerCase();
+            const type = String(
+                listing.listingType ||
+                listing["Listing Type"] ||
+                listing.type ||
+                "service"
+            ).toLowerCase();
+            return status === "approved" && type !== "job";
         });
 
         const approvedIds = new Set();
@@ -3525,6 +3538,7 @@ if (listingForm) {
 
                 listingData.listingId = listingId;
                 listingData.paymentCode = paymentCode;
+                listingData.listingType = "service";
 
                 localStorage.setItem(
                     "serviceHubListing",
@@ -4470,11 +4484,9 @@ if (featuredServices && typeof services !== "undefined") {
 const jobListingForm = document.getElementById("jobListingForm");
 
 if (jobListingForm) {
-
     const jobType = document.getElementById("jobType");
     const otherJobTypeBox = document.getElementById("otherJobTypeBox");
     const otherJobType = document.getElementById("otherJobType");
-
     const paymentCurrency = document.getElementById("paymentCurrency");
     const paymentAmountBox = document.getElementById("paymentAmountBox");
     const paymentCurrencySymbol = document.getElementById("paymentCurrencySymbol");
@@ -4486,151 +4498,67 @@ if (jobListingForm) {
     function updateOtherJobType() {
         const show = jobType && jobType.value === "others";
         if (otherJobTypeBox) otherJobTypeBox.hidden = !show;
-        if (otherJobType) {
-            otherJobType.required = show;
-            if (!show) otherJobType.value = "";
-        }
+        if (otherJobType) { otherJobType.required = show; if (!show) otherJobType.value = ""; }
     }
-
     function updatePaymentCurrency() {
         const value = paymentCurrency ? paymentCurrency.value : "";
         const selected = value === "USD" || value === "NGN";
         if (paymentAmountBox) paymentAmountBox.hidden = !selected;
         if (paymentCurrencySymbol) paymentCurrencySymbol.textContent = value === "NGN" ? "₦" : "$";
-        if (paymentAmount) {
-            paymentAmount.required = selected;
-            if (!selected) paymentAmount.value = "";
-        }
+        if (paymentAmount) { paymentAmount.required = selected; if (!selected) paymentAmount.value = ""; }
     }
-
     function renderJobMediaPreview() {
         if (!jobMediaPreview) return;
         jobMediaPreview.innerHTML = "";
-        const files = jobMedia && jobMedia.files ? Array.from(jobMedia.files) : [];
-        files.forEach(function (file) {
-            const row = document.createElement("div");
-            row.className = "job-media-file";
-            const icon = document.createElement("span");
-            icon.textContent = file.type.indexOf("image/") === 0 ? "🖼️" : file.type.indexOf("video/") === 0 ? "🎥" : "📄";
-            const name = document.createElement("span");
-            name.textContent = file.name;
-            row.appendChild(icon);
-            row.appendChild(name);
-            jobMediaPreview.appendChild(row);
+        Array.from(jobMedia?.files || []).forEach(function(file) {
+            const row=document.createElement("div"); row.className="job-media-file";
+            const icon=document.createElement("span"); icon.textContent=file.type.indexOf("image/")===0?"🖼️":file.type.indexOf("video/")===0?"🎥":"📄";
+            const name=document.createElement("span"); name.textContent=file.name; row.appendChild(icon); row.appendChild(name); jobMediaPreview.appendChild(row);
         });
     }
-
-    function openJobMediaDB() {
-        return new Promise(function (resolve, reject) {
-            const request = indexedDB.open("ServiceHubJobMedia", 1);
-            request.onupgradeneeded = function (event) {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains("files")) {
-                    db.createObjectStore("files", { keyPath: "id" });
-                }
-            };
-            request.onsuccess = function () { resolve(request.result); };
-            request.onerror = function () { reject(request.error || new Error("Could not open local media storage.")); };
-        });
+    function fileToBase64(file) {
+        return new Promise(function(resolve,reject){ const reader=new FileReader(); reader.onload=function(){ const x=String(reader.result||""); const i=x.indexOf(","); resolve(i>=0?x.slice(i+1):x); }; reader.onerror=function(){reject(new Error("Could not read "+file.name+"."));}; reader.readAsDataURL(file); });
     }
-
-    async function saveJobMediaFiles(jobId, files) {
-        const db = await openJobMediaDB();
-        return new Promise(function (resolve, reject) {
-            const tx = db.transaction("files", "readwrite");
-            const store = tx.objectStore("files");
-            files.forEach(function (file, index) {
-                store.put({
-                    id: jobId + "_" + index,
-                    jobId: jobId,
-                    name: file.name,
-                    type: file.type || "application/octet-stream",
-                    size: file.size,
-                    file: file,
-                    createdAt: new Date().toISOString()
-                });
-            });
-            tx.oncomplete = function () { db.close(); resolve(); };
-            tx.onerror = function () { db.close(); reject(tx.error || new Error("Could not save the job media.")); };
-            tx.onabort = function () { db.close(); reject(tx.error || new Error("Could not save the job media.")); };
-        });
+    async function uploadJobMedia(file, listingId) {
+        if (!file || !file.size) throw new Error("The selected file is empty.");
+        if (file.size > 30*1024*1024) throw new Error(file.name+" is larger than the 30 MB upload limit.");
+        await postToExistingAppsScript({action:"uploadMedia", listingId:listingId, fileName:file.name, mimeType:file.type||"application/octet-stream", base64:await fileToBase64(file)});
     }
-
-    if (jobMedia) jobMedia.addEventListener("change", renderJobMediaPreview);
+    jobMedia?.addEventListener("change", renderJobMediaPreview);
     jobType?.addEventListener("change", updateOtherJobType);
     paymentCurrency?.addEventListener("change", updatePaymentCurrency);
-    updateOtherJobType();
-    updatePaymentCurrency();
+    updateOtherJobType(); updatePaymentCurrency();
 
-    jobListingForm.addEventListener("submit", async function (event) {
+    jobListingForm.addEventListener("submit", async function(event) {
         event.preventDefault();
-
-        const selectedJobType = jobType?.value || "";
-        const resolvedJobType = selectedJobType === "others" ? (otherJobType?.value.trim() || "") : selectedJobType;
-        const currency = paymentCurrency?.value || "";
-        const amount = paymentAmount?.value.trim() || "";
-        const mediaFiles = jobMedia && jobMedia.files ? Array.from(jobMedia.files) : [];
-
-        const googleFormInput = document.getElementById("jobGoogleForm");
-        const googleFormLink = googleFormInput ? googleFormInput.value.trim() : "";
-
-        /* Accept docs.google.com/forms/..., forms.gle/... or forms.google.com/... */
-        const validGoogleForm = /^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/|forms\.google\.com\/)\S+$/i.test(googleFormLink);
-
-        if (!validGoogleForm) {
-            if (jobListingMessage) jobListingMessage.textContent = "Please paste a valid Google Form link (it should start with https://docs.google.com/forms or https://forms.gle).";
-            if (googleFormInput) {
-                googleFormInput.focus();
-                googleFormInput.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-            return;
-        }
-
-        if (!resolvedJobType || !currency || !amount || !mediaFiles.length) {
-            if (jobListingMessage) jobListingMessage.textContent = "Please complete all required job information, including at least one media attachment.";
-            if (!mediaFiles.length && jobMedia) {
-                jobMedia.focus();
-                jobMedia.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-            return;
-        }
-
-        const jobId = "JOB-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-        const submitButton = jobListingForm.querySelector(".listing-submit");
-        if (submitButton) submitButton.disabled = true;
-
+        const selectedJobType=jobType?.value||"";
+        const resolvedJobType=selectedJobType==="others"?(otherJobType?.value.trim()||""):selectedJobType;
+        const currency=paymentCurrency?.value||"";
+        const amount=paymentAmount?.value.trim()||"";
+        const mediaFiles=Array.from(jobMedia?.files||[]);
+        const googleFormLink=(document.getElementById("jobGoogleForm")?.value||"").trim();
+        const validGoogleForm=/^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/|forms\.google\.com\/)/i.test(googleFormLink);
+        if(!validGoogleForm){ if(jobListingMessage) jobListingMessage.textContent="Please paste a valid Google Form link."; return; }
+        if(!document.getElementById("jobTitle")?.value.trim()||!resolvedJobType||!currency||!amount||!mediaFiles.length){ if(jobListingMessage) jobListingMessage.textContent="Please complete all required job information, including at least one media attachment."; return; }
+        const submitButton=jobListingForm.querySelector(".listing-submit"); if(submitButton) submitButton.disabled=true;
         try {
-            await saveJobMediaFiles(jobId, mediaFiles);
-
-            const jobData = {
-                type: "job",
-                jobId: jobId,
-                name: document.getElementById("jobName")?.value.trim() || "",
-                company: document.getElementById("jobCompany")?.value.trim() || "",
-                jobType: resolvedJobType,
-                expectedQualifications: document.getElementById("jobRequirements")?.value.trim() || "",
-                paymentOffer: amount,
-                currency: currency,
-                contact: document.getElementById("jobContact")?.value.trim() || "",
-                whatsapp: document.getElementById("jobWhatsapp")?.value.trim() || "",
-                telegram: document.getElementById("jobTelegram")?.value.trim() || "",
-                googleFormLink: googleFormLink,
-                media: mediaFiles.map(function (file, index) {
-                    return { id: jobId + "_" + index, name: file.name, type: file.type || "application/octet-stream", size: file.size };
-                }),
-                createdAt: new Date().toISOString()
+            const listingData={
+                listingId: await generateServiceHubListingId(), listingType:"job", jobTitle:document.getElementById("jobTitle").value.trim(),
+                name:document.getElementById("jobName")?.value.trim()||"", company:document.getElementById("jobCompany")?.value.trim()||"",
+                service:document.getElementById("jobTitle").value.trim(), jobType:resolvedJobType, expectedQualifications:document.getElementById("jobRequirements")?.value.trim()||"",
+                paymentOffer:amount, startingPrice:amount, currency:currency, contact:document.getElementById("jobContact")?.value.trim()||"",
+                phone:"", whatsapp:document.getElementById("jobWhatsapp")?.value.trim()||"", telegram:document.getElementById("jobTelegram")?.value.trim()||"",
+                googleFormLink:googleFormLink, portfolio:"", about:document.getElementById("jobRequirements")?.value.trim()||"", pricing:[], customPricing:[]
             };
-
-            localStorage.setItem("serviceHubJobListing", JSON.stringify(jobData, null, 2));
-            if (jobListingMessage) jobListingMessage.textContent = "Job information and media saved on this device.";
-        } catch (error) {
-            console.error("ServiceHub job media save error:", error);
-            if (jobListingMessage) jobListingMessage.textContent = error && error.message ? error.message : "The job media could not be saved.";
-        } finally {
-            if (submitButton) submitButton.disabled = false;
-        }
+            const result=await createAppsScriptListing(listingData);
+            if(!result.ok) throw new Error((result.error&&result.error.message)||"Your job could not be saved.");
+            listingData.listingId=result.id; listingData.paymentCode=result.code;
+            localStorage.setItem("serviceHubListing",JSON.stringify(listingData,null,2));
+            localStorage.setItem("serviceHubListingSaved","true"); localStorage.setItem("serviceHubListingId",result.id); localStorage.setItem("serviceHubPaymentCode",result.code);
+            for(const file of mediaFiles) await uploadJobMedia(file,result.id);
+            window.location.href="payment.html";
+        } catch(error){ console.error(error); if(jobListingMessage) jobListingMessage.textContent=error.message||"The job could not be saved."; if(submitButton) submitButton.disabled=false; }
     });
-
 }
 
 /* ========================================
