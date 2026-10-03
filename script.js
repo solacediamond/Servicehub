@@ -337,9 +337,16 @@ async function createAppsScriptListing(listingData) {
         serviceName: listingData.service || listingData.jobTitle || "",
         listingType: listingData.listingType || "service",
         type: listingData.listingType || "service",
+        /* Explicit marker so the backend can branch: "Job" or "Service" */
+        listingKind: String(listingData.listingType || "service").toLowerCase() === "job" ? "Job" : "Service",
+        isJob: String(listingData.listingType || "service").toLowerCase() === "job",
+        jobTitle: listingData.jobTitle || "",
         jobType: listingData.jobType || "",
+        jobRequirements: listingData.jobRequirements || listingData.expectedQualifications || "",
         expectedQualifications: listingData.expectedQualifications || "",
+        paymentOffer: listingData.paymentOffer || "",
         googleFormLink: listingData.googleFormLink || "",
+        googleForm: listingData.googleFormLink || "",
         telegram: listingData.telegram || "",
         price: parseServiceHubAmount(listingData.startingPrice || listingData.paymentOffer),
         /* Always forwarded to Apps Script as "NGN" or "USD" */
@@ -4476,9 +4483,8 @@ if (featuredServices && typeof services !== "undefined") {
 })();
 /* ========================================
    LIST A JOB FORM
-   The current Apps Script accepts service listings,
-   not job-posting records. Keep this new form local
-   until a dedicated job endpoint is added.
+   Submits through createAppsScriptListing() (same path as
+   list-service.html) with listingType "job" / listingKind "Job".
 ======================================== */
 
 const jobListingForm = document.getElementById("jobListingForm");
@@ -4628,169 +4634,81 @@ if (jobListingForm) {
                     .replace(/^-+|-+$/g, "");
 
         /*
-         * Build the actual job listing payload.
+         * Job columns. Sent through the SAME createAppsScriptListing()
+         * used by list-service.html, so the manage token, payment code
+         * polling and response shape are identical. listingType "job"
+         * (plus listingKind "Job") tells the backend this is a job row.
          */
+        const jobRequirementsText =
+            document.getElementById("jobRequirements")?.value.trim() || "";
+
         const jobData = {
-
-            action: "createListing",
-
             listingType: "job",
-            type: "job",
-
             listingId: listingId,
-
-            providerId: providerId,
-
-            /*
-             * The backend stores the job title
-             * in the existing Service Name column.
-             */
-            serviceName: jobName,
             jobTitle: jobName,
-
-            providerName:
-                document.getElementById("jobName")?.value.trim() || "",
-
+            service: jobName,
+            name: jobName,
             company: company,
-
             jobType: resolvedJobType,
-
-            expectedQualifications:
-                document.getElementById("jobRequirements")
-                    ?.value.trim() || "",
-
-            jobRequirements:
-                document.getElementById("jobRequirements")
-                    ?.value.trim() || "",
-
+            expectedQualifications: jobRequirementsText,
+            jobRequirements: jobRequirementsText,
+            about: jobRequirementsText,
             paymentOffer: amount,
-
-            price: amount,
-
+            startingPrice: amount,
             currency: currency,
-
-            contact:
-                document.getElementById("jobContact")
-                    ?.value.trim() || "",
-
-            whatsapp:
-                document.getElementById("jobWhatsapp")
-                    ?.value.trim() || "",
-
-            telegram:
-                document.getElementById("jobTelegram")
-                    ?.value.trim() || "",
-
+            contact: providerName,
+            phone: document.getElementById("jobWhatsapp")?.value.trim() || "",
+            telegram: document.getElementById("jobTelegram")?.value.trim() || "",
             googleFormLink: googleFormLink,
-
-            googleForm: googleFormLink,
-
-            about:
-                document.getElementById("jobRequirements")
-                    ?.value.trim() || ""
+            media: [],
+            savedAt: new Date().toISOString()
         };
 
-        /*
-         * CREATE JOB IN APPS SCRIPT FIRST.
-         *
-         * This is the important difference from the
-         * previous version. The browser no longer
-         * considers the job created just because it
-         * saved something to localStorage.
-         */
-        const response =
-            await postToExistingAppsScript(jobData);
+        const overlayOn = typeof showListingUploadOverlay === "function";
+        if (overlayOn) showListingUploadOverlay("Saving your job, please wait for a moment");
 
-        if (
-            !response ||
-            response.success === false
-        ) {
+        const result = await createAppsScriptListing(jobData);
+
+        if (!result.ok) {
             throw new Error(
-                response?.error ||
-                "The job could not be created on ServiceHub."
+                result.offline
+                    ? "ServiceHub Apps Script is not configured."
+                    : ((result.error && result.error.message) || "The job could not be created on ServiceHub.")
             );
         }
 
-        /*
-         * Apps Script is authoritative for the
-         * Listing ID and payment code.
-         */
-        const actualListingId =
-            String(
-                response.listingId ||
-                response.id ||
-                listingId
-            ).trim();
+        const actualListingId = result.id;
+        const paymentCode = result.code;
 
-        const paymentCode =
-            String(
-                response.paymentCode ||
-                response.code ||
-                ""
-            ).trim();
+        jobData.listingId = actualListingId;
+        jobData.paymentCode = paymentCode;
+        jobData.jobId = actualListingId;
+        jobData.providerName = jobName;
 
-        if (!actualListingId) {
-            throw new Error(
-                "The job was created but no Listing ID was returned."
-            );
+        const persistJob = function () {
+            const json = JSON.stringify(jobData, null, 2);
+            localStorage.setItem("serviceHubListing", json);
+            localStorage.setItem("serviceHubJobListing", json);
+            localStorage.setItem("serviceHubListingSaved", "true");
+            localStorage.setItem("serviceHubListingId", actualListingId);
+            localStorage.setItem("serviceHubPaymentCode", paymentCode);
+            localStorage.setItem("serviceHubListingType", "job");
+        };
+        persistJob();
+
+        /* Upload media into the created listing, one at a time (same as services). */
+        if (mediaFiles.length) {
+            if (overlayOn) showListingUploadOverlay("Uploading media, please wait for a moment");
+            for (const file of mediaFiles) {
+                try {
+                    await uploadJobMedia(file, actualListingId);
+                } catch (uploadError) {
+                    throw new Error("Failed to upload " + file.name + ". " + (uploadError.message || "Unknown upload error."));
+                }
+            }
+            jobData.media = mediaFiles.map(function (f) { return { name: f.name, type: f.type, size: f.size }; });
+            persistJob();
         }
-
-        if (!paymentCode) {
-            throw new Error(
-                "The job was created but no payment code was returned."
-            );
-        }
-
-        /*
-         * Save the job using the SAME localStorage
-         * structure used by normal listings.
-         */
-        jobData.listingId =
-            actualListingId;
-
-        jobData.paymentCode =
-            paymentCode;
-
-        jobData.jobId =
-            actualListingId;
-
-        localStorage.setItem(
-            "serviceHubListing",
-            JSON.stringify(
-                jobData,
-                null,
-                2
-            )
-        );
-
-        localStorage.setItem(
-            "serviceHubListingSaved",
-            "true"
-        );
-
-        localStorage.setItem(
-            "serviceHubListingId",
-            actualListingId
-        );
-
-        localStorage.setItem(
-            "serviceHubPaymentCode",
-            paymentCode
-        );
-
-        localStorage.setItem(
-            "serviceHubListingType",
-            "job"
-        );
-
-        localStorage.setItem(
-            "serviceHubJobListing",
-            JSON.stringify(
-                jobData,
-                null,
-                2
-            )
-        );
 
         /*
          * IMPORTANT:
@@ -4806,6 +4724,8 @@ if (jobListingForm) {
         window.location.href = "payment.html";
 
     } catch (error) {
+
+        if (typeof hideListingUploadOverlay === "function") hideListingUploadOverlay();
 
         console.error(
             "ServiceHub Job creation error:",
