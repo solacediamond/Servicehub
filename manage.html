@@ -479,13 +479,13 @@ var chat={
   function snapshotUnread(cs){var now={};cs.forEach(function(c){var n=Number(c.unread||0);now[String(c.id)]=n;var old=Object.prototype.hasOwnProperty.call(lastUnreadSnapshot,String(c.id))?lastUnreadSnapshot[String(c.id)]:0;if(n>old&&!currentThreadIs(c))playNotification()});lastUnreadSnapshot=now}
   function notificationPoll(){
     chat.list().then(function(cs){snapshotUnread(cs);var total=0;cs.forEach(function(c){total+=Number(c.unread||0)});var u=$("#unread");u.hidden=!total;u.textContent=total}).catch(function(){});
-    if(openConv&&document.querySelector("#v-thread").classList.contains("on")){chat.messages(openConv).then(function(ms){if(!ms||!ms.length)return;var newest=ms[ms.length-1],id=String(newest.id||newest.created_at||newest.body||"");if(lastThreadMessageId!==null&&id!==lastThreadMessageId&&newest.sender!=="provider")playInChatBeep();lastThreadMessageId=id}).catch(function(){})}
+    if(openConv&&document.querySelector("#v-thread").classList.contains("on")){chat.messages(openConv).then(function(ms){if(!ms||!ms.length)return;var newest=ms[ms.length-1],id=String(newest.id||newest.created_at||newest.body||"");if(lastThreadMessageId!==null&&id!==lastThreadMessageId){if(newest.sender!=="provider")playInChatBeep();drawThread()}}).catch(function(){})}
   }
 
   function saveSoundSettings(){
     var checked=document.querySelector('input[name="notifySound"]:checked');
     if(!checked)return;
-    if(checked.value==="custom"&&!soundSettings.customData){toast("Choose a custom audio file first");return}
+    if(checked.value==="custom"&&!soundSettings.customBlob&&!soundSettings.customData){toast("Choose a custom audio file first");return}
     var previous=soundSettings.type;
     soundSettings.type=checked.value;
     try{localStorage.setItem(SOUND_KEY,JSON.stringify({type:soundSettings.type}))}catch(_){toast("Could not save the selected sound on this device");soundSettings.type=previous;return}
