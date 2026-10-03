@@ -4529,37 +4529,304 @@ if (jobListingForm) {
     paymentCurrency?.addEventListener("change", updatePaymentCurrency);
     updateOtherJobType(); updatePaymentCurrency();
 
-    jobListingForm.addEventListener("submit", async function(event) {
-        event.preventDefault();
-        const selectedJobType=jobType?.value||"";
-        const resolvedJobType=selectedJobType==="others"?(otherJobType?.value.trim()||""):selectedJobType;
-        const currency=paymentCurrency?.value||"";
-        const amount=paymentAmount?.value.trim()||"";
-        const mediaFiles=Array.from(jobMedia?.files||[]);
-        const googleFormLink=(document.getElementById("jobGoogleForm")?.value||"").trim();
-        const validGoogleForm=/^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/|forms\.google\.com\/)/i.test(googleFormLink);
-        if(!validGoogleForm){ if(jobListingMessage) jobListingMessage.textContent="Please paste a valid Google Form link."; return; }
-        if(!document.getElementById("jobTitle")?.value.trim()||!resolvedJobType||!currency||!amount||!mediaFiles.length){ if(jobListingMessage) jobListingMessage.textContent="Please complete all required job information, including at least one media attachment."; return; }
-        const submitButton=jobListingForm.querySelector(".listing-submit"); if(submitButton) submitButton.disabled=true;
-        try {
-            const listingData={
-                listingId: await generateServiceHubListingId(), listingType:"job", jobTitle:document.getElementById("jobTitle").value.trim(),
-                name:document.getElementById("jobName")?.value.trim()||"", company:document.getElementById("jobCompany")?.value.trim()||"",
-                service:document.getElementById("jobTitle").value.trim(), jobType:resolvedJobType, expectedQualifications:document.getElementById("jobRequirements")?.value.trim()||"",
-                paymentOffer:amount, startingPrice:amount, currency:currency, contact:document.getElementById("jobContact")?.value.trim()||"",
-                phone:"", whatsapp:document.getElementById("jobWhatsapp")?.value.trim()||"", telegram:document.getElementById("jobTelegram")?.value.trim()||"",
-                googleFormLink:googleFormLink, portfolio:"", about:document.getElementById("jobRequirements")?.value.trim()||"", pricing:[], customPricing:[]
-            };
-            const result=await createAppsScriptListing(listingData);
-            if(!result.ok) throw new Error((result.error&&result.error.message)||"Your job could not be saved.");
-            listingData.listingId=result.id; listingData.paymentCode=result.code;
-            localStorage.setItem("serviceHubListing",JSON.stringify(listingData,null,2));
-            localStorage.setItem("serviceHubListingSaved","true"); localStorage.setItem("serviceHubListingId",result.id); localStorage.setItem("serviceHubPaymentCode",result.code);
-            for(const file of mediaFiles) await uploadJobMedia(file,result.id);
-            window.location.href="payment.html";
-        } catch(error){ console.error(error); if(jobListingMessage) jobListingMessage.textContent=error.message||"The job could not be saved."; if(submitButton) submitButton.disabled=false; }
-    });
-}
+    jobListingForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const selectedJobType = jobType?.value || "";
+    const resolvedJobType =
+        selectedJobType === "others"
+            ? (otherJobType?.value.trim() || "")
+            : selectedJobType;
+
+    const currency = paymentCurrency?.value || "";
+    const amount = paymentAmount?.value.trim() || "";
+    const mediaFiles =
+        jobMedia && jobMedia.files
+            ? Array.from(jobMedia.files)
+            : [];
+
+    const googleFormInput =
+        document.getElementById("jobGoogleForm");
+
+    const googleFormLink =
+        googleFormInput
+            ? googleFormInput.value.trim()
+            : "";
+
+    const validGoogleForm =
+        /^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/|forms\.google\.com\/)\S+$/i
+            .test(googleFormLink);
+
+    if (!validGoogleForm) {
+        if (jobListingMessage) {
+            jobListingMessage.textContent =
+                "Please paste a valid Google Form link.";
+        }
+
+        if (googleFormInput) {
+            googleFormInput.focus();
+            googleFormInput.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+
+        return;
+    }
+
+    if (
+        !resolvedJobType ||
+        !currency ||
+        !amount ||
+        !mediaFiles.length
+    ) {
+        if (jobListingMessage) {
+            jobListingMessage.textContent =
+                "Please complete all required job information, including at least one media attachment.";
+        }
+
+        return;
+    }
+
+    const submitButton =
+        jobListingForm.querySelector(".listing-submit");
+
+    if (submitButton) {
+        submitButton.disabled = true;
+    }
+
+    try {
+
+        /*
+         * Get the same sequential SH-xxx Listing ID
+         * system used by normal service listings.
+         */
+        const listingId =
+            await generateServiceHubListingId();
+
+        const jobName =
+            document.getElementById("jobName")?.value.trim() || "";
+
+        const company =
+            document.getElementById("jobCompany")?.value.trim() || "";
+
+        const providerName =
+            document.getElementById("jobContact")?.value.trim() || "";
+
+        const providerIdSource =
+            company ||
+            providerName ||
+            jobName ||
+            "job-poster";
+
+        const providerId =
+            typeof slugifyServiceHubProvider === "function"
+                ? slugifyServiceHubProvider(providerIdSource)
+                : providerIdSource
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, "");
+
+        /*
+         * Build the actual job listing payload.
+         */
+        const jobData = {
+
+            action: "createListing",
+
+            listingType: "job",
+            type: "job",
+
+            listingId: listingId,
+
+            providerId: providerId,
+
+            /*
+             * The backend stores the job title
+             * in the existing Service Name column.
+             */
+            serviceName: jobName,
+            jobTitle: jobName,
+
+            providerName:
+                document.getElementById("jobName")?.value.trim() || "",
+
+            company: company,
+
+            jobType: resolvedJobType,
+
+            expectedQualifications:
+                document.getElementById("jobRequirements")
+                    ?.value.trim() || "",
+
+            jobRequirements:
+                document.getElementById("jobRequirements")
+                    ?.value.trim() || "",
+
+            paymentOffer: amount,
+
+            price: amount,
+
+            currency: currency,
+
+            contact:
+                document.getElementById("jobContact")
+                    ?.value.trim() || "",
+
+            whatsapp:
+                document.getElementById("jobWhatsapp")
+                    ?.value.trim() || "",
+
+            telegram:
+                document.getElementById("jobTelegram")
+                    ?.value.trim() || "",
+
+            googleFormLink: googleFormLink,
+
+            googleForm: googleFormLink,
+
+            about:
+                document.getElementById("jobRequirements")
+                    ?.value.trim() || ""
+        };
+
+        /*
+         * CREATE JOB IN APPS SCRIPT FIRST.
+         *
+         * This is the important difference from the
+         * previous version. The browser no longer
+         * considers the job created just because it
+         * saved something to localStorage.
+         */
+        const response =
+            await postToExistingAppsScript(jobData);
+
+        if (
+            !response ||
+            response.success === false
+        ) {
+            throw new Error(
+                response?.error ||
+                "The job could not be created on ServiceHub."
+            );
+        }
+
+        /*
+         * Apps Script is authoritative for the
+         * Listing ID and payment code.
+         */
+        const actualListingId =
+            String(
+                response.listingId ||
+                response.id ||
+                listingId
+            ).trim();
+
+        const paymentCode =
+            String(
+                response.paymentCode ||
+                response.code ||
+                ""
+            ).trim();
+
+        if (!actualListingId) {
+            throw new Error(
+                "The job was created but no Listing ID was returned."
+            );
+        }
+
+        if (!paymentCode) {
+            throw new Error(
+                "The job was created but no payment code was returned."
+            );
+        }
+
+        /*
+         * Save the job using the SAME localStorage
+         * structure used by normal listings.
+         */
+        jobData.listingId =
+            actualListingId;
+
+        jobData.paymentCode =
+            paymentCode;
+
+        jobData.jobId =
+            actualListingId;
+
+        localStorage.setItem(
+            "serviceHubListing",
+            JSON.stringify(
+                jobData,
+                null,
+                2
+            )
+        );
+
+        localStorage.setItem(
+            "serviceHubListingSaved",
+            "true"
+        );
+
+        localStorage.setItem(
+            "serviceHubListingId",
+            actualListingId
+        );
+
+        localStorage.setItem(
+            "serviceHubPaymentCode",
+            paymentCode
+        );
+
+        localStorage.setItem(
+            "serviceHubListingType",
+            "job"
+        );
+
+        localStorage.setItem(
+            "serviceHubJobListing",
+            JSON.stringify(
+                jobData,
+                null,
+                2
+            )
+        );
+
+        /*
+         * IMPORTANT:
+         * Do NOT show a management link yet.
+         *
+         * Payment must be confirmed first.
+         */
+
+        /*
+         * Finally enter the EXISTING ServiceHub
+         * payment flow.
+         */
+        window.location.href = "payment.html";
+
+    } catch (error) {
+
+        console.error(
+            "ServiceHub Job creation error:",
+            error
+        );
+
+        if (jobListingMessage) {
+            jobListingMessage.textContent =
+                error && error.message
+                    ? error.message
+                    : "The job could not be created. Please try again.";
+        }
+
+    } finally {
+
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
+
+    }
+});
 
 /* ========================================
    PROVIDER CHAT INBOX
@@ -4694,4 +4961,5 @@ function formatTime(timestamp) {
 
 function scrollMessagesToBottom(container) {
     if (container) container.scrollTop = container.scrollHeight;
+}
 }
