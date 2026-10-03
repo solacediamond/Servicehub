@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Crypto Payment — ServiceHub</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="provider-page">
+
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="manage.html">Manage Your Service</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">List a Job</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button"
+                aria-label="Open menu"
+                aria-expanded="false"
+                aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+    <main class="listing-page">
+
+        <button type="button" class="how-back-btn"
+                onclick="window.location.href='payment.html'">
+            ← Back
+        </button>
+
+        <section class="listing-card payment-card">
+
+            <div id="cryptoWaitingStep">
+
+                <div class="listing-heading">
+                    <p class="eyebrow">CRYPTO PAYMENT</p>
+
+                    <h1>Pay With USDT</h1>
+
+                    <p>
+                        Pay the ServiceHub listing fee with USDT on Polygon
+                        or Solana. You do not need to connect a wallet to
+                        ServiceHub.
+                    </p>
+                </div>
+
+                <div class="payment-summary">
+                    <div>
+                        <span class="payment-label">Listing</span>
+                        <strong id="cryptoListingId">Loading…</strong>
+                    </div>
+
+                    <span class="payment-status">USDT</span>
+                </div>
+
+                <div class="bank-info-box">
+                    <div class="bank-row">
+                        <span class="bank-label">Amount</span>
+                        <strong class="bank-value">1.45 USDT</strong>
+                    </div>
+
+                    <div class="bank-row">
+                        <span class="bank-label">Network</span>
+                        <strong class="bank-value" id="cryptoNetworkLabel">Polygon or Solana</strong>
+                    </div>
+
+                    <div class="bank-row">
+                        <span class="bank-label">Merchant</span>
+                        <strong class="bank-value">Solace</strong>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:18px;">
+                    <label for="cryptoNetwork">Choose USDT network</label>
+
+                    <select id="cryptoNetwork">
+                        <option value="">Choose network</option>
+                        <option value="polygon">Polygon</option>
+                        <option value="solana">Solana</option>
+                    </select>
+                </div>
+
+                <div class="bank-warning-box" role="note" style="margin-top:16px;">
+                    <span class="bank-warning-icon" aria-hidden="true">⚠</span>
+                    <div class="bank-warning-text">
+                        <strong>Send USDT only</strong>
+                        <p>
+                            Choose the same network in your payment wallet.
+                            Sending another token or using the wrong network
+                            can cause the payment not to be recognized.
+                        </p>
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="listing-submit"
+                        id="cryptoPayButton"
+                        style="margin-top:18px;">
+                    Continue to NoWalletConnect →
+                </button>
+
+                <div id="cryptoStatus"
+                     class="payment-status-pill"
+                     style="margin-top:16px;">
+                    <span class="payment-spinner"></span>
+                    Waiting for payment…
+                </div>
+
+                <p class="payment-security-note">
+                    🔒 After NoWalletConnect reports success, ServiceHub will
+                    send the result to Apps Script and wait for backend
+                    approval before treating the listing as paid.
+                </p>
+
+            </div>
+
+            <div id="cryptoApprovedStep" style="display:none;">
+
+                <div class="approved-check">✓</div>
+
+                <div class="listing-heading approved-heading">
+                    <p class="eyebrow">PAYMENT CONFIRMED</p>
+
+                    <h1>You're Live!</h1>
+
+                    <p>
+                        Your USDT payment has been recorded and your service
+                        listing has been approved.
+                    </p>
+                </div>
+
+                <a href="explore.html" class="listing-submit">
+                    View Your Listing →
+                </a>
+
+            </div>
+
+            <div id="cryptoErrorStep" style="display:none;">
+
+                <div class="listing-heading">
+                    <p class="eyebrow">PAYMENT ISSUE</p>
+
+                    <h1>We couldn't confirm the payment</h1>
+
+                    <p id="cryptoErrorText">
+                        Please return to the payment page and try again.
+                    </p>
+                </div>
+
+                <button type="button"
+                        class="listing-submit"
+                        onclick="window.location.href='payment.html'">
+                    Return to Payment
+                </button>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+
+    <script>
+    (function () {
+        const listingIdEl = document.getElementById("cryptoListingId");
+        const networkSelect = document.getElementById("cryptoNetwork");
+        const networkLabel = document.getElementById("cryptoNetworkLabel");
+        const payButton = document.getElementById("cryptoPayButton");
+        const statusEl = document.getElementById("cryptoStatus");
+
+        const waitingStep = document.getElementById("cryptoWaitingStep");
+        const approvedStep = document.getElementById("cryptoApprovedStep");
+        const errorStep = document.getElementById("cryptoErrorStep");
+        const errorText = document.getElementById("cryptoErrorText");
+
+        const listingId = String(
+            localStorage.getItem("serviceHubListingId") || ""
+        ).trim();
+
+        const APPROVED_PARAM = new URLSearchParams(location.search).get("verified");
+
+        let stopped = false;
+        let checking = false;
+        let timer = null;
+
+        if (!listingId) {
+            showError("Your ServiceHub Listing ID is missing. Please return to the listing page and start again.");
+            return;
+        }
+
+        listingIdEl.textContent = listingId;
+
+        networkSelect.addEventListener("change", function () {
+            const value = this.value;
+            networkLabel.textContent =
+                value === "polygon"
+                    ? "Polygon"
+                    : value === "solana"
+                        ? "Solana"
+                        : "Polygon or Solana";
+        });
+
+        function setStatus(message) {
+            if (statusEl) {
+                statusEl.textContent = message || "Waiting for payment…";
+            }
+        }
+
+        function showError(message) {
+            stopped = true;
+
+            if (waitingStep) waitingStep.style.display = "none";
+            if (approvedStep) approvedStep.style.display = "none";
+            if (errorStep) errorStep.style.display = "block";
+            if (errorText) errorText.textContent = message;
+
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+        }
+
+        function showApproved() {
+            stopped = true;
+
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+
+            if (waitingStep) waitingStep.style.display = "none";
+            if (errorStep) errorStep.style.display = "none";
+            if (approvedStep) approvedStep.style.display = "block";
+        }
+
+        async function checkApproval() {
+            if (stopped || checking) return;
+
+            checking = true;
+
+            try {
+                const listing = await fetchAppsScriptListing(listingId);
+
+                if (!listing.ok) {
+                    setStatus("Waiting for the ServiceHub backend…");
+                    return;
+                }
+
+                const code = String(
+                    listing.code ||
+                    listing.listing?.paymentCode ||
+                    listing.listing?.["Payment Code"] ||
+                    ""
+                ).trim();
+
+                if (code) {
+                    localStorage.setItem("serviceHubPaymentCode", code);
+                }
+
+                const result = await checkAppsScriptPayment(
+                    listingId,
+                    code
+                );
+
+                if (result.status === "approved") {
+                    showApproved();
+                    return;
+                }
+
+                setStatus(
+                    APPROVED_PARAM
+                        ? "Payment received. Waiting for final backend approval…"
+                        : "Waiting for payment confirmation…"
+                );
+
+            } catch (error) {
+                console.error("Crypto approval check failed:", error);
+                setStatus("Waiting for payment confirmation…");
+            } finally {
+                checking = false;
+            }
+        }
+
+        payButton.addEventListener("click", function () {
+            const network = String(networkSelect.value || "").toLowerCase();
+
+            if (network !== "polygon" && network !== "solana") {
+                setStatus("Choose Polygon or Solana first.");
+                networkSelect.focus();
+                return;
+            }
+
+            /*
+             * Mark this browser session as an active ServiceHub crypto
+             * checkout. The NoWalletConnect return page uses this same
+             * browser's localStorage to recover the Listing ID.
+             */
+            localStorage.setItem("serviceHubCryptoCheckoutActive", "true");
+            localStorage.setItem("serviceHubCryptoNetwork", network);
+            localStorage.setItem("serviceHubCryptoListingId", listingId);
+
+            const url =
+                "https://niti.com.ng/tools/nowalletconnect/checkout.html" +
+                "?merchant=Solace" +
+                "&amount=1.45" +
+                "&network=" + encodeURIComponent(network);
+
+            window.location.href = url;
+        });
+
+        /*
+         * When NoWalletConnect has returned to the ServiceHub return page,
+         * it redirects here with ?verified=1 after Apps Script accepts the
+         * payment record. Keep checking until the Listing is actually
+         * approved.
+         */
+        checkApproval();
+        timer = setInterval(checkApproval, 5000);
+
+    })();
+    </script>
+
+</body>
+</html>

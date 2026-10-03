@@ -3819,7 +3819,8 @@ if (
                         class="custom-price"
                         placeholder="Price"
                         min="0"
-                        inputmode="numeric"
+                        step="any"
+                        inputmode="decimal"
                     >
 
                 </div>

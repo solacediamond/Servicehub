@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>USD Payment — ServiceHub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="provider-page usd-under-construction-page">
+
+<header class="navbar">
+    <a href="index.html" class="logo">
+        <span class="logo-mark">ϟ</span>
+        <span>ServiceHub</span>
+    </a>
+
+    <div id="mobile-nav-panel" class="nav-panel">
+        <nav class="nav-links">
+            <a href="explore.html">Explore</a>
+            <a href="manage.html">Manage Your Service</a>
+            <a href="how-it-works.html">How It Works</a>
+        </nav>
+        <div class="nav-actions">
+            <a class="login-btn" href="login.html">List a Job</a>
+            <a class="list-btn" href="list-service.html">List Your Service</a>
+        </div>
+    </div>
+
+    <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+</header>
+
+<main class="usd-under-construction-wrap">
+    <section class="usd-under-construction-card">
+        <button type="button" class="how-back-btn usd-back-btn" onclick="history.back()">← Back</button>
+
+        <div class="usd-construction-icon" aria-hidden="true">
+            <span class="usd-dollar">$</span>
+            <span class="usd-gear">⚙</span>
+        </div>
+
+        <div class="usd-status-pill">
+            <span></span>
+            PAYMENT OPTION IN DEVELOPMENT
+        </div>
+
+        <h1>USD Payments<br><strong>Under Construction</strong></h1>
+
+        <p class="usd-construction-text">
+            Paying in US Dollars is not available on ServiceHub yet. We're working on the USD payment system and will make it available once it's ready.
+        </p>
+
+        <div class="usd-info-box">
+            <div class="usd-info-icon">$</div>
+            <div>
+                <strong>Coming soon</strong>
+                <span>You'll be able to pay ServiceHub listings in USD directly through the platform.</span>
+            </div>
+        </div>
+
+        <a href="payment.html" class="listing-submit usd-return-btn">Choose another payment method</a>
+    </section>
+</main>
+
+<script>
+(function () {
+    const menuBtn = document.querySelector('.menu-btn');
+    const navPanel = document.getElementById('mobile-nav-panel');
+
+    if (!menuBtn || !navPanel) return;
+
+    menuBtn.addEventListener('click', function () {
+        const open = navPanel.classList.toggle('active');
+        menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+})();
+</script>
+
+</body>
+</html>

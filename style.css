@@ -4236,3 +4236,228 @@ body.listing-upload-locked {
         text-align: center;
     }
 }
+
+/* ========================================
+   USD PAYMENT — UNDER CONSTRUCTION
+======================================== */
+
+.usd-under-construction-page {
+    min-height: 100vh;
+}
+
+.usd-under-construction-wrap {
+    min-height: calc(100vh - 76px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 45px 20px 60px;
+    position: relative;
+    overflow: hidden;
+}
+
+.usd-under-construction-wrap::before,
+.usd-under-construction-wrap::after {
+    content: "";
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.14;
+    pointer-events: none;
+}
+
+.usd-under-construction-wrap::before {
+    background: #2388ff;
+    top: 5%;
+    left: -100px;
+}
+
+.usd-under-construction-wrap::after {
+    background: #ff4fd8;
+    bottom: -100px;
+    right: -80px;
+}
+
+.usd-under-construction-card {
+    width: min(620px, 100%);
+    padding: 34px;
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 24px;
+    background: rgba(16,21,34,0.88);
+    box-shadow: 0 25px 80px rgba(0,0,0,0.35), 0 0 45px rgba(35,136,255,0.07);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    animation: usdCardIn 0.65s ease both;
+}
+
+.usd-back-btn {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+}
+
+.usd-construction-icon {
+    width: 108px;
+    height: 108px;
+    margin: 30px auto 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border: 1px solid rgba(35,136,255,0.35);
+    background: radial-gradient(circle, rgba(35,136,255,0.16), rgba(168,85,247,0.06) 55%, transparent 70%);
+    box-shadow: 0 0 35px rgba(35,136,255,0.12);
+}
+
+.usd-dollar {
+    font-size: 54px;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, #2388ff, #a855f7, #ff4fd8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.usd-gear {
+    position: absolute;
+    right: 3px;
+    bottom: 4px;
+    font-size: 30px;
+    animation: usdGearSpin 7s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(255,79,216,0.35));
+}
+
+.usd-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 13px;
+    border: 1px solid rgba(168,85,247,0.28);
+    border-radius: 999px;
+    background: rgba(168,85,247,0.08);
+    color: #c9b4ff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.usd-status-pill span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ff4fd8;
+    box-shadow: 0 0 10px rgba(255,79,216,0.8);
+    animation: usdPulse 1.6s ease-in-out infinite;
+}
+
+.usd-under-construction-card h1 {
+    margin: 20px 0 14px;
+    font-size: clamp(30px, 6vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+}
+
+.usd-under-construction-card h1 strong {
+    background: linear-gradient(90deg, #2388ff, #a855f7, #ff4fd8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.usd-construction-text {
+    max-width: 510px;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.75;
+}
+
+.usd-info-box {
+    margin: 25px 0;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    text-align: left;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 15px;
+    background: rgba(255,255,255,0.025);
+}
+
+.usd-info-icon {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(35,136,255,0.1);
+    border: 1px solid rgba(35,136,255,0.2);
+    color: #62adff;
+    font-weight: 800;
+    font-size: 20px;
+}
+
+.usd-info-box div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.usd-info-box strong {
+    font-size: 14px;
+}
+
+.usd-info-box span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.usd-return-btn {
+    display: block;
+    width: 100%;
+    text-decoration: none;
+    text-align: center;
+}
+
+@keyframes usdCardIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes usdGearSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes usdPulse {
+    0%, 100% { transform: scale(0.8); opacity: 0.65; }
+    50% { transform: scale(1.15); opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .usd-under-construction-wrap {
+        padding: 35px 14px 45px;
+    }
+
+    .usd-under-construction-card {
+        padding: 28px 18px 22px;
+        border-radius: 20px;
+    }
+
+    .usd-construction-icon {
+        margin-top: 28px;
+    }
+
+    .usd-construction-text {
+        font-size: 14px;
+    }
+}

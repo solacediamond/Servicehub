@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifying USDT Payment — ServiceHub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="provider-page">
+
+    <main class="listing-page">
+        <section class="listing-card payment-card">
+
+            <div class="listing-heading" style="text-align:center;">
+                <p class="eyebrow">CRYPTO PAYMENT</p>
+                <h1 id="returnTitle">Verifying your payment…</h1>
+                <p id="returnMessage">
+                    Please wait while ServiceHub records the NoWalletConnect
+                    payment and checks the listing approval status.
+                </p>
+            </div>
+
+            <div class="payment-status-pill" id="returnStatus">
+                <span class="payment-spinner"></span>
+                Connecting to ServiceHub…
+            </div>
+
+            <div id="returnDetails" class="bank-info-box" style="display:none;margin-top:18px;"></div>
+
+            <a id="returnContinue"
+               href="payment.html"
+               class="listing-submit"
+               style="display:none;margin-top:18px;">
+                Return to Payment
+            </a>
+
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+
+    <script>
+    (function () {
+        const q = new URLSearchParams(location.search);
+
+        const title = document.getElementById("returnTitle");
+        const message = document.getElementById("returnMessage");
+        const statusEl = document.getElementById("returnStatus");
+        const details = document.getElementById("returnDetails");
+        const continueEl = document.getElementById("returnContinue");
+
+        const status = String(q.get("status") || "").toLowerCase();
+        const merchant = String(q.get("merchant") || "");
+        const amount = Number(q.get("amount"));
+        const txHash = String(q.get("tx_hash") || "");
+        const network = String(q.get("network") || "").toLowerCase();
+        const paymentId = String(q.get("payment_id") || "").trim();
+
+        const listingId = String(
+            localStorage.getItem("serviceHubCryptoListingId") ||
+            localStorage.getItem("serviceHubListingId") ||
+            ""
+        ).trim();
+
+        function setStatus(text) {
+            if (statusEl) statusEl.textContent = text;
+        }
+
+        function fail(text) {
+            if (title) title.textContent = "Payment could not be confirmed";
+            if (message) message.textContent = text;
+            setStatus("Payment was not recorded.");
+            if (continueEl) continueEl.style.display = "block";
+        }
+
+        if (
+            status !== "success" ||
+            merchant !== "Solace" ||
+            !Number.isFinite(amount) ||
+            Math.abs(amount - 1.45) >= 0.01 ||
+            !txHash ||
+            !paymentId ||
+            (network !== "polygon" && network !== "solana")
+        ) {
+            fail(
+                "The NoWalletConnect return data is incomplete or does not match the ServiceHub crypto payment requirements."
+            );
+            return;
+        }
+
+        if (!listingId) {
+            fail(
+                "ServiceHub could not identify the listing that started this crypto checkout. Please return to ServiceHub and start the payment again."
+            );
+            return;
+        }
+
+        if (details) {
+            details.style.display = "block";
+            details.innerHTML =
+                "<div class=\"bank-row\">" +
+                    "<span class=\"bank-label\">Listing ID</span>" +
+                    "<strong class=\"bank-value\">" + escapeText(listingId) + "</strong>" +
+                "</div>" +
+                "<div class=\"bank-row\">" +
+                    "<span class=\"bank-label\">Payment ID</span>" +
+                    "<strong class=\"bank-value\">" + escapeText(paymentId) + "</strong>" +
+                "</div>" +
+                "<div class=\"bank-row\">" +
+                    "<span class=\"bank-label\">Network</span>" +
+                    "<strong class=\"bank-value\">" + escapeText(network) + "</strong>" +
+                "</div>";
+        }
+
+        async function recordPayment() {
+            try {
+                setStatus("Sending payment result to ServiceHub…");
+
+                const data = await postToExistingAppsScript({
+                    action: "recordNoWalletConnectPayment",
+                    listingId: listingId,
+                    status: status,
+                    amount: String(amount),
+                    tx_hash: txHash,
+                    merchant: merchant,
+                    network: network,
+                    payment_id: paymentId
+                });
+
+                if (!data || data.success !== true) {
+                    throw new Error(
+                        data && data.error
+                            ? data.error
+                            : "Apps Script did not accept the payment."
+                    );
+                }
+
+                /*
+                 * NoWalletConnect payment_id is now the ServiceHub Payment
+                 * Code for this crypto payment.
+                 */
+                localStorage.setItem(
+                    "serviceHubPaymentCode",
+                    paymentId
+                );
+
+                try {
+                    const listing = JSON.parse(
+                        localStorage.getItem("serviceHubListing") || "{}"
+                    );
+
+                    listing.listingId = listingId;
+                    listing.paymentCode = paymentId;
+
+                    localStorage.setItem(
+                        "serviceHubListing",
+                        JSON.stringify(listing, null, 2)
+                    );
+                } catch (_) {}
+
+                if (title) title.textContent = "Payment received";
+                if (message) {
+                    message.textContent =
+                        "Your payment has been recorded. ServiceHub is now waiting for the final listing approval check.";
+                }
+
+                setStatus("Payment recorded. Checking approval…");
+
+                /*
+                 * Give Apps Script a moment to finish the approval update,
+                 * then let payment-crypto.html perform the authoritative
+                 * checkPayment call.
+                 */
+                setTimeout(function () {
+                    window.location.href =
+                        "payment-crypto.html?verified=1";
+                }, 900);
+
+            } catch (error) {
+                console.error("NoWalletConnect recording error:", error);
+                fail(
+                    error && error.message
+                        ? error.message
+                        : "ServiceHub could not record the payment."
+                );
+            }
+        }
+
+        recordPayment();
+
+        function escapeText(value) {
+            const div = document.createElement("div");
+            div.textContent = String(value == null ? "" : value);
+            return div.innerHTML;
+        }
+    })();
+    </script>
+
+</body>
+</html>
