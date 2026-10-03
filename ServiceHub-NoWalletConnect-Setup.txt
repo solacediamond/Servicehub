@@ -1,0 +1,44 @@
+SERVICEHUB — NoWalletConnect setup
+===================================
+
+Updated payment flow
+--------------------
+1. payment-crypto.html stores the active ServiceHub Listing ID in localStorage.
+2. It opens the NoWalletConnect checkout with merchant=Solace, amount=1.45,
+   the selected network, and the generated hosted return URL passed as the
+   `webhook` query parameter.
+3. The hosted return URL is already embedded in the page, so you do not need
+   to recreate the generator URL after closing the browser.
+4. NoWalletConnect returns status, amount, tx_hash, network and payment_id to
+   payment-crypto-return.html.
+5. payment-crypto-return.html sends those values to Apps Script using
+   recordNoWalletConnectPayment.
+6. Apps Script writes the crypto transaction into the existing Payments sheet
+   and runs the existing listing approval checker.
+7. payment-crypto.html only displays PAYMENT CONFIRMED after the backend
+   checkPayment result reports the listing as approved.
+
+Embedded hosted return URL
+--------------------------
+https://niti.com.ng/tools/nowalletconnect/return.html?message=Confirmed%20%E2%9C%85&redirect=https%3A%2F%2Fsolacediamond.github.io%2FServicehub%2Fpayment-crypto-return.html&label=Continue%20to%20ServiceHub
+
+Important note
+--------------
+The supplied NoWalletConnect material confirms that this generated page is
+called a merchant webhook/return URL, but it does not document the exact
+checkout query parameter used to pass it into checkout.html. This build uses
+`webhook=` because it matches the provider's terminology. If checkout.html
+does not consume that parameter, the payment page will still open normally,
+but the automatic return step will not be activated by this parameter.
+
+Apps Script
+-----------
+Use the supplied ServiceHub_Code_Updated_Crypto.gs replacement. Replace the
+existing doGet and doPost definitions rather than adding duplicates.
+
+Security note
+-------------
+The browser return parameters are untrusted input. Apps Script validates the
+merchant, status, amount, network, required identifiers and duplicates, then
+uses the normal ServiceHub approval check. This is not equivalent to direct
+on-chain signature verification by the backend.

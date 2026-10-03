@@ -195,6 +195,23 @@
 
         const APPROVED_PARAM = new URLSearchParams(location.search).get("verified");
 
+        /*
+         * NoWalletConnect's hosted return-page generator gives us this
+         * merchant return URL. Keeping it in the frontend means you do not
+         * have to recreate/save the generated URL every time the browser is
+         * closed.
+         *
+         * The checkout URL below passes it as `webhook`, which is the natural
+         * merchant callback field for the NoWalletConnect checkout flow. If
+         * the checkout page ignores unknown query parameters, payment still
+         * opens normally and the existing return-page flow remains available.
+         */
+        const NOWALLETCONNECT_WEBHOOK_URL =
+            "https://niti.com.ng/tools/nowalletconnect/return.html" +
+            "?message=Confirmed%20%E2%9C%85" +
+            "&redirect=https%3A%2F%2Fsolacediamond.github.io%2FServicehub%2Fpayment-crypto-return.html" +
+            "&label=Continue%20to%20ServiceHub";
+
         let stopped = false;
         let checking = false;
         let timer = null;
@@ -319,7 +336,8 @@
                 "https://niti.com.ng/tools/nowalletconnect/checkout.html" +
                 "?merchant=Solace" +
                 "&amount=1.45" +
-                "&network=" + encodeURIComponent(network);
+                "&network=" + encodeURIComponent(network) +
+                "&webhook=" + encodeURIComponent(NOWALLETCONNECT_WEBHOOK_URL);
 
             window.location.href = url;
         });

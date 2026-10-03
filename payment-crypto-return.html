@@ -50,6 +50,10 @@
         const details = document.getElementById("returnDetails");
         const continueEl = document.getElementById("returnContinue");
 
+        // Apps Script endpoint used when the shared site helper is unavailable.
+        const APPS_SCRIPT_URL =
+            "https://script.google.com/macros/s/AKfycbyshp8ls2f-PTWGBaHveiAjDhhuOVxUhcdNjw7OWPVSfLyhSIwNAG4eGerwTH5SktRi/exec";
+
         const status = String(q.get("status") || "").toLowerCase();
         const merchant = String(q.get("merchant") || "");
         const amount = Number(q.get("amount"));
@@ -113,11 +117,42 @@
                 "</div>";
         }
 
+        async function sendToAppsScript(payload) {
+            // Keep using the site's existing helper when it is available.
+            if (typeof window.postToExistingAppsScript === "function") {
+                return window.postToExistingAppsScript(payload);
+            }
+
+            // Fallback for this return page so it can still submit the payment
+            // if script.js is changed or the helper is unavailable.
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
+                body: JSON.stringify(payload),
+                redirect: "follow"
+            });
+
+            const text = await response.text();
+            let data;
+
+            try {
+                data = JSON.parse(text);
+            } catch (_) {
+                throw new Error(
+                    "Apps Script returned an invalid response."
+                );
+            }
+
+            return data;
+        }
+
         async function recordPayment() {
             try {
                 setStatus("Sending payment result to ServiceHub…");
 
-                const data = await postToExistingAppsScript({
+                const data = await sendToAppsScript({
                     action: "recordNoWalletConnectPayment",
                     listingId: listingId,
                     status: status,
