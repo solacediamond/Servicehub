@@ -80,9 +80,9 @@
 
         if (
             status !== "success" ||
-            merchant !== "Solace" ||
+            merchant !== "Diamond" ||
             !Number.isFinite(amount) ||
-            Math.abs(amount - 1.45) >= 0.01 ||
+            amount < 1.45 ||
             !txHash ||
             !paymentId ||
             (network !== "polygon" && network !== "solana")

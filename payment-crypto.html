@@ -71,7 +71,7 @@
                 <div class="bank-info-box">
                     <div class="bank-row">
                         <span class="bank-label">Amount</span>
-                        <strong class="bank-value">1.45 USDT</strong>
+                        <strong class="bank-value">1.5 USDT</strong>
                     </div>
 
                     <div class="bank-row">
@@ -81,7 +81,7 @@
 
                     <div class="bank-row">
                         <span class="bank-label">Merchant</span>
-                        <strong class="bank-value">Solace</strong>
+                        <strong class="bank-value">Diamond</strong>
                     </div>
                 </div>
 
@@ -174,7 +174,85 @@
 
     </main>
 
+
+    <!-- PAYMENT SUCCESS POPUP -->
+    <div
+        id="cryptoPaymentSuccessPopup"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cryptoPaymentSuccessTitle"
+        class="naira-success-popup"
+        style="display:none;"
+    >
+        <div class="naira-success-box">
+            <div class="naira-success-check">✓</div>
+            <h2 id="cryptoPaymentSuccessTitle">Payment Successful</h2>
+            <p>Your payment has been confirmed successfully.</p>
+            <p>Returning to the homepage in <strong id="cryptoPaymentCountdown">5</strong> seconds…</p>
+        </div>
+    </div>
+
     <script src="script.js"></script>
+
+    <script>
+    /*
+       Crypto payment success redirect.
+       This reacts only to the approved state produced by Apps Script.
+       The success popup uses the exact same design and behavior as
+       payment-naira.html.
+    */
+    (function () {
+        const popup = document.getElementById("cryptoPaymentSuccessPopup");
+        const countdownEl = document.getElementById("cryptoPaymentCountdown");
+        const approvedStep = document.getElementById("cryptoApprovedStep");
+
+        if (!popup || !approvedStep || !countdownEl) return;
+
+        let redirectStarted = false;
+
+        function startSuccessCountdown() {
+            if (redirectStarted) return;
+            redirectStarted = true;
+
+            popup.style.display = "flex";
+
+            let seconds = 5;
+            countdownEl.textContent = String(seconds);
+
+            const timer = setInterval(function () {
+                seconds -= 1;
+                countdownEl.textContent = String(seconds);
+
+                if (seconds <= 0) {
+                    clearInterval(timer);
+                    window.location.href = "index.html";
+                }
+            }, 1000);
+        }
+
+        /*
+           script.js reveals the existing approved section only after
+           Apps Script reports status = "approved". Observe that existing
+           UI change so the crypto success experience remains identical
+           to the Naira payment flow.
+        */
+        const observer = new MutationObserver(function () {
+            if (approvedStep.style.display !== "none") {
+                startSuccessCountdown();
+            }
+        });
+
+        observer.observe(approvedStep, {
+            attributes: true,
+            attributeFilter: ["style"]
+        });
+
+        if (approvedStep.style.display !== "none") {
+            startSuccessCountdown();
+        }
+    })();
+    </script>
+
 
     <script>
     (function () {
@@ -206,12 +284,6 @@
          * the checkout page ignores unknown query parameters, payment still
          * opens normally and the existing return-page flow remains available.
          */
-        const NOWALLETCONNECT_WEBHOOK_URL =
-            "https://niti.com.ng/tools/nowalletconnect/return.html" +
-            "?message=Confirmed%20%E2%9C%85" +
-            "&redirect=https%3A%2F%2Fsolacediamond.github.io%2FServicehub%2Fpayment-crypto-return.html" +
-            "&label=Continue%20to%20ServiceHub";
-
         let stopped = false;
         let checking = false;
         let timer = null;
@@ -334,10 +406,9 @@
 
             const url =
                 "https://niti.com.ng/tools/nowalletconnect/checkout.html" +
-                "?merchant=Solace" +
-                "&amount=1.45" +
-                "&network=" + encodeURIComponent(network) +
-                "&webhook=" + encodeURIComponent(NOWALLETCONNECT_WEBHOOK_URL);
+                "?merchant=Diamond" +
+                "&amount=1.5" +
+                "&network=" + encodeURIComponent(network);
 
             window.location.href = url;
         });
