@@ -60,6 +60,15 @@
         const txHash = String(q.get("tx_hash") || "");
         const network = String(q.get("network") || "").toLowerCase();
         const paymentId = String(q.get("payment_id") || "").trim();
+        const paymentCode = String(
+            localStorage.getItem("serviceHubPaymentCode") ||
+            (() => {
+                try {
+                    const listing = JSON.parse(localStorage.getItem("serviceHubListing") || "{}");
+                    return listing.paymentCode || "";
+                } catch (_) { return ""; }
+            })()
+        ).trim();
 
         const listingId = String(
             localStorage.getItem("serviceHubCryptoListingId") ||
@@ -85,6 +94,7 @@
             amount < 1.45 ||
             !txHash ||
             !paymentId ||
+            !paymentCode ||
             (network !== "polygon" && network !== "solana")
         ) {
             fail(
@@ -160,7 +170,8 @@
                     tx_hash: txHash,
                     merchant: merchant,
                     network: network,
-                    payment_id: paymentId
+                    payment_id: paymentId,
+                    paymentCode: paymentCode
                 });
 
                 if (!data || data.success !== true) {
@@ -172,27 +183,13 @@
                 }
 
                 /*
-                 * NoWalletConnect payment_id is now the ServiceHub Payment
-                 * Code for this crypto payment.
+                 * Keep the original ServiceHub Payment Code.
+                 * NoWalletConnect payment_id remains a separate transaction ID.
                  */
                 localStorage.setItem(
                     "serviceHubPaymentCode",
-                    paymentId
+                    paymentCode
                 );
-
-                try {
-                    const listing = JSON.parse(
-                        localStorage.getItem("serviceHubListing") || "{}"
-                    );
-
-                    listing.listingId = listingId;
-                    listing.paymentCode = paymentId;
-
-                    localStorage.setItem(
-                        "serviceHubListing",
-                        JSON.stringify(listing, null, 2)
-                    );
-                } catch (_) {}
 
                 if (title) title.textContent = "Payment received";
                 if (message) {
