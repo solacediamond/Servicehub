@@ -54,6 +54,9 @@
         const APPS_SCRIPT_URL =
             "https://script.google.com/macros/s/AKfycbyshp8ls2f-PTWGBaHveiAjDhhuOVxUhcdNjw7OWPVSfLyhSIwNAG4eGerwTH5SktRi/exec";
 
+        // Minimum accepted amount in USDT. Anything at or above this is valid.
+        const MIN_AMOUNT = 1.45;
+
         const status = String(q.get("status") || "").toLowerCase();
         const merchant = String(q.get("merchant") || "");
         const amount = Number(q.get("amount"));
@@ -91,7 +94,7 @@
             status !== "success" ||
             merchant !== "Diamond" ||
             !Number.isFinite(amount) ||
-            amount < 1.45 ||
+            amount < MIN_AMOUNT ||
             !txHash ||
             !paymentId ||
             !paymentCode ||
