@@ -257,21 +257,26 @@ textarea {
 .hero {
     position: relative;
     overflow: hidden;
-}.hero::before {
-    content: "";
+}
+
+/* Rotating hero background layer. The existing hero-network graphic remains
+   the first slide, while the additional supplied graphics rotate every 6s. */
+.hero-slideshow {
     position: absolute;
     inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
 
-    background-image: url("hero-network.png");
+.hero-slide {
+    position: absolute;
+    inset: 0;
     background-size: cover;
     background-position: center top;
     background-repeat: no-repeat;
-
     opacity: 0.8;
-
-    pointer-events: none;
-    z-index: 0;
-
+    will-change: transform;
     -webkit-mask-image: linear-gradient(
         to bottom,
         black 0%,
@@ -279,7 +284,6 @@ textarea {
         rgba(0, 0, 0, 0.7) 72%,
         transparent 100%
     );
-
     mask-image: linear-gradient(
         to bottom,
         black 0%,
@@ -287,9 +291,23 @@ textarea {
         rgba(0, 0, 0, 0.7) 72%,
         transparent 100%
     );
-}.hero > * {
+}
+
+.hero-slide-current {
+    transform: translateX(0);
+}
+
+.hero-slide-next {
+    transform: translateX(100%);
+}
+
+.hero > * {
     position: relative;
     z-index: 1;
+}
+
+.hero > .hero-slideshow {
+    position: absolute;
 }
 
 

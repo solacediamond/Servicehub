@@ -582,28 +582,36 @@ function goToRenewalPayment(){
   if(code){redirect(code);return;}
   var b=$("#renewIcon"),old=b.textContent;
   busy(b,true,"Loading...");
-  /* Use the existing manage-listing endpoint first. This backend already
-     knows the listing token and may return the stored payment code.
-     Do not call a separate renewal endpoint that may not exist. */
-  api("getManageListing").then(function(j){
-    /* Some versions of the Apps Script manage endpoint return the payment
-       code inside listing, while others return it at the top level.  Your
-       Listings sheet header is exactly "Payment Code", so accept both
-       response shapes without changing the backend. */
-    var fresh=j&&j.listing?j.listing:{};
-    var freshCode=getPaymentCode(fresh);
-    if(!freshCode) freshCode=getPaymentCode(j);
-    if(!freshCode && j&&j.data) freshCode=getPaymentCode(j.data);
-    if(!freshCode && j&&j.result) freshCode=getPaymentCode(j.result);
-    if(freshCode){
+
+  /* IMPORTANT: read the actual Listings row by Listing ID. The Listings
+     sheet stores the code in the exact column "Payment Code". The older
+     getManageListing response used by this page does not reliably expose
+     that column, so renewal must refresh the row through getListing. */
+  var q=API+(API.indexOf("?")>-1?"&":"?")+
+    "action=getListing&listingId="+encodeURIComponent(listingId);
+
+  fetch(q,{method:"GET",cache:"no-store"})
+    .then(function(r){return r.json()})
+    .then(function(j){
+      if(!j||j.success===false)throw new Error((j&&j.error)||"Could not read the listing payment code.");
+
+      /* getListing returns {success:true, listing:{...}} and rowToObject
+         preserves the exact sheet header names, including "Payment Code". */
+      var fresh=j&&j.listing?j.listing:{};
+      var freshCode=getPaymentCode(fresh);
+      if(!freshCode) freshCode=getPaymentCode(j);
+      if(!freshCode && j&&j.data) freshCode=getPaymentCode(j.data);
+      if(!freshCode && j&&j.result) freshCode=getPaymentCode(j.result);
+
+      if(!freshCode)throw new Error("Payment code is not available for this listing.");
+
       L=Object.assign({},L,fresh);
       L.paymentCode=freshCode;
       L["Payment Code"]=freshCode;
       redirect(freshCode);
-      return;
-    }
-    throw new Error("Payment code is not available for this listing yet.");
-  }).catch(function(e){toast(e.message)}).then(function(){busy(b,false,old);updateRenewButton()});
+    })
+    .catch(function(e){toast(e.message)})
+    .then(function(){busy(b,false,old);updateRenewButton()});
 }
 $("#renewIcon").onclick=goToRenewalPayment;
 

@@ -1411,6 +1411,93 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* ================================
+       HERO BACKGROUND SLIDESHOW
+    ================================= */
+    (function initHeroSlideshow() {
+        const slideshow = document.querySelector(".hero-slideshow");
+        const currentSlide = slideshow && slideshow.querySelector(".hero-slide-current");
+        const nextSlide = slideshow && slideshow.querySelector(".hero-slide-next");
+
+        if (!slideshow || !currentSlide || !nextSlide) return;
+
+        const heroImages = [
+            "hero-network.png",
+            "hero-business.png",
+            "hero-neon-handshake.png",
+            "hero-solaceproeditz.jpg"
+        ];
+
+        let currentIndex = 0;
+        let current = currentSlide;
+        let next = nextSlide;
+        let timer = null;
+        let changing = false;
+
+        current.style.backgroundImage = 'url("' + heroImages[currentIndex] + '")';
+        next.style.backgroundImage = 'url("' + heroImages[1] + '")';
+
+        function chooseNextIndex() {
+            if (heroImages.length < 2) return currentIndex;
+            let index = currentIndex;
+            while (index === currentIndex) {
+                index = Math.floor(Math.random() * heroImages.length);
+            }
+            return index;
+        }
+
+        function advanceHero() {
+            if (changing || heroImages.length < 2) return;
+            changing = true;
+
+            const nextIndex = chooseNextIndex();
+            const direction = Math.random() < 0.5 ? -1 : 1;
+
+            next.style.transition = "none";
+            next.style.backgroundImage = 'url("' + heroImages[nextIndex] + '")';
+            next.style.transform = "translateX(" + (direction * 100) + "%)";
+
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    current.style.transition = "transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1)";
+                    next.style.transition = "transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1)";
+                    current.style.transform = "translateX(" + (-direction * 100) + "%)";
+                    next.style.transform = "translateX(0)";
+                });
+            });
+
+            window.setTimeout(function () {
+                current.style.transition = "none";
+                current.style.transform = "translateX(" + (direction * 100) + "%)";
+
+                const oldCurrent = current;
+                current = next;
+                next = oldCurrent;
+                currentIndex = nextIndex;
+                changing = false;
+            }, 740);
+        }
+
+        timer = window.setInterval(advanceHero, 6000);
+
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) {
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+            } else if (!timer) {
+                timer = window.setInterval(advanceHero, 6000);
+            }
+        });
+
+        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            if (timer) clearInterval(timer);
+            timer = null;
+        }
+    })();
+
+
+    /* ================================
        MOBILE MENU
     ================================= */
 document.body.classList.add("menu-open");
