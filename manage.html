@@ -104,10 +104,6 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 .tile.danger .ico{background:rgba(239,68,68,.16);color:var(--bad)}
 .btn.danger{background:#dc2626}
 .warnbox{margin:4px 0 0;padding:12px 14px;border-radius:12px;border:1px solid rgba(252,165,165,.35);background:rgba(239,68,68,.08);color:#fecaca;font-size:.9rem;line-height:1.5}
-.ib.dim,.ib:disabled{opacity:.38;filter:saturate(.35);cursor:not-allowed}
-.banner.warn{background:rgba(251,191,36,.10);color:#fde68a}
-.banner.bad{background:rgba(239,68,68,.10);color:#fecaca}
-.codebox{margin:6px 0 0;padding:14px;border-radius:12px;border:1px dashed var(--line);background:var(--card);font-size:1.6rem;font-weight:700;letter-spacing:.12em;text-align:center}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:#111c33;border:1px solid var(--line);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
 #toast.on{opacity:1}
 </style>
@@ -117,12 +113,10 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 <header>
   <button class="ib" id="back" hidden aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
   <h1 id="title">Manage listing</h1>
-  <button class="ib dim" id="renewIcon" data-go="renew" hidden disabled aria-label="Renew listing (available once expired)" title="Renew listing (available once expired)"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
   <button class="ib" id="deleteIcon" data-go="delete" hidden aria-label="Delete service"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>
 </header>
 
 <section class="view on" id="v-home">
-  <div class="banner" id="expiryBanner" hidden></div>
   <div class="hello"><span class="chip" id="lid">Listing</span><h2 id="svc">Your service</h2><p id="who"></p></div>
   <button class="tile" data-go="portfolio"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span><span><b>Update portfolio</b><small>Card info, media and contact details</small></span></button>
   <button class="tile" id="chatTile" data-go="chats"><span class="ico"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.6A8 8 0 1 1 21 12z"/></svg></span><span><b>Chat</b><small>Messages from people asking about your service</small></span><span class="badge" id="unread" hidden></span></button>
@@ -180,15 +174,6 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
   <label for="f-seclink">Manage link</label>
   <input id="f-seclink" placeholder="Paste the other listing's manage link" autocomplete="off" autocapitalize="off" spellcheck="false">
   <button class="btn" id="linkSecondary">Link this service</button>
-</section>
-
-<section class="view" id="v-renew">
-  <div class="hello"><h2>Renew your listing</h2><p>A listing stays live for 6 months after each payment.</p></div>
-  <div class="banner" id="renewInfo"></div>
-  <label>Your payment code (same one you used when you listed)</label>
-  <div class="codebox" id="renewCode">-</div>
-  <p class="empty" style="padding:10px 0 0;text-align:left;font-size:.85rem">After you pay, your 6 months restart from the payment date and your listing goes back on Explore.</p>
-  <button class="btn" id="doRenew">Continue to payment</button>
 </section>
 
 <section class="view" id="v-delete">
@@ -551,16 +536,15 @@ function refreshUnreadBadge(){
 }
 
 /* ---- navigation ---- */
-var titles={home:"Manage listing",portfolio:"Update portfolio",price:"Update price",chats:"Chat",delete:"Delete service",renew:"Renew listing",thread:""};
+var titles={home:"Manage listing",portfolio:"Update portfolio",price:"Update price",chats:"Chat",delete:"Delete service",thread:""};
 function show(v){
   document.querySelectorAll(".view").forEach(function(s){s.classList.toggle("on",s.id==="v-"+v)});
   $("#title").textContent=v==="thread"&&openConv?openConv.name:titles[v];
-  document.body.classList.toggle("chat",v==="thread");$("#back").hidden=v==="home";$("#deleteIcon").hidden=v!=="home";$("#renewIcon").hidden=v!=="home";$("#composer").hidden=v!=="thread";
+  document.body.classList.toggle("chat",v==="thread");$("#back").hidden=v==="home";$("#deleteIcon").hidden=v!=="home";$("#composer").hidden=v!=="thread";
   $("#back").dataset.to=v==="thread"?"chats":"home";window.scrollTo(0,0);
-  if(v==="renew")drawRenew();
 }
 $("#back").onclick=function(){show(this.dataset.to)};
-document.querySelectorAll("[data-go]").forEach(function(b){b.onclick=function(){var v=b.dataset.go;if(v==="renew"&&!renewalState().expired)return;if(v==="chats"&&String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job")return;show(v);if(v==="chats")renderConvs()}});
+document.querySelectorAll("[data-go]").forEach(function(b){b.onclick=function(){var v=b.dataset.go;if(v==="chats"&&String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job")return;show(v);if(v==="chats")renderConvs()}});
 function updateJobChatState(){var isJob=String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job";var tile=$("#chatTile");if(!tile)return;tile.classList.toggle("chat-disabled",isJob);tile.setAttribute("aria-disabled",isJob?"true":"false");tile.title=isJob?"Chat is not available for job listings":"Open chats";}
 
 /* ---- render ---- */
@@ -588,7 +572,6 @@ function fill(){
   $("#f-currency").value=cur;
   $("#f-price").value="";media=Array.isArray(L.media)?L.media.slice():[];drawMedia();
   drawTiers();
-  drawExpiry();
 }
 
 var FIXED_TIERS=["Basic","Standard","Medium","Premium"];
@@ -675,71 +658,6 @@ function drawThread(){
 }
 function sendMsg(){var i=$("#say"),t=i.value.trim();if(!t||!openConv)return;i.value="";chat.send(openConv,t).then(drawThread)}
 $("#send").onclick=sendMsg;$("#say").onkeydown=function(e){if(e.key==="Enter")sendMsg()};
-
-/* ---- expiry + renewal ----
-   Renewal is ONLY possible once the listing's status is "expired"
-   (Renewals.gs flips approved -> expired from the Payments sheet).
-   While it is approved, the renew buttons stay dull and unclickable. */
-function fmtDate(d){return d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})}
-function renewalState(){
-  var st=String(L&&(L.status||L.Status)||"").trim().toLowerCase();
-  var r=(L&&L.renewal)||{};
-  var exp=r.expiresAt?new Date(r.expiresAt):null;
-  if(exp&&isNaN(exp.getTime()))exp=null;
-  var days=exp?Math.ceil((exp.getTime()-Date.now())/86400000):null;
-  return {status:st,exp:exp,days:days,expired:st==="expired"};
-}
-function updateRenewButtons(){
-  var ok=renewalState().expired,ic=$("#renewIcon");
-  if(ic){ic.disabled=!ok;ic.classList.toggle("dim",!ok);ic.setAttribute("aria-disabled",ok?"false":"true");
-    ic.title=ok?"Renew listing":"Renew listing (available once expired)"}
-}
-function drawExpiry(){
-  var b=$("#expiryBanner");if(!b||!L)return;
-  var s=renewalState();b.className="banner";
-  if(s.expired){
-    b.textContent="Your listing has expired"+(s.exp?" (on "+fmtDate(s.exp)+")":"")+" and is hidden from Explore. Tap the renew icon at the top to put it back.";
-    b.classList.add("bad");b.hidden=false;
-  }else if(s.status==="approved"&&s.exp){
-    b.textContent=(s.days<=30?"Expires in "+s.days+" day"+(s.days===1?"":"s")+" ("+fmtDate(s.exp)+"). ":"Active until "+fmtDate(s.exp)+". ")+"Renewal opens once it expires.";
-    if(s.days<=30)b.classList.add("warn");b.hidden=false;
-  }else{b.hidden=true}
-  updateRenewButtons();
-}
-function renewCode(){return String(L&&(L.paymentCode||L["Payment Code"])||"").trim()}
-function drawRenew(){
-  var s=renewalState(),code=renewCode(),info=$("#renewInfo"),btn=$("#doRenew");
-  $("#renewCode").textContent=code||"-";
-  var ok=false,text;
-  if(!code){text="We could not find your payment code. Please contact support."}
-  else if(s.expired){ok=true;text="Your listing expired"+(s.exp?" on "+fmtDate(s.exp):"")+". Pay again to bring it back."}
-  else if(s.status==="approved"){text="Your listing is live"+(s.exp?" until "+fmtDate(s.exp):"")+". Renewal opens once it expires."}
-  else if(s.status==="pending"){text="Your listing is still waiting for its first payment to be confirmed."}
-  else{text="Renewal is not available for this listing."}
-  info.textContent=text;info.className="banner"+(ok?"":" warn");
-  btn.disabled=!ok;
-}
-$("#doRenew").onclick=function(){
-  var s=renewalState(),code=renewCode(),id=String(L&&L.listingId||"").trim();
-  if(!id||!code){toast("Payment code not found");return}
-  if(!s.expired){toast("Renewal opens once your listing has expired");return}
-  var type=String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job"?"job":"service";
-  /* Hand the payment pages exactly what a brand-new listing would: same listing ID + the SAME payment code. */
-  try{
-    localStorage.setItem("serviceHubListingId",id);
-    localStorage.setItem("serviceHubPaymentCode",code);
-    localStorage.setItem("serviceHubCryptoListingId",id);
-    localStorage.setItem("serviceHubListingSaved","true");
-    localStorage.setItem("serviceHubListing",JSON.stringify({listingId:id,paymentCode:code,listingType:type,serviceName:L.serviceName||"",renewal:true}));
-    if(type==="job")localStorage.setItem("serviceHubListingType","job");else localStorage.removeItem("serviceHubListingType");
-    localStorage.setItem("serviceHubRenewal",JSON.stringify({listingId:id,startedAt:Date.now()}));
-    /* Let the crypto page show its pay button again and restart the naira timer. */
-    localStorage.removeItem("serviceHubCryptoPaidListing");
-    localStorage.removeItem("serviceHubCryptoCheckoutActive");
-    try{sessionStorage.removeItem("serviceHubNairaTimerDeadline")}catch(_){}
-  }catch(e){toast("Could not start renewal. Check your browser storage settings.");return}
-  location.href="payment.html";
-};
 
 /* ---- save actions ---- */
 function busy(b,on,txt){b.disabled=on;if(txt)b.textContent=txt}
