@@ -194,22 +194,31 @@
                     paymentCode
                 );
 
+                /*
+                 * Remember that this listing has been paid, so
+                 * payment-crypto.html never offers the pay button again
+                 * for it (prevents accidental double payment).
+                 */
+                try {
+                    localStorage.setItem("serviceHubCryptoPaidListing", listingId);
+                    localStorage.setItem("serviceHubCryptoListingId", listingId);
+                } catch (_) {}
+
                 if (title) title.textContent = "Payment received";
                 if (message) {
                     message.textContent =
                         "Your payment has been recorded. ServiceHub is now waiting for the final listing approval check.";
                 }
 
-                setStatus("Payment recorded. Checking approval…");
+                setStatus("Payment recorded. Waiting for approval…");
 
                 /*
-                 * Give Apps Script a moment to finish the approval update,
-                 * then let payment-crypto.html perform the authoritative
-                 * checkPayment call.
+                 * Hand over to the status page, which does the 5-second
+                 * approval polling. replace() keeps this page out of the
+                 * back-button history.
                  */
                 setTimeout(function () {
-                    window.location.href =
-                        "payment-crypto.html?verified=1";
+                    window.location.replace("payment-crypto-status.html");
                 }, 900);
 
             } catch (error) {

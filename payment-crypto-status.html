@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Waiting for Approval — ServiceHub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="provider-page">
+
+    <main class="listing-page">
+        <section class="listing-card payment-card">
+
+            <div class="listing-heading" style="text-align:center;">
+                <p class="eyebrow">CRYPTO PAYMENT</p>
+                <h1 id="statusTitle">Waiting for approval</h1>
+                <p id="statusMessage">
+                    Your payment was received. Please keep this page open
+                    while ServiceHub approves your listing.
+                </p>
+            </div>
+
+            <div class="payment-status-pill" id="statusPill">
+                <span class="payment-spinner"></span>
+                Waiting for approval…
+            </div>
+
+            <p id="statusSlow" class="payment-security-note" style="display:none;">
+                This is taking longer than expected. If you have paid, please
+                <a id="statusSupport" href="#" target="_blank" rel="noopener">contact support on WhatsApp</a>
+                and keep this page open.
+            </p>
+
+            <a id="statusReturn"
+               href="payment.html"
+               class="listing-submit"
+               style="display:none;margin-top:18px;">
+                Return to Payment
+            </a>
+
+        </section>
+    </main>
+
+    <!-- PAYMENT SUCCESS POPUP (same popup as the naira payment page) -->
+    <div
+        id="cryptoPaymentSuccessPopup"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cryptoPaymentSuccessTitle"
+        class="naira-success-popup"
+        style="display:none;"
+    >
+        <div class="naira-success-box">
+            <div class="naira-success-check">✓</div>
+            <h2 id="cryptoPaymentSuccessTitle">You're Live!</h2>
+            <p>Payment successful. Your service is now published on ServiceHub.</p>
+            <p>Returning to the homepage in <strong id="cryptoPaymentCountdown">5</strong> seconds…</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+    <script>
+    (function () {
+        const titleEl = document.getElementById("statusTitle");
+        const messageEl = document.getElementById("statusMessage");
+        const pillEl = document.getElementById("statusPill");
+        const slowEl = document.getElementById("statusSlow");
+        const supportEl = document.getElementById("statusSupport");
+        const returnEl = document.getElementById("statusReturn");
+
+        const POLL_MS = 5000;
+        const SLOW_AFTER_MS = 5 * 60 * 1000;
+        const SUPPORT_WHATSAPP_NUMBER = window.SERVICEHUB_SUPPORT_WHATSAPP || "+2348073410722";
+        const SUPPORT_MESSAGE = "Hi I made a crypto payment on service hub and it's not approved yet";
+
+        const listingId = String(
+            localStorage.getItem("serviceHubCryptoListingId") ||
+            localStorage.getItem("serviceHubListingId") ||
+            ""
+        ).trim();
+
+        let paymentCode = String(
+            localStorage.getItem("serviceHubPaymentCode") || ""
+        ).trim();
+
+        let stopped = false;
+        let checking = false;
+        let redirectStarted = false;
+        let pollTimer = null;
+        const startedAt = Date.now();
+
+        if (supportEl) {
+            supportEl.href =
+                "https://wa.me/" +
+                String(SUPPORT_WHATSAPP_NUMBER).replace(/\D/g, "") +
+                "?text=" + encodeURIComponent(SUPPORT_MESSAGE);
+        }
+
+        function setStatus(text) {
+            if (pillEl) pillEl.textContent = text;
+        }
+
+        function fail(text) {
+            stopped = true;
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            if (titleEl) titleEl.textContent = "We couldn't check your payment";
+            if (messageEl) messageEl.textContent = text;
+            setStatus("Not checking.");
+            if (returnEl) returnEl.style.display = "block";
+        }
+
+        function startSuccessCountdown() {
+            if (redirectStarted) return;
+            redirectStarted = true;
+
+            const popup = document.getElementById("cryptoPaymentSuccessPopup");
+            const countdownEl = document.getElementById("cryptoPaymentCountdown");
+
+            let seconds = 5;
+
+            if (popup) popup.style.display = "flex";
+            if (countdownEl) countdownEl.textContent = String(seconds);
+
+            const countdownTimer = setInterval(function () {
+                seconds -= 1;
+                if (countdownEl) countdownEl.textContent = String(Math.max(seconds, 0));
+
+                if (seconds <= 0) {
+                    clearInterval(countdownTimer);
+                    window.location.replace("index.html");
+                }
+            }, 1000);
+        }
+
+        function showApproved() {
+            if (redirectStarted) return;
+
+            stopped = true;
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+
+            /* Tell index.html (manage-link-modal.js) to show the manage link
+               after the popup redirects home. Set BEFORE the countdown. */
+            try {
+                localStorage.setItem("serviceHubManageLinkPending", listingId);
+            } catch (_) {}
+
+            setStatus("Payment confirmed");
+            if (slowEl) slowEl.style.display = "none";
+
+            startSuccessCountdown();
+        }
+
+        async function checkApproval() {
+            if (stopped || checking) return;
+            checking = true;
+
+            try {
+                /* The return page saves the payment code; only fetch the
+                   listing if it is somehow missing. */
+                if (!paymentCode) {
+                    const listing = await fetchAppsScriptListing(listingId);
+                    if (listing && listing.ok) {
+                        paymentCode = String(
+                            listing.code ||
+                            (listing.listing && (listing.listing.paymentCode || listing.listing["Payment Code"])) ||
+                            ""
+                        ).trim();
+                        if (paymentCode) {
+                            localStorage.setItem("serviceHubPaymentCode", paymentCode);
+                        }
+                    }
+                }
+
+                if (!paymentCode) {
+                    setStatus("Waiting for the ServiceHub backend…");
+                    return;
+                }
+
+                const result = await checkAppsScriptPayment(listingId, paymentCode);
+
+                if (result && result.status === "approved") {
+                    showApproved();
+                    return;
+                }
+
+                setStatus("Payment received. Waiting for approval…");
+
+            } catch (error) {
+                console.warn("Crypto approval check failed:", error);
+                setStatus("Connection check failed. Retrying…");
+            } finally {
+                checking = false;
+
+                if (!stopped && slowEl && Date.now() - startedAt > SLOW_AFTER_MS) {
+                    slowEl.style.display = "block";
+                }
+            }
+        }
+
+        if (!listingId) {
+            fail("ServiceHub could not find the listing for this payment. Please return to ServiceHub.");
+            return;
+        }
+
+        checkApproval();
+        pollTimer = setInterval(checkApproval, POLL_MS);
+    })();
+    </script>
+
+</body>
+</html>

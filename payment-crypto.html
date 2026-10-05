@@ -45,7 +45,11 @@
 
         <section class="listing-card payment-card">
 
-            <div id="cryptoWaitingStep">
+            <!-- PAY STEP: choose network, then go to NoWalletConnect.
+                 This page does NOT check approval. After payment,
+                 NoWalletConnect sends the user to payment-crypto-return.html,
+                 which sends them to payment-crypto-status.html. -->
+            <div id="cryptoPayStep">
 
                 <div class="listing-heading">
                     <p class="eyebrow">CRYPTO PAYMENT</p>
@@ -116,46 +120,23 @@
 
                 <div id="cryptoStatus"
                      class="payment-status-pill"
-                     style="margin-top:16px;">
-                    <span class="payment-spinner"></span>
-                    Waiting for payment…
-                </div>
+                     style="margin-top:16px;display:none;"></div>
 
                 <p class="payment-security-note">
-                    🔒 After NoWalletConnect reports success, ServiceHub will
-                    send the result to Apps Script and wait for backend
-                    approval before treating the listing as paid.
+                    🔒 After you pay, NoWalletConnect brings you back to
+                    ServiceHub, where we confirm your payment and approve
+                    your listing.
                 </p>
 
             </div>
 
-            <div id="cryptoApprovedStep" style="display:none;">
-
-                <div class="approved-check">✓</div>
-
-                <div class="listing-heading approved-heading">
-                    <p class="eyebrow">PAYMENT CONFIRMED</p>
-
-                    <h1>You're Live!</h1>
-
-                    <p>
-                        Your USDT payment has been recorded and your service
-                        listing has been approved.
-                    </p>
-                </div>
-
-                <a href="explore.html" class="listing-submit">
-                    View Your Listing →
-                </a>
-
-            </div>
-
+            <!-- ERROR STEP (e.g. missing listing) -->
             <div id="cryptoErrorStep" style="display:none;">
 
                 <div class="listing-heading">
                     <p class="eyebrow">PAYMENT ISSUE</p>
 
-                    <h1>We couldn't confirm the payment</h1>
+                    <h1>We couldn't start the payment</h1>
 
                     <p id="cryptoErrorText">
                         Please return to the payment page and try again.
@@ -184,8 +165,7 @@
         const payButton = document.getElementById("cryptoPayButton");
         const statusEl = document.getElementById("cryptoStatus");
 
-        const waitingStep = document.getElementById("cryptoWaitingStep");
-        const approvedStep = document.getElementById("cryptoApprovedStep");
+        const payStep = document.getElementById("cryptoPayStep");
         const errorStep = document.getElementById("cryptoErrorStep");
         const errorText = document.getElementById("cryptoErrorText");
 
@@ -193,18 +173,10 @@
             localStorage.getItem("serviceHubListingId") || ""
         ).trim();
 
-        const APPROVED_PARAM = new URLSearchParams(location.search).get("verified");
-
         /*
          * NoWalletConnect's hosted return-page generator gives us this
-         * merchant return URL. Keeping it in the frontend means you do not
-         * have to recreate/save the generated URL every time the browser is
-         * closed.
-         *
-         * The checkout URL below passes it as `webhook`, which is the natural
-         * merchant callback field for the NoWalletConnect checkout flow. If
-         * the checkout page ignores unknown query parameters, payment still
-         * opens normally and the existing return-page flow remains available.
+         * merchant return URL. It sends the user to payment-crypto-return.html
+         * after payment.
          */
         const NOWALLETCONNECT_WEBHOOK_URL =
             "https://niti.com.ng/tools/nowalletconnect/return.html" +
@@ -212,12 +184,36 @@
             "&redirect=https%3A%2F%2Fsolacediamond.github.io%2FServicehub%2Fpayment-crypto-return.html" +
             "&label=Continue%20to%20ServiceHub";
 
-        let stopped = false;
-        let checking = false;
-        let timer = null;
+        function showError(message) {
+            if (payStep) payStep.style.display = "none";
+            if (errorStep) errorStep.style.display = "block";
+            if (errorText) errorText.textContent = message;
+        }
+
+        function setStatus(message) {
+            if (!statusEl) return;
+            statusEl.textContent = message || "";
+            statusEl.style.display = message ? "" : "none";
+        }
 
         if (!listingId) {
             showError("Your ServiceHub Listing ID is missing. Please return to the listing page and start again.");
+            return;
+        }
+
+        /*
+         * Already paid for this listing in this browser? Do not show the pay
+         * button again, so the user cannot accidentally pay twice. The flag
+         * is set by payment-crypto-return.html once the payment is recorded.
+         */
+        let alreadyPaid = false;
+        try {
+            alreadyPaid =
+                localStorage.getItem("serviceHubCryptoPaidListing") === listingId;
+        } catch (_) {}
+
+        if (alreadyPaid) {
+            window.location.replace("payment-crypto-status.html");
             return;
         }
 
@@ -231,88 +227,8 @@
                     : value === "solana"
                         ? "Solana"
                         : "Polygon or Solana";
+            setStatus("");
         });
-
-        function setStatus(message) {
-            if (statusEl) {
-                statusEl.textContent = message || "Waiting for payment…";
-            }
-        }
-
-        function showError(message) {
-            stopped = true;
-
-            if (waitingStep) waitingStep.style.display = "none";
-            if (approvedStep) approvedStep.style.display = "none";
-            if (errorStep) errorStep.style.display = "block";
-            if (errorText) errorText.textContent = message;
-
-            if (timer) {
-                clearInterval(timer);
-                timer = null;
-            }
-        }
-
-        function showApproved() {
-            stopped = true;
-
-            if (timer) {
-                clearInterval(timer);
-                timer = null;
-            }
-
-            if (waitingStep) waitingStep.style.display = "none";
-            if (errorStep) errorStep.style.display = "none";
-            if (approvedStep) approvedStep.style.display = "block";
-        }
-
-        async function checkApproval() {
-            if (stopped || checking) return;
-
-            checking = true;
-
-            try {
-                const listing = await fetchAppsScriptListing(listingId);
-
-                if (!listing.ok) {
-                    setStatus("Waiting for the ServiceHub backend…");
-                    return;
-                }
-
-                const code = String(
-                    listing.code ||
-                    listing.listing?.paymentCode ||
-                    listing.listing?.["Payment Code"] ||
-                    ""
-                ).trim();
-
-                if (code) {
-                    localStorage.setItem("serviceHubPaymentCode", code);
-                }
-
-                const result = await checkAppsScriptPayment(
-                    listingId,
-                    code
-                );
-
-                if (result.status === "approved") {
-                    showApproved();
-                    return;
-                }
-
-                setStatus(
-                    APPROVED_PARAM
-                        ? "Payment received. Waiting for final backend approval…"
-                        : "Waiting for payment confirmation…"
-                );
-
-            } catch (error) {
-                console.error("Crypto approval check failed:", error);
-                setStatus("Waiting for payment confirmation…");
-            } finally {
-                checking = false;
-            }
-        }
 
         payButton.addEventListener("click", function () {
             const network = String(networkSelect.value || "").toLowerCase();
@@ -324,9 +240,9 @@
             }
 
             /*
-             * Mark this browser session as an active ServiceHub crypto
-             * checkout. The NoWalletConnect return page uses this same
-             * browser's localStorage to recover the Listing ID.
+             * Mark this browser as an active ServiceHub crypto checkout.
+             * The return page uses this same browser's localStorage to
+             * recover the Listing ID.
              */
             localStorage.setItem("serviceHubCryptoCheckoutActive", "true");
             localStorage.setItem("serviceHubCryptoNetwork", network);
@@ -341,16 +257,6 @@
 
             window.location.href = url;
         });
-
-        /*
-         * When NoWalletConnect has returned to the ServiceHub return page,
-         * it redirects here with ?verified=1 after Apps Script accepts the
-         * payment record. Keep checking until the Listing is actually
-         * approved.
-         */
-        checkApproval();
-        timer = setInterval(checkApproval, 5000);
-
     })();
     </script>
 
