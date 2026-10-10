@@ -718,6 +718,91 @@ async function toggleServiceHubLike(cardId, cardData, button) {
 }
 
 
+/* ========================================
+   SHARE A SERVICE CARD
+   Builds a link to service.html?service=ID
+   and shares it (native share sheet) or
+   copies it to the clipboard as a fallback.
+======================================== */
+
+function buildServiceHubShareLink(cardId) {
+    const path = window.location.pathname.replace(/[^/]*$/, "");
+    return window.location.origin + path +
+        "service.html?service=" + encodeURIComponent(cardId);
+}
+
+function showServiceHubToast(message) {
+    let toast = document.getElementById("serviceHubToast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "serviceHubToast";
+        toast.className = "servicehub-toast";
+        toast.setAttribute("role", "status");
+        toast.setAttribute("aria-live", "polite");
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add("is-visible");
+    clearTimeout(showServiceHubToast._timer);
+    showServiceHubToast._timer = setTimeout(function () {
+        toast.classList.remove("is-visible");
+    }, 2200);
+}
+
+async function copyServiceHubText(text) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch (_) { /* fall through to legacy copy */ }
+
+    try {
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(area);
+        return ok;
+    } catch (_) {
+        return false;
+    }
+}
+
+async function shareServiceHubCard(cardId, title) {
+    if (!cardId) return;
+
+    const link = buildServiceHubShareLink(cardId);
+    const name = String(title || "").trim();
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: name || "ServiceHub",
+                text: name
+                    ? "Check out \"" + name + "\" on ServiceHub"
+                    : "Check out this service on ServiceHub",
+                url: link
+            });
+            return;
+        } catch (error) {
+            /* User closed the share sheet: nothing more to do */
+            if (error && error.name === "AbortError") return;
+        }
+    }
+
+    const copied = await copyServiceHubText(link);
+    if (copied) {
+        showServiceHubToast("Link copied");
+    } else {
+        window.prompt("Copy this link:", link);
+    }
+}
+
 function buildServiceHubCardElement(cardData, cardId) {
 
     const card = document.createElement("a");
@@ -784,7 +869,33 @@ function buildServiceHubCardElement(cardData, cardId) {
             <span class="service-like-heart" aria-hidden="true">♥</span>
             <span class="service-like-count">${likes}</span>
         </button>
+        <button
+            type="button"
+            class="service-share-btn"
+            aria-label="Share this service"
+            title="Share"
+        >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line>
+                <line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line>
+            </svg>
+        </button>
     `;
+
+    const shareButton = card.querySelector(".service-share-btn");
+
+    if (shareButton) {
+        shareButton.addEventListener("click", function (event) {
+            /* The whole card is a link: don't navigate when sharing */
+            event.preventDefault();
+            event.stopPropagation();
+
+            shareServiceHubCard(String(cardId), cardData.title);
+        });
+    }
 
     const likeButton = card.querySelector(".service-like-btn");
 
@@ -2831,6 +2942,14 @@ function renderServiceDetailLike(card) {
         event.preventDefault();
         toggleServiceHubLike(String(cardId), card, button);
     };
+
+    const shareButton = document.getElementById("serviceDetailShareBtn");
+    if (shareButton) {
+        shareButton.onclick = function (event) {
+            event.preventDefault();
+            shareServiceHubCard(String(cardId), card.title);
+        };
+    }
 }
 
 function renderServiceProviderDetails(card) {
