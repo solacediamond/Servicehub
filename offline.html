@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>You're offline · ServiceHub</title>
+
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#080b12">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ServiceHub">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+
+    <style>
+        :root {
+            --bg: #080b12;
+            --surface: #101522;
+            --surface-light: #151c2b;
+            --blue: #2388ff;
+            --purple: #a855f7;
+            --pink: #ff4fd8;
+            --text: #f3f6fa;
+            --muted: #8994a6;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body { min-height: 100%; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* soft brand glows */
+        body::before, body::after {
+            content: "";
+            position: fixed;
+            width: 520px;
+            height: 520px;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: .22;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::before { background: var(--blue); top: -220px; left: -200px; }
+        body::after  { background: var(--pink); bottom: -240px; right: -220px; opacity: .16; }
+
+        .wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(16, 21, 34, .7);
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .status i {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--pink);
+            box-shadow: 0 0 10px var(--pink);
+            animation: pulse 1.8s ease-in-out infinite;
+        }
+
+        .app-icon {
+            width: 96px;
+            height: 96px;
+            margin: 30px auto 24px;
+            border-radius: 24px;
+            display: block;
+            box-shadow: 0 0 40px rgba(35, 136, 255, .28), 0 0 70px rgba(255, 79, 216, .14);
+        }
+
+        h1 {
+            font-size: clamp(30px, 8.5vw, 40px);
+            line-height: 1.15;
+            letter-spacing: -.5px;
+        }
+        h1 span {
+            display: block;
+            background: linear-gradient(90deg, var(--blue), var(--purple), var(--pink));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        .lead {
+            margin: 14px auto 0;
+            max-width: 340px;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .actions { margin-top: 30px; }
+
+        .notice {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            text-align: left;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--blue);
+            border-radius: 12px;
+            font-size: 13.5px;
+            color: #c3cbd8;
+        }
+        .notice svg { flex: none; margin-top: 2px; color: var(--blue); }
+        .notice strong { color: var(--text); }
+
+        .missing {
+            display: none;
+            margin-bottom: 14px;
+            padding: 11px 14px;
+            border-radius: 12px;
+            background: rgba(255, 79, 216, .08);
+            border: 1px solid rgba(255, 79, 216, .28);
+            color: #ffd0f3;
+            font-size: 13.5px;
+            text-align: left;
+        }
+        .missing.show { display: block; }
+
+        /* continuous pink + blue flow */
+        .flow-btn {
+            width: 100%;
+            border: 0;
+            cursor: pointer;
+            padding: 16px 20px;
+            border-radius: 14px;
+            color: #fff;
+            font: 700 16px/1.2 Arial, sans-serif;
+            letter-spacing: .2px;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, .45);
+            background: linear-gradient(90deg,
+                var(--blue), var(--pink), var(--blue), var(--pink), var(--blue));
+            background-size: 200% 100%;
+            animation: flow 3.2s linear infinite, glow 3.2s ease-in-out infinite;
+            transition: transform .15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .flow-btn:active { transform: scale(.98); }
+        .flow-btn:focus-visible, .retry:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 3px;
+        }
+
+        .retry {
+            margin-top: 16px;
+            background: none;
+            border: 0;
+            color: var(--muted);
+            font: 600 14px Arial, sans-serif;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        .retry:hover { color: var(--text); }
+
+        .toast {
+            min-height: 20px;
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        @keyframes flow  { from { background-position: 0% 0; } to { background-position: 200% 0; } }
+        @keyframes glow  {
+            0%, 100% { box-shadow: 0 6px 26px rgba(35, 136, 255, .40); }
+            50%      { box-shadow: 0 6px 26px rgba(255, 79, 216, .40); }
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            .flow-btn { animation-duration: 12s, 12s; }
+            .status i { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+
+        <div class="status"><i></i> No internet connection</div>
+
+        <img class="app-icon" src="/icons/icon-192.png" width="96" height="96" alt="ServiceHub">
+
+        <h1>You're offline<span>ServiceHub is still here.</span></h1>
+        <p class="lead">We can't reach the internet right now. You can still look around what you've opened before.</p>
+
+        <div class="actions">
+
+            <div class="missing" id="missing">
+                That page hasn't been opened before, so it isn't saved on this device. Continue to the home page instead.
+            </div>
+
+            <!-- Offline notice: sits directly above the button -->
+            <div class="notice" role="note">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span><strong>The site can't update in offline mode.</strong> Whatever you see is based on what was loaded the last time you opened ServiceHub, so it may be out of date.</span>
+            </div>
+
+            <button class="flow-btn" id="continue" type="button">Continue in offline mode</button>
+
+            <button class="retry" id="retry" type="button">Try again</button>
+            <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        </div>
+    </main>
+
+    <script>
+    (function () {
+        var MARKER = "/__sh_offline_mode";
+        var TTL = 20 * 60 * 1000;
+
+        function markerActive() {
+            if (!window.caches) return Promise.resolve(false);
+            return caches.open("sh-state")
+                .then(function (c) { return c.match(MARKER); })
+                .then(function (r) { return r ? r.text() : null; })
+                .then(function (t) { return t !== null && Date.now() - parseInt(t, 10) < TTL; })
+                .catch(function () { return false; });
+        }
+
+        function setMarker() {
+            if (!window.caches) return Promise.resolve();
+            return caches.open("sh-state")
+                .then(function (c) { return c.put(MARKER, new Response(String(Date.now()))); })
+                .catch(function () {});
+        }
+
+        function clearMarker() {
+            if (!window.caches) return Promise.resolve();
+            return caches.open("sh-state")
+                .then(function (c) { return c.delete(MARKER); })
+                .catch(function () {});
+        }
+
+        // If the user was already browsing in offline mode and hit a page that was never saved.
+        markerActive().then(function (on) {
+            if (on) document.getElementById("missing").classList.add("show");
+        });
+
+        document.getElementById("continue").addEventListener("click", function () {
+            setMarker().then(function () { window.location.href = "/index.html"; });
+        });
+
+        var toast = document.getElementById("toast");
+        document.getElementById("retry").addEventListener("click", function () {
+            toast.textContent = "Checking connection…";
+            // /sw.js is never answered from the saved copy, so this is a real network check.
+            fetch("/sw.js?_=" + Date.now(), { cache: "no-store" })
+                .then(function (r) {
+                    if (!r.ok) throw new Error("bad");
+                    return clearMarker();
+                })
+                .then(function () { window.location.reload(); })
+                .catch(function () { toast.textContent = "Still offline. Check your data or Wi-Fi."; });
+        });
+
+        // Connection came back while this page is open: reload the page that was requested.
+        window.addEventListener("online", function () {
+            clearMarker().then(function () { window.location.reload(); });
+        });
+    })();
+    </script>
+</body>
+</html>

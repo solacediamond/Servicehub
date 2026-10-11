@@ -112,6 +112,18 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:#111c33;border:1px solid var(--line);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
 #toast.on{opacity:1}
 </style>
+    <!-- ServiceHub app (PWA) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#080b12">
+    <meta name="application-name" content="ServiceHub">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ServiceHub">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png">
+    <script src="/pwa.js" defer></script>
 </head>
 <body>
 <div class="wrap">
