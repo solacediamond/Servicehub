@@ -725,9 +725,21 @@ async function toggleServiceHubLike(cardId, cardData, button) {
    copies it to the clipboard as a fallback.
 ======================================== */
 
+/* Links must use the PUBLIC address. Vercel's private deployment addresses
+   (servicehub-xxxx-yourname.vercel.app) send visitors, and the bots that build
+   link previews, to a Vercel login page, so those links show no preview at all.
+   Change SERVICEHUB_PUBLIC_ORIGIN (or set window.SERVICEHUB_PUBLIC_ORIGIN) if you
+   ever move to your own domain. */
+const SERVICEHUB_PUBLIC_ORIGIN =
+    window.SERVICEHUB_PUBLIC_ORIGIN || "https://servicehub-amber.vercel.app";
+
 function buildServiceHubShareLink(cardId) {
-    const path = window.location.pathname.replace(/[^/]*$/, "");
-    return window.location.origin + path +
+    const onVercelAddress = /\.vercel\.app$/i.test(window.location.hostname);
+    const origin = onVercelAddress ? SERVICEHUB_PUBLIC_ORIGIN : window.location.origin;
+    const path = onVercelAddress
+        ? "/"
+        : window.location.pathname.replace(/[^/]*$/, "");
+    return origin + path +
         "service.html?service=" + encodeURIComponent(cardId);
 }
 

@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    {
+      "source": "/service.html",
+      "has": [{ "type": "query", "key": "service" }],
+      "destination": "/api/service-preview"
+    }
+  ],
+  "functions": {
+    "api/service-preview.js": { "includeFiles": "{service.html,backend-config.js}" },
+    "api/og-image.js": { "includeFiles": "og-default.jpg" }
+  }
+}
