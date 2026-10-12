@@ -8,7 +8,7 @@
  *
  * Bump VERSION whenever you want every phone to drop its old saved files.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = "sh-shell-" + VERSION;
 const RUNTIME = "sh-runtime-" + VERSION;
 const STATE = "sh-state";
@@ -139,7 +139,9 @@ async function networkFirst(req, cacheName, ms, keyReq, init) {
 
 async function staleWhileRevalidate(req) {
   const cache = await caches.open(RUNTIME);
-  const hit = await cache.match(req);
+  // Look in every saved area: icons and other files saved at install time live
+  // in the SHELL cache, not RUNTIME.
+  const hit = (await cache.match(req)) || (await caches.match(req));
   const net = fetch(req).then((res) => {
     if (res && (res.ok || res.type === "opaque")) {
       cache.put(req, res.clone()).then(() => trim(RUNTIME, MAX_RUNTIME_ENTRIES)).catch(() => {});
