@@ -4591,3 +4591,93 @@ body.listing-upload-locked {
         font-size: 14px;
     }
 }
+
+
+/* ========================================
+   SEARCH RESULTS PAGE (search.html)
+   Services use the Explore card grid, jobs use the Browse Jobs
+   card grid; only the matches are shown.
+======================================== */
+
+.search-header .search-status {
+    min-height: 22px;
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.search-header .explore-search-box {
+    margin-top: 18px;
+}
+
+.search-results {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 38px;
+    animation: explorePageFadeIn 0.45s ease-out;
+}
+
+.search-group-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.search-group-heading h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.search-group-heading span {
+    min-width: 26px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    background: rgba(35, 136, 255, 0.1);
+    border: 1px solid rgba(35, 136, 255, 0.28);
+}
+
+.search-group .explore-grid {
+    margin-top: 0;
+}
+
+.search-results > .job-empty {
+    margin-top: 6px;
+}
+
+.search-results .job-empty a {
+    color: var(--blue);
+    font-weight: 700;
+}
+
+@media (max-width: 650px) {
+    .search-results {
+        gap: 30px;
+        margin-top: 22px;
+    }
+
+    .search-group .jobs-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Keep a single result at normal card width instead of stretching */
+.search-group .explore-grid,
+.search-group .jobs-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+@media (max-width: 650px) {
+    .search-group .explore-grid,
+    .search-group .jobs-grid {
+        grid-template-columns: 1fr;
+    }
+}

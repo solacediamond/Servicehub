@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <title>Search | ServiceHub</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+    <!-- ServiceHub app (PWA) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#080b12">
+    <meta name="application-name" content="ServiceHub">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ServiceHub">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png">
+    <script src="/pwa.js" defer></script>
+    <!-- ServiceHub link preview -->
+    <meta property="og:site_name" content="ServiceHub">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Search | ServiceHub">
+    <meta property="og:description" content="Search services and jobs on ServiceHub.">
+    <meta property="og:image" content="https://servicehub-amber.vercel.app/og-default.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Search | ServiceHub">
+    <meta name="twitter:description" content="Search services and jobs on ServiceHub.">
+    <meta name="twitter:image" content="https://servicehub-amber.vercel.app/og-default.jpg">
+</head>
+
+
+<body>
+
+
+    <!-- ========================================
+         NAVBAR
+    ======================================== -->
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="manage.html">Manage Your Service</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">List a Job</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+<!-- ========================================
+         SEARCH RESULTS PAGE
+         Shows only the services (and jobs) that match the search.
+         Result cards still open service.html.
+    ======================================== -->
+
+    <main class="service-page explore-page">
+<button type="button" class="how-back-btn" onclick="history.back()">
+    ← Back
+</button>
+
+        <section class="service-header search-header">
+
+            <span class="service-category">
+                SERVICEHUB
+            </span>
+
+            <h1>
+                Search Results
+            </h1>
+
+            <p id="searchStatus" class="search-status" aria-live="polite">
+                Searching…
+            </p>
+
+            <div class="search-box explore-search-box">
+                <span class="search-icon">⌕</span>
+                <input
+                    type="text"
+                    placeholder="Search services or jobs..."
+                    aria-label="Search services or jobs"
+                >
+                <button type="button">Search</button>
+            </div>
+
+        </section>
+
+        <!-- MATCHING SERVICES / JOBS APPEAR HERE -->
+
+        <section
+            id="searchResultsGrid"
+            class="search-results"
+        >
+        </section>
+
+    </main>
+    
+    <script src="script.js"></script>
+
+</body>
+
+</html>

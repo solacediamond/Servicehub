@@ -8,7 +8,7 @@
  *
  * Bump VERSION whenever you want every phone to drop its old saved files.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL = "sh-shell-" + VERSION;
 const RUNTIME = "sh-runtime-" + VERSION;
 const STATE = "sh-state";
@@ -17,7 +17,7 @@ const MARKER_TTL = 20 * 60 * 1000; // offline mode stays "on" for 20 min of inac
 const MAX_RUNTIME_ENTRIES = 120;
 
 const PRECACHE = [
-  "/index.html", "/explore.html", "/how-it-works.html", "/jobs.html",
+  "/index.html", "/explore.html", "/search.html", "/how-it-works.html", "/jobs.html",
   "/list-service.html", "/login.html", "/manage.html", "/service.html",
   "/provider.html", "/chat.html", "/conversation.html",
   "/payment.html", "/payment-naira.html", "/payment-usd.html",

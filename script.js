@@ -2056,7 +2056,9 @@ document.body.classList.remove("menu-open");
 
             const itemText =
                 normalizeText(
-                    item.textContent
+                    typeof item === "string"
+                        ? item
+                        : item.textContent
                 );
 
 
@@ -2129,6 +2131,18 @@ document.body.classList.remove("menu-open");
                         itemWords.some(
                             function (itemWord) {
 
+                                /* Tiny words ("bo", "job") fuzzy-match
+                                   almost anything, so skip them. */
+                                if (
+                                    queryWord.length < 4 ||
+                                    itemWord.length < 4
+                                ) {
+
+                                    return false;
+
+                                }
+
+
                                 if (
                                     Math.abs(
                                         itemWord.length -
@@ -2194,6 +2208,358 @@ document.body.classList.remove("menu-open");
         }
 
 
+        /* ---------- SEARCH TEXT BUILDERS ----------
+           Services and jobs are scored on the same text rules, so the
+           same smart (stemmed / partial / fuzzy) matching applies to both. */
+
+        function flattenSearchValue(value) {
+
+            if (value === null || value === undefined) return "";
+
+            if (Array.isArray(value)) {
+                return value.map(flattenSearchValue).join(" ");
+            }
+
+            if (typeof value === "object") {
+                return Object.keys(value).map(function (key) {
+                    return flattenSearchValue(value[key]);
+                }).join(" ");
+            }
+
+            return String(value);
+
+        }
+
+        function scoreSearchEntry(primaryText, secondaryText, query) {
+
+            const primary =
+                calculateSearchScore(primaryText, query);
+
+            const secondary =
+                secondaryText
+                    ? calculateSearchScore(secondaryText, query)
+                    : 0;
+
+            if (primary === 0 && secondary === 0) return 0;
+
+            /* Title / category / provider count fully; the long
+               description text counts for less so it can't drown them. */
+            return primary + secondary * 0.5;
+
+        }
+
+        function getServiceSearchText(card) {
+
+            return {
+                primary: [
+                    card.title,
+                    card.category,
+                    card.provider,
+                    card.company
+                ].join(" "),
+                secondary: [
+                    card.about,
+                    flattenSearchValue(card.pricing),
+                    flattenSearchValue(card.customPricing)
+                ].join(" ")
+            };
+
+        }
+
+        function getJobSearchText(job) {
+
+            const pick = function () {
+                for (let i = 0; i < arguments.length; i++) {
+                    const value = job[arguments[i]];
+                    if (value !== undefined && value !== null && value !== "") {
+                        return value;
+                    }
+                }
+                return "";
+            };
+
+            return {
+                /* "job" words are added so queries such as "jobs",
+                   "hiring" or "video editing vacancy" can reach jobs. */
+                primary: [
+                    pick("Service Name", "serviceName"),
+                    pick("Company", "company"),
+                    pick("Job Type", "jobType"),
+                    "job jobs hiring vacancy opening position work"
+                ].join(" "),
+                secondary: [
+                    pick("Job Requirements", "jobRequirements"),
+                    pick("About", "about")
+                ].join(" ")
+            };
+
+        }
+
+        function buildServiceHubJobCardElement(job) {
+
+            const pick = function () {
+                for (let i = 0; i < arguments.length; i++) {
+                    const value = job[arguments[i]];
+                    if (value !== undefined && value !== null && value !== "") {
+                        return value;
+                    }
+                }
+                return "";
+            };
+
+            const title = pick("Service Name", "serviceName") || "Job";
+            const company = pick("Company", "company");
+            const type = pick("Job Type", "jobType") || "Job";
+            const req = String(
+                pick("Job Requirements", "jobRequirements", "About", "about")
+            );
+            const form = pick("Google Form Link", "googleFormLink");
+            const price = pick("Price", "price");
+            const currency = String(pick("Currency", "currency") || "NGN").toUpperCase();
+
+            let media = [];
+            try {
+                media = Array.isArray(job.Media)
+                    ? job.Media
+                    : JSON.parse(job.Media || "[]");
+            } catch (_) {}
+
+            const first = media.find(function (item) {
+                return item && (item.previewUrl || item.url || item.embedUrl);
+            });
+
+            const mediaHtml = first
+                ? '<div class="job-card-media"><img src="' +
+                  escapeServiceHubAttribute(first.previewUrl || first.url || first.embedUrl) +
+                  '" alt="" loading="lazy"></div>'
+                : '<div class="job-card-media"><span>JOB</span></div>';
+
+            const payment = (price === "" || Number.isNaN(Number(price)))
+                ? (price === "" ? "Payment not specified" : escapeServiceHubText(price))
+                : formatServiceHubPrice(price, currency);
+
+            const article = document.createElement("article");
+            article.className = "job-card-rendered";
+            article.innerHTML =
+                mediaHtml +
+                '<div class="job-card-body">' +
+                    '<div class="job-card-top">' +
+                        '<span class="job-type-pill">' + escapeServiceHubText(type) + '</span>' +
+                        '<span class="job-payment">' + payment + '</span>' +
+                    '</div>' +
+                    '<h2>' + escapeServiceHubText(title) + '</h2>' +
+                    (company ? '<p class="job-company">' + escapeServiceHubText(company) + '</p>' : '') +
+                    '<p class="job-excerpt">' + escapeServiceHubText(req.slice(0, 180)) +
+                        (req.length > 180 ? "…" : "") + '</p>' +
+                    '<a class="apply-job-btn" href="' + escapeServiceHubAttribute(form) +
+                        '" target="_blank" rel="noopener">Apply via Form <span>↗</span></a>' +
+                '</div>';
+
+            return article;
+
+        }
+
+        /* ---------- SEARCH RESULTS PAGE (search.html) ---------- */
+
+        const searchResultsGrid =
+            document.getElementById("searchResultsGrid");
+
+        const searchStatus =
+            document.getElementById("searchStatus");
+
+        let searchDataPromise = null;
+
+        function loadSearchData() {
+
+            if (searchDataPromise) return searchDataPromise;
+
+            searchDataPromise = (async function () {
+
+                let listings = [];
+
+                try {
+                    const data =
+                        await callServiceHubAppsScript("getListings", {});
+                    listings = Array.isArray(data.listings) ? data.listings : [];
+                } catch (error) {
+                    console.warn("Search could not load listings:", error);
+                    return { failed: true, services: [], jobs: [] };
+                }
+
+                const typeOf = function (listing) {
+                    return String(
+                        listing.listingType ||
+                        listing["Listing Type"] ||
+                        listing.type ||
+                        "service"
+                    ).toLowerCase();
+                };
+
+                const statusOf = function (listing) {
+                    return String(
+                        listing.status || listing.Status || ""
+                    ).toLowerCase();
+                };
+
+                const serviceCards = [];
+
+                listings.forEach(function (listing) {
+                    if (typeOf(listing) === "job") return;
+                    if (statusOf(listing) !== "approved") return;
+
+                    const card = mapAppsScriptListingToCard(listing);
+                    if (card.id) serviceCards.push(card);
+                });
+
+                /* Same rule as jobs.html: every listing marked as a job. */
+                const jobs = listings.filter(function (listing) {
+                    return typeOf(listing) === "job";
+                });
+
+                return { failed: false, services: serviceCards, jobs: jobs };
+
+            })();
+
+            return searchDataPromise;
+
+        }
+
+        async function renderSearchResults(term) {
+
+            if (!searchResultsGrid) return;
+
+            if (searchStatus) {
+                searchStatus.textContent = "Searching…";
+            }
+
+            searchResultsGrid.innerHTML = "";
+
+            if (!term) {
+                if (searchStatus) {
+                    searchStatus.textContent =
+                        "Type what you're looking for and press Search.";
+                }
+                return;
+            }
+
+            const data = await loadSearchData();
+
+            /* The user may have searched again while data was loading */
+            if (searchInput.value.trim() !== term) return;
+
+            if (data.failed) {
+                searchDataPromise = null;
+                if (searchStatus) {
+                    searchStatus.textContent =
+                        "Could not load results right now. Please try again.";
+                }
+                return;
+            }
+
+            const results = [];
+
+            data.services.forEach(function (card) {
+                const text = getServiceSearchText(card);
+                const score = scoreSearchEntry(text.primary, text.secondary, term);
+
+                if (score > 0) {
+                    results.push({ kind: "service", card: card, score: score });
+                }
+            });
+
+            data.jobs.forEach(function (job) {
+                const text = getJobSearchText(job);
+                const score = scoreSearchEntry(text.primary, text.secondary, term);
+
+                if (score > 0) {
+                    results.push({ kind: "job", job: job, score: score });
+                }
+            });
+
+            results.sort(function (a, b) {
+                return b.score - a.score;
+            });
+
+            searchResultsGrid.innerHTML = "";
+
+            if (results.length === 0) {
+                searchResultsGrid.innerHTML =
+                    '<div class="job-empty">No services or jobs found for "' +
+                    escapeServiceHubText(term) +
+                    '". Try different words, or <a href="explore.html">browse all services</a>.</div>';
+
+                if (searchStatus) searchStatus.textContent = "";
+                return;
+            }
+
+            /* Two groups, each laid out exactly like its own listing page:
+               services as the Explore cards, jobs as the Browse Jobs cards.
+               The group holding the best match is shown first. */
+            const serviceResults = results.filter(function (r) {
+                return r.kind === "service";
+            });
+
+            const jobResults = results.filter(function (r) {
+                return r.kind === "job";
+            });
+
+            function addGroup(title, list, gridClass, buildCard) {
+
+                if (!list.length) return;
+
+                const group = document.createElement("section");
+                group.className = "search-group";
+
+                const heading = document.createElement("div");
+                heading.className = "search-group-heading";
+                heading.innerHTML =
+                    "<h2>" + escapeServiceHubText(title) + "</h2>" +
+                    "<span>" + list.length + "</span>";
+
+                const grid = document.createElement("div");
+                grid.className = gridClass;
+
+                list.forEach(function (result) {
+                    grid.appendChild(buildCard(result));
+                });
+
+                group.appendChild(heading);
+                group.appendChild(grid);
+                searchResultsGrid.appendChild(group);
+
+            }
+
+            const groups = [
+                {
+                    best: serviceResults.length ? serviceResults[0].score : -1,
+                    add: function () {
+                        addGroup("Services", serviceResults, "explore-grid", function (r) {
+                            return buildServiceHubCardElement(r.card, r.card.id);
+                        });
+                    }
+                },
+                {
+                    best: jobResults.length ? jobResults[0].score : -1,
+                    add: function () {
+                        addGroup("Jobs", jobResults, "jobs-grid", function (r) {
+                            return buildServiceHubJobCardElement(r.job);
+                        });
+                    }
+                }
+            ];
+
+            groups.sort(function (x, y) { return y.best - x.best; });
+            groups.forEach(function (g) { g.add(); });
+
+            if (searchStatus) {
+                searchStatus.textContent =
+                    results.length + " result" +
+                    (results.length === 1 ? "" : "s") +
+                    ' for "' + term + '"';
+            }
+
+        }
+
         /* ---------- PERFORM SEARCH ---------- */
 
         function performSearch() {
@@ -2212,104 +2578,28 @@ document.body.classList.remove("menu-open");
 
             }
 
-            /* Smart Search is Explore-only.
-               From the homepage, send the query to Explore.
-               On Explore, search only the Explore service grid. */
-            const isExplorePage =
-                window.location.pathname.endsWith("explore.html");
+            /* Searching never scrolls or highlights cards any more.
+               Every search opens the results page, which shows only the
+               matching services (and jobs) and hides everything else. */
+            if (searchResultsGrid) {
 
-            if (!isExplorePage) {
-                window.location.href =
-                    "explore.html?search=" + encodeURIComponent(term);
-                return;
-            }
-
-            const exploreGrid =
-                document.getElementById("exploreGrid");
-
-            const items = exploreGrid
-                ? Array.from(exploreGrid.querySelectorAll(".service-card"))
-                : [];
-
-            const uniqueItems =
-                [...new Set(items)];
-
-
-            const results = [];
-
-
-            uniqueItems.forEach(
-                function (item) {
-
-                    const score =
-                        calculateSearchScore(
-                            item,
-                            term
-                        );
-
-
-                    item.style.outline = "";
-
-
-                    if (score > 0) {
-
-                        results.push({
-                            item: item,
-                            score: score
-                        });
-
-                    }
-
+                /* Already on the results page: update in place */
+                if (window.history && window.history.pushState) {
+                    window.history.pushState(
+                        null,
+                        "",
+                        "search.html?q=" + encodeURIComponent(term)
+                    );
                 }
-            );
 
-
-            /* ---------- NO RESULTS ---------- */
-
-            if (results.length === 0) {
-
-                alert(
-                    'No service found for "' +
-                    term +
-                    '".'
-                );
-
+                document.title = 'Search: ' + term + ' | ServiceHub';
+                renderSearchResults(term);
                 return;
 
             }
 
-
-            /* ---------- SORT ---------- */
-
-            results.sort(
-                function (a, b) {
-
-                    return b.score - a.score;
-
-                }
-            );
-
-
-            /* ---------- HIGHLIGHT ---------- */
-
-            results.forEach(
-                function (result, index) {
-
-                    result.item.style.outline =
-                        "2px solid var(--blue)";
-
-
-                    if (index === 0) {
-
-                        result.item.scrollIntoView({
-                            behavior: "smooth",
-                            block: "center"
-                        });
-
-                    }
-
-                }
-            );
+            window.location.href =
+                "search.html?q=" + encodeURIComponent(term);
 
         }
 
@@ -2337,29 +2627,31 @@ document.body.classList.remove("menu-open");
             }
         );
 
-        /* If Explore was opened from the homepage with a search query,
-           wait until its service cards have been rendered, then search them. */
-        if (window.location.pathname.endsWith("explore.html")) {
-            const exploreSearch =
-                new URLSearchParams(window.location.search).get("search");
+        /* Results page opened with ?q=... (or the old ?search=...) */
+        if (searchResultsGrid) {
 
-            if (exploreSearch) {
-                searchInput.value = exploreSearch;
+            const params =
+                new URLSearchParams(window.location.search);
 
-                let attempts = 0;
-                const runExploreSearch = setInterval(function () {
-                    attempts += 1;
-                    const grid = document.getElementById("exploreGrid");
-                    const cards = grid
-                        ? grid.querySelectorAll(".service-card")
-                        : [];
+            const initialTerm =
+                (params.get("q") || params.get("search") || "").trim();
 
-                    if (cards.length || attempts >= 20) {
-                        clearInterval(runExploreSearch);
-                        performSearch();
-                    }
-                }, 150);
+            searchInput.value = initialTerm;
+
+            if (initialTerm) {
+                document.title = 'Search: ' + initialTerm + ' | ServiceHub';
             }
+
+            renderSearchResults(initialTerm);
+
+            window.addEventListener("popstate", function () {
+                const back =
+                    new URLSearchParams(window.location.search);
+                const backTerm = (back.get("q") || "").trim();
+                searchInput.value = backTerm;
+                renderSearchResults(backTerm);
+            });
+
         }
 
     }
