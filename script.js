@@ -725,21 +725,30 @@ async function toggleServiceHubLike(cardId, cardData, button) {
    copies it to the clipboard as a fallback.
 ======================================== */
 
-/* Links must use the PUBLIC address. Vercel's private deployment addresses
-   (servicehub-xxxx-yourname.vercel.app) send visitors, and the bots that build
-   link previews, to a Vercel login page, so those links show no preview at all.
+/* Share links use the PUBLIC address and the short /s/ID form.
+   - Vercel's private deployment addresses (servicehub-xxxx-yourname.vercel.app)
+     send visitors, and the bots that build link previews, to a Vercel login page,
+     so those links show no preview at all.
+   - /s/ID is answered by the small preview function in /api: preview bots get the
+     card's title, price and photo, and people are sent on to service.html?service=ID.
    Change SERVICEHUB_PUBLIC_ORIGIN (or set window.SERVICEHUB_PUBLIC_ORIGIN) if you
    ever move to your own domain. */
 const SERVICEHUB_PUBLIC_ORIGIN =
     window.SERVICEHUB_PUBLIC_ORIGIN || "https://servicehub-amber.vercel.app";
 
 function buildServiceHubShareLink(cardId) {
-    const onVercelAddress = /\.vercel\.app$/i.test(window.location.hostname);
-    const origin = onVercelAddress ? SERVICEHUB_PUBLIC_ORIGIN : window.location.origin;
-    const path = onVercelAddress
-        ? "/"
-        : window.location.pathname.replace(/[^/]*$/, "");
-    return origin + path +
+    let publicHost = "";
+    try { publicHost = new URL(SERVICEHUB_PUBLIC_ORIGIN).hostname; } catch (_) {}
+    const host = window.location.hostname;
+    const onPublicSite = /\.vercel\.app$/i.test(host) || host === publicHost;
+
+    if (onPublicSite) {
+        return SERVICEHUB_PUBLIC_ORIGIN.replace(/\/$/, "") +
+            "/s/" + encodeURIComponent(cardId);
+    }
+
+    const path = window.location.pathname.replace(/[^/]*$/, "");
+    return window.location.origin + path +
         "service.html?service=" + encodeURIComponent(cardId);
 }
 
