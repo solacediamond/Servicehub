@@ -23,7 +23,7 @@ const PRECACHE = [
   "/payment.html", "/payment-naira.html", "/payment-usd.html",
   "/payment-crypto.html", "/payment-crypto-return.html", "/payment-crypto-status.html",
   "/style.css", "/script.js", "/backend-config.js", "/manage-link-modal.js",
-  "/offline.html", "/manifest.webmanifest", "/pwa.js",
+  "/offline.html", "/manifest.webmanifest", "/pwa.js", "/social-fab.js", "/solaceproeditz-logo.png",
   "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png",
   "/icons/favicon-32.png"
 ];
