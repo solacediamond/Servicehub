@@ -21,6 +21,10 @@
    * ------------------------------------------------------------------ */
   var PHONE_INTL = "2348073410722";          // WhatsApp / call number, digits only
   var TEASER_TEXT = "Our socials / contacts";
+  // WhatsApp's "wa.me/message/..." business links ignore pre-typed text. If you put the
+  // sponsor's WhatsApp number here (digits only, e.g. "23480xxxxxxx") the pre-typed text
+  // will arrive inside the chat. Until then the text is copied to the clipboard instead.
+  var SPONSOR_PHONE = "2349072964285";
 
   // Pre-typed message so you can tell the chat came from the website.
   function pretyped() {
@@ -42,9 +46,13 @@
       href: function () { return "https://instagram.com/servicehub.01?mdxt=cWc2Z29oNm5maWdw"; } },
     { id: "phone", label: "Call us", color: "#ff9f0a", sameTab: true,
       href: function () { return "tel:+" + PHONE_INTL; } },
-    // Sponsor: always keep this LAST. Shows the logo image, not part of the centre-icon cycle.
-    { id: "sponsor", label: "Sponsor: Solaceproeditz", img: "/solaceproeditz-logo.png", noCycle: true,
-      href: function () { return "https://wa.me/message/VCBCH6LJK2VYN1?text=" + encodeURIComponent(pretyped()); } }
+    // Sponsor: always keep this LAST. Shows the logo image (also joins the centre-icon cycle).
+    { id: "sponsor", label: "Sponsor: Solaceproeditz", img: "/solaceproeditz-logo.png", copy: true,
+      href: function () {
+        return SPONSOR_PHONE
+          ? "https://wa.me/" + SPONSOR_PHONE + "?text=" + encodeURIComponent(pretyped())
+          : "https://wa.me/message/VCBCH6LJK2VYN1";
+      } }
   ];
 
   var ICONS = {
@@ -110,6 +118,10 @@
     "#shfab .face.on{opacity:1;transform:none}",
     "#shfab .face.off{opacity:0;transform:scale(.45) rotate(70deg)}",
     "#shfab .face svg{width:46%;height:46%;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}",
+    "#shfab .face img{width:64%;height:64%;border-radius:50%;object-fit:cover;display:block;pointer-events:none;-webkit-user-drag:none;",
+    "box-shadow:0 0 0 1.5px rgba(255,255,255,.55),0 2px 6px rgba(0,0,0,.35)}",
+    "#shfab.open .face.on{opacity:0;transform:scale(.45) rotate(70deg)}",
+    "#shfab.open .face.chatface{opacity:1;transform:none;color:#fff}",
 
     /* ring of contact icons */
     "#shfab .ring{position:absolute;inset:0;z-index:2;pointer-events:none}",
@@ -138,6 +150,14 @@
     "#shfab .tz.in span{transform:translateX(calc(var(--dir)*(var(--b)/2 + 8px)*-1))}",
     "#shfab .tz.out span{transition:transform .6s cubic-bezier(.5,0,.75,0)}",
 
+    ".shfab-toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));z-index:2147482500;",
+    "transform:translate(-50%,24px);opacity:0;pointer-events:none;padding:11px 18px;border-radius:999px;color:#fff;",
+    "font:600 13px/1.3 Arial,Helvetica,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,.45);max-width:88vw;text-align:center;",
+    "transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s ease}",
+    ".shfab-toast.show{transform:translate(-50%,0);opacity:1}",
+    ".shfab-toast.glass{position:fixed;background:linear-gradient(145deg,rgba(255,255,255,.3),rgba(255,255,255,.08)),rgba(22,28,46,.55);",
+    "-webkit-backdrop-filter:blur(14px) saturate(190%);backdrop-filter:blur(14px) saturate(190%);border:1px solid rgba(255,255,255,.35);",
+    "box-shadow:inset 0 1px 1px rgba(255,255,255,.6),0 10px 28px rgba(0,0,0,.35)}",
     "@media (prefers-reduced-motion:reduce){#shfab .bob{animation:none}",
     "#shfab .item,#shfab .face,#shfab.snap{transition-duration:.01s}}",
     "@media print{#shfab{display:none!important}}"
@@ -188,6 +208,7 @@
     }
     a.addEventListener("click", function (e) {
       if (suppressClick) { e.preventDefault(); return; }
+      if (c.copy && !SPONSOR_PHONE) copyMessage();
       a.href = c.href();           // build link at click time (page name in the message)
     });
     a.href = c.href();
@@ -204,14 +225,22 @@
   main.setAttribute("aria-label", "Contact us. Tap to open, hold and drag to move");
   var bob = document.createElement("div");
   bob.className = "bob";
-  var faces = CONTACTS.filter(function (c) { return !c.noCycle; }).map(function (c) {
+  var faces = CONTACTS.map(function (c) {
     var f = document.createElement("span");
     f.className = "face";
-    f.innerHTML = iconFor(c);
-    if (f.firstChild && f.firstChild.style) f.firstChild.style.color = c.color;
+    if (c.img) f.innerHTML = '<img alt="" draggable="false" src="' + c.img + '">';
+    else {
+      f.innerHTML = iconFor(c);
+      if (f.firstChild && f.firstChild.style) f.firstChild.style.color = c.color;
+    }
     bob.appendChild(f);
     return f;
   });
+  // Shown in the centre while the menu is open (a chat bubble).
+  var chatFace = document.createElement("span");
+  chatFace.className = "face chatface";
+  chatFace.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M5 4h14a2.5 2.5 0 0 1 2.5 2.5v8A2.5 2.5 0 0 1 19 17h-8.2L6 21v-4H5A2.5 2.5 0 0 1 2.5 14.500v-8A2.5 2.5 0 0 1 5 4Z"/><circle cx="8.200" cy="10.500" r="1.300" fill="currentColor"/><circle cx="12" cy="10.500" r="1.300" fill="currentColor"/><circle cx="15.800" cy="10.500" r="1.300" fill="currentColor"/></svg>';
+  bob.appendChild(chatFace);
   main.appendChild(bob);
 
   root.insertAdjacentHTML("beforeend", defs);
@@ -296,44 +325,30 @@
   function mod(a, m) { return ((a % m) + m) % m; }
 
   function computeArc() {
+    // The arc always has the same size (radius and spacing), wherever the button sits.
+    // If fewer icons fit in the free space than you have, the arc turns like a wheel.
     var cx = posX + B / 2, cy = posY + B / 2;
     var dir = side === "right" ? 180 : 0;
     var W = vw(), H = vh(), half = S / 2, pad = 8;
-    var want = Math.min(n, MAX_VISIBLE);
+    var R = 2.2 * S;
+    var step = 2 * Math.asin(Math.min(1, (S * 1.14) / (2 * R))) * 180 / Math.PI;
     var LIM = 135;
-    var best = null;
-
-    for (var f = 2.2; f <= 4.8; f += 0.2) {
-      var R = f * S;
-      var step = 2 * Math.asin(Math.min(1, (S * 1.14) / (2 * R))) * 180 / Math.PI;
-      var ok = function (rel) {
-        var a = (dir + rel) * Math.PI / 180;
-        var x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
-        return x - half >= pad && x + half <= W - pad &&
-               y - half >= pad + safeTop && y + half <= H - pad - safeBottom;
-      };
-      if (!ok(0)) continue;
-      var lo = 0, hi = 0;
+    function ok(rel) {
+      var a = (dir + rel) * Math.PI / 180;
+      var x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
+      return x - half >= pad && x + half <= W - pad &&
+             y - half >= pad + safeTop && y + half <= H - pad - safeBottom;
+    }
+    var lo = 0, hi = 0;
+    if (ok(0)) {
       while (lo > -LIM && ok(lo - 1)) lo--;
       while (hi < LIM && ok(hi + 1)) hi++;
-      var cap = Math.min(MAX_VISIBLE, Math.floor((hi - lo) / step + 1e-6) + 1);
-      var cand = { R: R, step: step, lo: lo, hi: hi, cap: cap };
-      if (!best || cap > best.cap) best = cand;
-      if (cap >= want) { best = cand; break; }
-    }
-    if (!best) {
-      var R0 = 2.2 * S;
-      var st0 = 2 * Math.asin((S * 1.14) / (2 * R0)) * 180 / Math.PI;
-      best = { R: R0, step: st0, lo: -st0, hi: st0, cap: Math.min(3, n) };
-    }
-
-    var k = Math.min(n, best.cap);
-    var step = best.step;
-    // Few icons on a roomy arc: spread them out a little instead of bunching up.
-    if (k >= n && n > 1) step = Math.min(step * 1.45, (best.hi - best.lo) / (n - 1));
-    var mid = (best.lo + best.hi) / 2;
+    } else { lo = -step; hi = step; }
+    var cap = Math.max(1, Math.min(MAX_VISIBLE, Math.floor((hi - lo) / step + 1e-6) + 1));
+    var k = Math.min(n, cap);
+    var mid = (lo + hi) / 2;
     return {
-      R: best.R, step: step, k: k, wheel: n > k,
+      R: R, step: step, k: k, wheel: n > k,
       start: dir + mid - ((k - 1) / 2) * step
     };
   }
@@ -360,6 +375,41 @@
       el.tabIndex = live ? 0 : -1;
       el.style.zIndex = Math.round(vis * 10);
     }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Copy the pre-typed message (used when a link cannot carry it by itself)
+   * ------------------------------------------------------------------ */
+  var toastEl = null, toastTimer = null;
+  function showToast(msg) {
+    if (!toastEl) {
+      toastEl = document.createElement("div");
+      toastEl.className = "shfab-toast glass";
+      toastEl.setAttribute("role", "status");
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    requestAnimationFrame(function () { toastEl.classList.add("show"); });
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 4200);
+  }
+  function copyMessage() {
+    var text = pretyped();
+    function fallback() {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.setAttribute("readonly", "");
+        ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch (e) {}
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+    showToast("Message copied \u2014 paste it in the chat");
   }
 
   /* ------------------------------------------------------------------ *
