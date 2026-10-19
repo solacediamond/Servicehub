@@ -10,7 +10,7 @@
     launcher.setAttribute('aria-haspopup', 'dialog');
     launcher.setAttribute('aria-controls', 'sh-dev-notice-modal');
     launcher.setAttribute('aria-label', 'Open ServiceHub development notice');
-    launcher.innerHTML = '<span class="sh-dev-kicker">SERVICEHUB // BETA</span><span class="sh-dev-title">STILL BUILDING…</span><span class="sh-dev-status">● NOT FULLY LIVE</span>';
+    launcher.innerHTML = '<span class="sh-dev-warning" aria-hidden="true">⚠️ 🚧</span><span class="sh-dev-kicker">SERVICEHUB // BETA</span><span class="sh-dev-title">STILL BUILDING…</span><span class="sh-dev-status">● NOT FULLY LIVE</span>'; 
 
     var backdrop = document.createElement('div');
     backdrop.id = 'sh-dev-notice-backdrop';
