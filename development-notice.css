@@ -1,0 +1,46 @@
+/* ServiceHub development notice: subtle floating TV-style badge and modal. */
+#sh-dev-notice-launcher {
+  position: fixed;
+  z-index: 9990;
+  right: max(14px, env(safe-area-inset-right));
+  top: 34%;
+  width: 116px;
+  min-height: 58px;
+  padding: 9px 10px;
+  border: 1px solid rgba(90, 170, 255, .62);
+  border-radius: 10px;
+  background: rgba(12, 18, 30, .78);
+  color: #f4f7ff;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .2), inset 0 0 18px rgba(69, 145, 255, .07);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  opacity: .88;
+  animation: sh-dev-float 6s ease-in-out infinite;
+  transition: opacity .2s ease, border-color .2s ease, background .2s ease;
+}
+#sh-dev-notice-launcher:hover,
+#sh-dev-notice-launcher:focus-visible { opacity: 1; border-color: #60a5fa; background: rgba(12, 18, 30, .94); outline: 2px solid rgba(96, 165, 250, .35); outline-offset: 3px; }
+#sh-dev-notice-launcher .sh-dev-kicker { display:block; color:#83bdff; font-size:10px; font-weight:800; letter-spacing:.12em; margin-bottom:5px; }
+#sh-dev-notice-launcher .sh-dev-title { display:block; font-size:13px; line-height:1.25; font-weight:800; }
+#sh-dev-notice-launcher .sh-dev-status { display:block; margin-top:5px; color:#d1d5db; font-size:10px; letter-spacing:.04em; }
+#sh-dev-notice-backdrop { position:fixed; inset:0; z-index:9998; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(2, 6, 14, .58); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+#sh-dev-notice-backdrop.sh-dev-open { display:flex; }
+#sh-dev-notice-modal { position:relative; width:min(100%, 440px); padding:25px 22px 22px; border:1px solid rgba(96,165,250,.55); border-radius:18px; background:rgba(13, 19, 31, .96); color:#f8fafc; box-shadow:0 24px 80px rgba(0,0,0,.45), inset 0 0 28px rgba(59,130,246,.06); animation:sh-dev-modal-in .22s ease-out; }
+#sh-dev-notice-modal .sh-dev-modal-kicker { margin:0 36px 10px 0; color:#fbbf24; font-size:12px; font-weight:800; letter-spacing:.12em; }
+#sh-dev-notice-modal h2 { margin:0 36px 12px 0; color:#fff; font-size:clamp(20px, 5vw, 25px); line-height:1.25; }
+#sh-dev-notice-modal p { margin:0; color:#d7deea; font-size:15px; line-height:1.65; }
+#sh-dev-notice-modal .sh-dev-close { position:absolute; top:12px; right:12px; display:grid; place-items:center; width:36px; height:36px; border:1px solid rgba(255,255,255,.18); border-radius:50%; background:rgba(255,255,255,.07); color:#fff; font-size:23px; line-height:1; cursor:pointer; }
+#sh-dev-notice-modal .sh-dev-close:hover { background:rgba(255,255,255,.15); }
+body.sh-dev-modal-visible { overflow:hidden; }
+@keyframes sh-dev-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-9px); } }
+@keyframes sh-dev-modal-in { from { opacity:0; transform:translateY(8px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+@media (max-width:600px) {
+  #sh-dev-notice-launcher { right:max(10px, env(safe-area-inset-right)); top:29%; width:104px; min-height:54px; padding:8px; }
+  #sh-dev-notice-launcher .sh-dev-title { font-size:12px; }
+  #sh-dev-notice-modal { padding:23px 18px 19px; }
+  #sh-dev-notice-modal p { font-size:14px; }
+}
+@media (prefers-reduced-motion: reduce) { #sh-dev-notice-launcher, #sh-dev-notice-modal { animation:none; } }

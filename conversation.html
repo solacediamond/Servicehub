@@ -165,6 +165,7 @@
     <meta name="twitter:title" content="ServiceHub — Provider">
     <meta name="twitter:description" content="Discover skilled people, businesses and professionals offering the services you need.">
     <meta name="twitter:image" content="https://servicehub-amber.vercel.app/og-default.jpg">
+    <link rel="stylesheet" href="development-notice.css">
 </head>
 
 <body>
@@ -225,5 +226,6 @@ function openChat(c){chatWindow.innerHTML="";const header=document.createElement
 window.addEventListener("storage",renderList);window.addEventListener("serviceHubLocalChatUpdated",renderList);setStatus("Local device chat",true);renderList();
 })();
 </script>
+    <script src="development-notice.js" defer></script>
 </body>
 </html>

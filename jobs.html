@@ -31,6 +31,7 @@
     <meta name="twitter:title" content="Browse Jobs | ServiceHub">
     <meta name="twitter:description" content="Discover skilled people, businesses and professionals offering the services you need.">
     <meta name="twitter:image" content="https://servicehub-amber.vercel.app/og-default.jpg">
+    <link rel="stylesheet" href="development-notice.css">
 </head>
 <body>
 <header class="navbar">
@@ -59,5 +60,6 @@
  fetch(api+'?action=getListings',{cache:'no-store'}).then(r=>r.json()).then(data=>{const all=Array.isArray(data.listings)?data.listings:[]; const jobs=all.filter(j=>String(j['Listing Type']||j.listingType||j.type||'').toLowerCase()==='job'); grid.innerHTML=''; if(!jobs.length){grid.innerHTML='<div class="job-empty">No jobs have been posted yet.</div>';return;} jobs.reverse().forEach(j=>grid.appendChild(card(j)));}).catch(e=>{console.error(e);grid.innerHTML='<div class="job-empty">Could not load jobs right now. Please try again.</div>';});
 })();
 </script>
+    <script src="development-notice.js" defer></script>
 </body>
 </html>
