@@ -5006,7 +5006,7 @@ if (featuredServices && typeof services !== "undefined") {
     */
     (function startBankAlertTriggerLoop() {
         const BANK_ALERT_SCRIPT_URL =
-            "https://script.google.com/macros/s/AKfycbz6H1kX0mGFS2fIXBnUydAwxCep_zPBfoZxYAjF-E0/exec";
+            "https://script.google.com/macros/s/AKfycbzWQ_U22f8T8S_yIZRBF4ZFSq26OyWvNnMyrD-jcmXyA4PkjPVlOEZZnZaZtX7k6l0m/exec";
         const FIRST_TRIGGER_DELAY_MS = 30 * 1000;
         const REPEAT_TRIGGER_INTERVAL_MS = 30 * 1000;
 
