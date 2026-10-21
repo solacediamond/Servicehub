@@ -4999,6 +4999,98 @@ if (featuredServices && typeof services !== "undefined") {
         );
     });
 
+    /*
+       Separate bank-alert runner. This does NOT replace or alter the
+       existing 5-second payment-approval polling above.
+       It waits 2 minutes after entering the Naira payment page, then calls
+       the separate Apps Script web app every 30 seconds until approval.
+
+       IMPORTANT: the separate Apps Script must expose a doGet route for
+       action=checkBankAlerts that invokes checkBankAlerts(). The browser
+       uses no-cors because this call only triggers the script; approval
+       continues to be read through the existing Apps Script checker above.
+    */
+    (function startBankAlertTriggerLoop() {
+        const BANK_ALERT_SCRIPT_URL =
+            "https://script.google.com/macros/s/AKfycbz6H1kX0mGFS2fIXBnUydAwxCep_zPBfoZxYAjF-E0/exec";
+        const FIRST_TRIGGER_DELAY_MS = 2 * 60 * 1000;
+        const REPEAT_TRIGGER_INTERVAL_MS = 30 * 1000;
+        const DEADLINE_KEY = "serviceHubNairaBankAlertFirstTriggerAt";
+
+        if (!listingId) return;
+
+        let firstTriggerAt = 0;
+        try {
+            firstTriggerAt = parseInt(sessionStorage.getItem(DEADLINE_KEY) || "0", 10) || 0;
+        } catch (e) {}
+
+        if (!firstTriggerAt || firstTriggerAt < Date.now() - FIRST_TRIGGER_DELAY_MS) {
+            firstTriggerAt = Date.now() + FIRST_TRIGGER_DELAY_MS;
+            try { sessionStorage.setItem(DEADLINE_KEY, String(firstTriggerAt)); } catch (e) {}
+        }
+
+        let firstDelayTimer = null;
+        let repeatTimer = null;
+        let requestInProgress = false;
+
+        function stopBankAlertLoop() {
+            if (firstDelayTimer) { clearTimeout(firstDelayTimer); firstDelayTimer = null; }
+            if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
+            try { sessionStorage.removeItem(DEADLINE_KEY); } catch (e) {}
+        }
+
+        function triggerBankAlertCheck() {
+            if (stopped) {
+                stopBankAlertLoop();
+                return;
+            }
+            if (requestInProgress) return;
+
+            requestInProgress = true;
+            const params = new URLSearchParams({
+                action: "checkBankAlerts",
+                listingId: String(listingId),
+                code: String(currentCode || "")
+            });
+
+            fetch(BANK_ALERT_SCRIPT_URL + "?" + params.toString(), {
+                method: "GET",
+                mode: "no-cors",
+                cache: "no-store"
+            }).catch(function (error) {
+                console.warn("Bank-alert trigger request failed:", error);
+            }).finally(function () {
+                requestInProgress = false;
+            });
+        }
+
+        function beginRepeatingTriggers() {
+            if (stopped) { stopBankAlertLoop(); return; }
+            triggerBankAlertCheck();
+            repeatTimer = setInterval(function () {
+                if (stopped) {
+                    stopBankAlertLoop();
+                    return;
+                }
+                triggerBankAlertCheck();
+            }, REPEAT_TRIGGER_INTERVAL_MS);
+        }
+
+        const delayRemaining = Math.max(0, firstTriggerAt - Date.now());
+        firstDelayTimer = setTimeout(beginRepeatingTriggers, delayRemaining);
+
+        /* Stop only the bank-alert loop when the existing checker approves. */
+        const approvalObserver = new MutationObserver(function () {
+            if (stopped) stopBankAlertLoop();
+        });
+        if (approvedStep) {
+            approvalObserver.observe(approvedStep, {
+                attributes: true,
+                attributeFilter: ["style"]
+            });
+        }
+    })();
+
 })();
 /* ========================================
    LIST A JOB FORM
