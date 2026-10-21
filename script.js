@@ -5000,88 +5000,125 @@ if (featuredServices && typeof services !== "undefined") {
     });
 
     /*
-       Separate bank-alert runner. This does NOT replace or alter the
-       existing 5-second payment-approval polling above.
-       It waits 2 minutes after entering the Naira payment page, then calls
-       the separate Apps Script web app every 30 seconds until approval.
-
-       IMPORTANT: the separate Apps Script must expose a doGet route for
-       action=checkBankAlerts that invokes checkBankAlerts(). The browser
-       uses no-cors because this call only triggers the script; approval
-       continues to be read through the existing Apps Script checker above.
+       Separate bank-alert runner. The existing 5-second approval checker
+       remains unchanged. First bank-alert request is made after 30 seconds,
+       then repeats every 30 seconds until approval.
     */
     (function startBankAlertTriggerLoop() {
         const BANK_ALERT_SCRIPT_URL =
             "https://script.google.com/macros/s/AKfycbz6H1kX0mGFS2fIXBnUydAwxCep_zPBfoZxYAjF-E0/exec";
-        const FIRST_TRIGGER_DELAY_MS = 2 * 60 * 1000;
+        const FIRST_TRIGGER_DELAY_MS = 30 * 1000;
         const REPEAT_TRIGGER_INTERVAL_MS = 30 * 1000;
-        const DEADLINE_KEY = "serviceHubNairaBankAlertFirstTriggerAt";
 
         if (!listingId) return;
 
-        let firstTriggerAt = 0;
-        try {
-            firstTriggerAt = parseInt(sessionStorage.getItem(DEADLINE_KEY) || "0", 10) || 0;
-        } catch (e) {}
-
-        if (!firstTriggerAt || firstTriggerAt < Date.now() - FIRST_TRIGGER_DELAY_MS) {
-            firstTriggerAt = Date.now() + FIRST_TRIGGER_DELAY_MS;
-            try { sessionStorage.setItem(DEADLINE_KEY, String(firstTriggerAt)); } catch (e) {}
-        }
-
+        let firstTriggerAt = Date.now() + FIRST_TRIGGER_DELAY_MS;
         let firstDelayTimer = null;
         let repeatTimer = null;
+        let countdownTimer = null;
         let requestInProgress = false;
+        let stoppedLoop = false;
+
+        // Visible status message, added without changing the page's existing markup.
+        const statusBox = document.createElement("div");
+        statusBox.setAttribute("role", "status");
+        statusBox.setAttribute("aria-live", "polite");
+        statusBox.style.cssText = "margin:12px 0;padding:12px 14px;border:1px solid rgba(35,136,255,.45);border-radius:12px;background:rgba(16,21,34,.92);color:#eaf2ff;font-size:14px;line-height:1.5;";
+        statusBox.textContent = "We’ll check for your payment in 30 seconds. Please keep this page open.";
+
+        const paymentCodeElement = document.querySelector("#paymentCode, .payment-code, [data-payment-code]");
+        const mountPoint = paymentCodeElement || document.querySelector("main") || document.body;
+        if (paymentCodeElement && paymentCodeElement.parentNode) {
+            paymentCodeElement.parentNode.insertBefore(statusBox, paymentCodeElement.nextSibling);
+        } else {
+            mountPoint.insertBefore(statusBox, mountPoint.firstChild);
+        }
+
+        function setBankAlertStatus(message, state) {
+            statusBox.textContent = message;
+            statusBox.style.borderColor = state === "error"
+                ? "rgba(255,79,216,.65)"
+                : state === "success" ? "rgba(34,197,94,.65)" : "rgba(35,136,255,.45)";
+        }
 
         function stopBankAlertLoop() {
+            stoppedLoop = true;
             if (firstDelayTimer) { clearTimeout(firstDelayTimer); firstDelayTimer = null; }
             if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
-            try { sessionStorage.removeItem(DEADLINE_KEY); } catch (e) {}
+            if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
         }
 
         function triggerBankAlertCheck() {
-            if (stopped) {
+            if (stopped || stoppedLoop) {
                 stopBankAlertLoop();
                 return;
             }
             if (requestInProgress) return;
-
             requestInProgress = true;
+
             const params = new URLSearchParams({
                 action: "checkBankAlerts",
                 listingId: String(listingId),
                 code: String(currentCode || "")
             });
+            setBankAlertStatus("Contacting ServiceHub’s payment-checking script…", "pending");
 
+            // CORS mode is intentional so a readable Apps Script response can be inspected.
             fetch(BANK_ALERT_SCRIPT_URL + "?" + params.toString(), {
                 method: "GET",
-                mode: "no-cors",
-                cache: "no-store"
+                mode: "cors",
+                cache: "no-store",
+                redirect: "follow"
+            }).then(function (response) {
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                return response.text();
+            }).then(function (text) {
+                let result = null;
+                try { result = JSON.parse(text); } catch (e) {}
+                if (result && result.success === false) {
+                    setBankAlertStatus("Apps Script was contacted, but the bank-alert check failed: " + (result.message || "unknown error"), "error");
+                } else if (result && result.success === true) {
+                    setBankAlertStatus("Apps Script responded and checked bank alerts. No payment approval has been detected yet; we’ll check again in 30 seconds.", "success");
+                } else {
+                    setBankAlertStatus("Apps Script was reached, but returned an unexpected response. We’ll try again in 30 seconds.", "error");
+                }
             }).catch(function (error) {
                 console.warn("Bank-alert trigger request failed:", error);
+                setBankAlertStatus("Could not contact the payment-checking Apps Script. We’ll try again in 30 seconds. Your separate payment-approval checker is still running.", "error");
             }).finally(function () {
                 requestInProgress = false;
             });
         }
 
         function beginRepeatingTriggers() {
-            if (stopped) { stopBankAlertLoop(); return; }
+            if (stopped || stoppedLoop) { stopBankAlertLoop(); return; }
             triggerBankAlertCheck();
             repeatTimer = setInterval(function () {
-                if (stopped) {
-                    stopBankAlertLoop();
-                    return;
-                }
+                if (stopped) { stopBankAlertLoop(); return; }
                 triggerBankAlertCheck();
             }, REPEAT_TRIGGER_INTERVAL_MS);
         }
 
-        const delayRemaining = Math.max(0, firstTriggerAt - Date.now());
-        firstDelayTimer = setTimeout(beginRepeatingTriggers, delayRemaining);
+        // Show a live countdown until the first call.
+        countdownTimer = setInterval(function () {
+            if (stopped || stoppedLoop) { stopBankAlertLoop(); return; }
+            const secondsLeft = Math.max(0, Math.ceil((firstTriggerAt - Date.now()) / 1000));
+            if (secondsLeft > 0) {
+                setBankAlertStatus("We’ll check for your payment in " + secondsLeft + " seconds. Please keep this page open.", "pending");
+            } else if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }, 1000);
 
-        /* Stop only the bank-alert loop when the existing checker approves. */
+        firstDelayTimer = setTimeout(beginRepeatingTriggers, FIRST_TRIGGER_DELAY_MS);
+
+        // Stop only this bank-alert loop when the existing checker approves payment.
         const approvalObserver = new MutationObserver(function () {
-            if (stopped) stopBankAlertLoop();
+            if (stopped) {
+                stopBankAlertLoop();
+                setBankAlertStatus("Payment approval detected. Bank-alert checks have stopped.", "success");
+            }
         });
         if (approvedStep) {
             approvalObserver.observe(approvedStep, {
