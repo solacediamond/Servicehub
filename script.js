@@ -5571,18 +5571,26 @@ if (jobListingForm) {
         };
         persistJob();
 
-        /* Upload media into the created listing, one at a time (same as services). */
+        /* Upload media into the created listing, one at a time.
+           A media-upload problem must not strand a successfully created job
+           before its existing payment step. Keep the selected media metadata
+           and continue to payment if an individual upload fails. */
         if (mediaFiles.length) {
             if (overlayOn) showListingUploadOverlay("Uploading media, please wait for a moment");
+            const failedMediaUploads = [];
             for (const file of mediaFiles) {
                 try {
                     await uploadJobMedia(file, actualListingId);
                 } catch (uploadError) {
-                    throw new Error("Failed to upload " + file.name + ". " + (uploadError.message || "Unknown upload error."));
+                    console.error("ServiceHub job media upload error:", file.name, uploadError);
+                    failedMediaUploads.push(file.name);
                 }
             }
             jobData.media = mediaFiles.map(function (f) { return { name: f.name, type: f.type, size: f.size }; });
             persistJob();
+            if (failedMediaUploads.length) {
+                console.warn("Some job media could not be uploaded; continuing to payment:", failedMediaUploads);
+            }
         }
 
         /*
@@ -5596,7 +5604,8 @@ if (jobListingForm) {
          * Finally enter the EXISTING ServiceHub
          * payment flow.
          */
-        window.location.href = "payment.html";
+        window.location.assign(new URL("payment.html", window.location.href).href);
+        return;
 
     } catch (error) {
 
