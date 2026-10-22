@@ -861,7 +861,7 @@ function serviceHubGetReporterName() {
     return "Anonymous";
 }
 
-function openServiceHubReportModal(cardId, cardTitle) {
+function openServiceHubReportModal(cardId, cardTitle, listingType) {
     const modal = document.getElementById("serviceHubReportModal");
     const reason = document.getElementById("serviceHubReportReason");
     const details = document.getElementById("serviceHubReportDetails");
@@ -872,7 +872,7 @@ function openServiceHubReportModal(cardId, cardTitle) {
     serviceHubReportPendingPayload = null;
     modal.dataset.listingId = String(cardId || serviceId || "").trim();
     modal.dataset.listingTitle = String(cardTitle || (selectedService && selectedService.title) || "Service listing");
-    modal.dataset.listingType = "service";
+    modal.dataset.listingType = String(listingType || "service");
     reason.value = "";
     if (details) details.value = "";
     ["serviceHubReportChoiceStatus", "serviceHubReportDetailsStatus", "serviceHubReportProgressStatus"].forEach(function (id) {

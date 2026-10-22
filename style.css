@@ -4956,3 +4956,15 @@ body.listing-upload-locked {
 @media (prefers-reduced-motion: reduce) {
     .servicehub-report-box.servicehub-report-glass { animation: none; }
 }
+
+
+/* Job-card social controls mirror the service-card placement. */
+.job-card-rendered { position: relative; }
+.job-card-media { position: relative; }
+.job-card-rendered .job-share-btn { top: 12px; left: 12px; }
+.job-card-rendered .job-like-btn { top: 12px; right: 12px; }
+.job-card-rendered .job-card-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-top:2px; }
+.job-card-rendered .job-card-title-row h2 { flex:1; min-width:0; }
+.job-card-rendered .job-report-btn { position:static; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:30px; padding:5px 9px; font-size:11px; line-height:1; white-space:nowrap; }
+.job-card-rendered .job-report-btn svg { width:13px; height:13px; }
+@media (max-width:380px) { .job-card-rendered .job-report-btn { padding:5px 7px; gap:3px; } .job-card-rendered .job-card-title-row { gap:6px; } }
