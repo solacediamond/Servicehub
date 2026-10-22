@@ -134,15 +134,7 @@ async function callServiceHubAppsScript(action, params) {
         return data;
 
     } catch (error) {
-        /* Give a useful message instead of the old local /apps-script 404. */
-        const message = String(error && error.message || error);
-        if (/failed to fetch|networkerror|cors/i.test(message)) {
-            throw new Error(
-                "The Apps Script Web App could not be read directly by this browser. " +
-                "The request URL is correct, but browser cross-origin access may be blocking the response. " +
-                "This is separate from the old localhost /apps-script 404."
-            );
-        }
+        // Preserve the original error; do not replace it with a custom popup message.
         throw error;
     }
 }
@@ -237,14 +229,7 @@ async function postToExistingAppsScript(payload) {
         return data;
 
     } catch (error) {
-        const message = String(error && error.message || error);
-        if (/failed to fetch|networkerror|cors/i.test(message)) {
-            throw new Error(
-                "The listing could not read the Apps Script response from this browser. " +
-                "The POST is now sent to the exact doPost() endpoint, but browser cross-origin " +
-                "access may still be blocking the response."
-            );
-        }
+        // Preserve the original error; do not replace it with a custom popup message.
         throw error;
     }
 }
