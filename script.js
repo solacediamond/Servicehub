@@ -824,6 +824,253 @@ async function shareServiceHubCard(cardId, title) {
     }
 }
 
+/* ========================================
+   SERVICEHUB FEEDBACK / REPORT FLOW
+   Only appears on the opened service detail page.
+======================================== */
+let serviceHubReportPendingPayload = null;
+let serviceHubReportCountdownTimer = null;
+let serviceHubReportCloseTimer = null;
+
+function serviceHubReportShowStage(stageId) {
+    [
+        "serviceHubReportChoiceStage",
+        "serviceHubReportDetailsStage",
+        "serviceHubReportProgressStage",
+        "serviceHubReportSuccessStage"
+    ].forEach(function (id) {
+        const stage = document.getElementById(id);
+        if (stage) stage.hidden = id !== stageId;
+    });
+}
+
+function serviceHubGetReporterName() {
+    try {
+        const savedName = String(localStorage.getItem("customerName") || "").trim();
+        if (savedName) return savedName.slice(0, 120);
+        const rawLogin = localStorage.getItem("serviceHubLogin");
+        if (rawLogin) {
+            const login = JSON.parse(rawLogin);
+            const name = login && (login.name || login.fullName || login.username || login.displayName);
+            if (name) return String(name).trim().slice(0, 120);
+        }
+    } catch (error) {
+        console.warn("Could not read an optional ServiceHub reporter name.", error);
+    }
+    return "Anonymous";
+}
+
+function openServiceHubReportModal(cardId, cardTitle) {
+    const modal = document.getElementById("serviceHubReportModal");
+    const reason = document.getElementById("serviceHubReportReason");
+    const details = document.getElementById("serviceHubReportDetails");
+    if (!modal || !reason) return;
+
+    if (serviceHubReportCountdownTimer) window.clearInterval(serviceHubReportCountdownTimer);
+    if (serviceHubReportCloseTimer) window.clearTimeout(serviceHubReportCloseTimer);
+    serviceHubReportPendingPayload = null;
+    modal.dataset.listingId = String(cardId || serviceId || "").trim();
+    modal.dataset.listingTitle = String(cardTitle || (selectedService && selectedService.title) || "Service listing");
+    modal.dataset.listingType = "service";
+    reason.value = "";
+    if (details) details.value = "";
+    ["serviceHubReportChoiceStatus", "serviceHubReportDetailsStatus", "serviceHubReportProgressStatus"].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = ""; el.className = "servicehub-report-status"; }
+    });
+    const continueButton = document.getElementById("serviceHubReportContinue");
+    const sendButton = document.getElementById("serviceHubReportSend");
+    if (continueButton) continueButton.disabled = false;
+    if (sendButton) sendButton.disabled = false;
+    const retryButton = document.getElementById("serviceHubReportRetry");
+    if (retryButton) retryButton.hidden = true;
+    serviceHubReportShowStage("serviceHubReportChoiceStage");
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    reason.focus();
+}
+
+function closeServiceHubReportModal() {
+    const modal = document.getElementById("serviceHubReportModal");
+    if (!modal) return;
+    if (serviceHubReportCountdownTimer) window.clearInterval(serviceHubReportCountdownTimer);
+    if (serviceHubReportCloseTimer) window.clearTimeout(serviceHubReportCloseTimer);
+    serviceHubReportCountdownTimer = null;
+    serviceHubReportCloseTimer = null;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    serviceHubReportPendingPayload = null;
+}
+
+function serviceHubReportStartSubmit() {
+    const modal = document.getElementById("serviceHubReportModal");
+    const reason = document.getElementById("serviceHubReportReason");
+    const details = document.getElementById("serviceHubReportDetails");
+    const choiceStatus = document.getElementById("serviceHubReportChoiceStatus");
+    const detailsStatus = document.getElementById("serviceHubReportDetailsStatus");
+    if (!modal || !reason) return;
+
+    const listingId = String(modal.dataset.listingId || "").trim();
+    if (!listingId) {
+        const target = choiceStatus || detailsStatus;
+        if (target) {
+            target.textContent = "We couldn't identify this listing. Refresh the page and try again.";
+            target.className = "servicehub-report-status is-error";
+        }
+        return;
+    }
+    if (!reason.value) {
+        if (choiceStatus) {
+            choiceStatus.textContent = "Please choose an option first.";
+            choiceStatus.className = "servicehub-report-status is-error";
+        }
+        reason.focus();
+        return;
+    }
+    const message = String(details && details.value || "").trim();
+    if (reason.value === "Others" && !message) {
+        if (detailsStatus) {
+            detailsStatus.textContent = "Please describe the issue or feedback before sending.";
+            detailsStatus.className = "servicehub-report-status is-error";
+        }
+        if (details) details.focus();
+        return;
+    }
+    const api = String(window.SERVICEHUB_APPS_SCRIPT_URL || "").trim();
+    if (!api) {
+        const target = detailsStatus || choiceStatus;
+        if (target) {
+            target.textContent = "Feedback is temporarily unavailable. Please try again later.";
+            target.className = "servicehub-report-status is-error";
+        }
+        return;
+    }
+
+    serviceHubReportPendingPayload = {
+        action: "submitReport",
+        listingId: listingId,
+        listingTitle: String(modal.dataset.listingTitle || "Service listing"),
+        listingType: String(modal.dataset.listingType || "service"),
+        reason: reason.value,
+        details: message,
+        reporterName: serviceHubGetReporterName(),
+        pageUrl: window.location.href
+    };
+    serviceHubReportSendPayload();
+}
+
+async function serviceHubReportSendPayload() {
+    const modal = document.getElementById("serviceHubReportModal");
+    const title = document.getElementById("serviceHubReportProgressTitle");
+    const message = document.getElementById("serviceHubReportProgressMessage");
+    const status = document.getElementById("serviceHubReportProgressStatus");
+    const retry = document.getElementById("serviceHubReportRetry");
+    if (!modal || !serviceHubReportPendingPayload) return;
+
+    serviceHubReportShowStage("serviceHubReportProgressStage");
+    if (title) title.textContent = "Submitting…";
+    if (message) message.textContent = "Sending your feedback securely. Please wait.";
+    if (status) { status.textContent = ""; status.className = "servicehub-report-status"; }
+    if (retry) retry.hidden = true;
+
+    try {
+        const response = await fetch(String(window.SERVICEHUB_APPS_SCRIPT_URL || "").trim(), {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(serviceHubReportPendingPayload)
+        });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const result = await response.json();
+        if (!result || result.success !== true) {
+            throw new Error((result && result.error) || "The feedback could not be saved.");
+        }
+
+        if (title) title.textContent = "Successfully submitted";
+        if (message) message.textContent = "Thank you for helping make ServiceHub better. Your feedback has been recorded for review.";
+        if (status) {
+            status.textContent = result.reportId ? "Reference: " + result.reportId : "Submission confirmed.";
+            status.className = "servicehub-report-status is-success";
+        }
+        serviceHubReportShowStage("serviceHubReportSuccessStage");
+        let seconds = 3;
+        const countdown = document.getElementById("serviceHubReportCountdown");
+        if (countdown) countdown.textContent = String(seconds);
+        serviceHubReportCountdownTimer = window.setInterval(function () {
+            seconds -= 1;
+            if (countdown) countdown.textContent = String(Math.max(seconds, 0));
+            if (seconds <= 0) {
+                window.clearInterval(serviceHubReportCountdownTimer);
+                serviceHubReportCountdownTimer = null;
+                closeServiceHubReportModal();
+            }
+        }, 1000);
+    } catch (error) {
+        console.error("ServiceHub feedback submission failed:", error);
+        if (title) title.textContent = "Couldn't submit yet";
+        if (message) message.textContent = "We couldn't confirm that your feedback was saved. Check your connection and try again.";
+        if (status) {
+            status.textContent = error && error.message ? error.message : "Please try again.";
+            status.className = "servicehub-report-status is-error";
+        }
+        if (retry) retry.hidden = false;
+    }
+}
+
+(function initServiceHubReportModal() {
+    const closeButton = document.getElementById("serviceHubReportClose");
+    const modal = document.getElementById("serviceHubReportModal");
+    const reason = document.getElementById("serviceHubReportReason");
+    const continueButton = document.getElementById("serviceHubReportContinue");
+    const backButton = document.getElementById("serviceHubReportBack");
+    const sendButton = document.getElementById("serviceHubReportSend");
+    const retryButton = document.getElementById("serviceHubReportRetry");
+
+    if (closeButton) closeButton.addEventListener("click", closeServiceHubReportModal);
+    if (reason) reason.addEventListener("change", function () {
+        const choiceStatus = document.getElementById("serviceHubReportChoiceStatus");
+        if (choiceStatus) { choiceStatus.textContent = ""; choiceStatus.className = "servicehub-report-status"; }
+        if (reason.value === "Others") {
+            serviceHubReportShowStage("serviceHubReportDetailsStage");
+            const details = document.getElementById("serviceHubReportDetails");
+            if (details) details.focus();
+        }
+    });
+    if (modal) {
+        modal.addEventListener("click", function (event) {
+            if (event.target === modal) closeServiceHubReportModal();
+        });
+    }
+    if (continueButton) continueButton.addEventListener("click", function () {
+        const choiceStatus = document.getElementById("serviceHubReportChoiceStatus");
+        if (!reason || !reason.value) {
+            if (choiceStatus) {
+                choiceStatus.textContent = "Please choose an option first.";
+                choiceStatus.className = "servicehub-report-status is-error";
+            }
+            if (reason) reason.focus();
+            return;
+        }
+        if (reason.value === "Others") {
+            serviceHubReportShowStage("serviceHubReportDetailsStage");
+            const details = document.getElementById("serviceHubReportDetails");
+            if (details) details.focus();
+            return;
+        }
+        serviceHubReportStartSubmit();
+    });
+    if (backButton) backButton.addEventListener("click", function () {
+        serviceHubReportShowStage("serviceHubReportChoiceStage");
+        if (reason) reason.focus();
+    });
+    if (sendButton) sendButton.addEventListener("click", serviceHubReportStartSubmit);
+    if (retryButton) retryButton.addEventListener("click", serviceHubReportSendPayload);
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") closeServiceHubReportModal();
+    });
+})();
+
 function buildServiceHubCardElement(cardData, cardId) {
 
     const card = document.createElement("a");
@@ -3261,6 +3508,14 @@ function renderServiceDetailLike(card) {
         shareButton.onclick = function (event) {
             event.preventDefault();
             shareServiceHubCard(String(cardId), card.title);
+        };
+    }
+
+    const reportButton = document.getElementById("serviceDetailReportBtn");
+    if (reportButton) {
+        reportButton.onclick = function (event) {
+            event.preventDefault();
+            openServiceHubReportModal(String(cardId), card.title);
         };
     }
 }

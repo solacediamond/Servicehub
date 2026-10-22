@@ -124,6 +124,20 @@
                     </svg>
                     <span>Share</span>
                 </button>
+
+                <button
+                    type="button"
+                    id="serviceDetailReportBtn"
+                    class="service-report-btn detail-report-btn"
+                    aria-label="Report this listing"
+                    title="Report this listing"
+                >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 21V5"></path>
+                        <path d="M4 5c5-4 9 4 16 0v11c-7 4-11-4-16 0"></path>
+                    </svg>
+                    <span>Report</span>
+                </button>
             </div>
 
 
@@ -209,6 +223,61 @@
 </main>
 
 
+
+
+    <!-- SERVICEHUB FEEDBACK / REPORT MODAL -->
+    <div class="servicehub-report-modal" id="serviceHubReportModal" aria-hidden="true">
+        <div class="servicehub-report-box servicehub-report-glass" role="dialog" aria-modal="true" aria-labelledby="serviceHubReportTitle">
+            <button class="servicehub-report-close" id="serviceHubReportClose" type="button" aria-label="Close feedback form">×</button>
+
+            <section class="servicehub-report-stage" id="serviceHubReportChoiceStage">
+                <p class="servicehub-report-eyebrow">SERVICEHUB FEEDBACK</p>
+                <h2 id="serviceHubReportTitle">Share your feedback</h2>
+                <p class="servicehub-report-intro">Help us understand your experience with this listing. Feedback is linked to this listing ID for review.</p>
+                <label for="serviceHubReportReason">What would you like to tell us?</label>
+                <select id="serviceHubReportReason" name="reason" required>
+                    <option value="">Choose an option</option>
+                    <option value="Spam">Spam</option>
+                    <option value="Fake">Fake / misleading</option>
+                    <option value="Genuine">Genuine</option>
+                    <option value="Loved the service">Loved the service</option>
+                    <option value="Others">Others</option>
+                </select>
+                <p class="servicehub-report-status" id="serviceHubReportChoiceStatus" role="status" aria-live="polite"></p>
+                <button class="servicehub-report-submit" id="serviceHubReportContinue" type="button">Continue <span aria-hidden="true">→</span></button>
+            </section>
+
+            <section class="servicehub-report-stage" id="serviceHubReportDetailsStage" hidden>
+                <p class="servicehub-report-eyebrow">ADDITIONAL DETAILS</p>
+                <h2>Tell us what happened</h2>
+                <p class="servicehub-report-intro">Describe the issue or feedback. Please don't include passwords or sensitive personal information.</p>
+                <label for="serviceHubReportDetails">Your message</label>
+                <textarea id="serviceHubReportDetails" rows="5" maxlength="2000" placeholder="Type your feedback or explain the issue…"></textarea>
+                <p class="servicehub-report-status" id="serviceHubReportDetailsStatus" role="status" aria-live="polite"></p>
+                <div class="servicehub-report-actions">
+                    <button class="servicehub-report-secondary" id="serviceHubReportBack" type="button">Back</button>
+                    <button class="servicehub-report-submit" id="serviceHubReportSend" type="button">Send feedback</button>
+                </div>
+            </section>
+
+            <section class="servicehub-report-stage servicehub-report-progress-stage" id="serviceHubReportProgressStage" hidden aria-live="polite">
+                <span class="servicehub-report-loader" aria-hidden="true"></span>
+                <p class="servicehub-report-eyebrow">SERVICEHUB</p>
+                <h2 id="serviceHubReportProgressTitle">Submitting…</h2>
+                <p class="servicehub-report-intro" id="serviceHubReportProgressMessage">Sending your feedback securely. Please wait.</p>
+                <p class="servicehub-report-status" id="serviceHubReportProgressStatus" role="status"></p>
+                <button class="servicehub-report-submit" id="serviceHubReportRetry" type="button" hidden>Try again</button>
+            </section>
+
+            <section class="servicehub-report-stage servicehub-report-success-stage" id="serviceHubReportSuccessStage" hidden aria-live="polite">
+                <div class="servicehub-report-success-icon" aria-hidden="true">✓</div>
+                <p class="servicehub-report-eyebrow">RECEIVED</p>
+                <h2>Successfully submitted</h2>
+                <p class="servicehub-report-intro">Thank you for helping make ServiceHub better. Your feedback has been recorded for review.</p>
+                <p class="servicehub-report-countdown">Returning to the listing in <strong id="serviceHubReportCountdown">3</strong> seconds…</p>
+            </section>
+        </div>
+    </div>
 
       <!-- CONTACT MODAL -->
 
