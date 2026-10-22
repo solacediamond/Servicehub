@@ -60,6 +60,13 @@
 
         <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
     </header>
+<!-- Temporary safety reminder: scrolls twice, then returns after 10 seconds -->
+<div class="sh-safety-marquee" id="serviceHubSafetyMarquee" role="note" aria-label="ServiceHub safety reminder">
+  <div class="sh-safety-marquee-track" id="serviceHubSafetyMarqueeTrack">
+    <span>⚠ Safety reminder: Service and job listings are not necessarily verified or genuine. Inspect the details, ask questions, and verify the other party before making any payment.</span>
+  </div>
+</div>
+
 
 <!-- Service Details -->
 
@@ -275,6 +282,18 @@
                 <h2>Successfully submitted</h2>
                 <p class="servicehub-report-intro">Thank you for helping make ServiceHub better. Your feedback has been recorded for review.</p>
                 <p class="servicehub-report-countdown">Returning to the listing in <strong id="serviceHubReportCountdown">3</strong> seconds…</p>
+            </section>
+
+            <section class="servicehub-report-stage servicehub-report-failed-stage" id="serviceHubReportFailedStage" hidden aria-live="assertive">
+                <div class="servicehub-report-failed-icon" aria-hidden="true">!</div>
+                <p class="servicehub-report-eyebrow">SUBMISSION NOT CONFIRMED</p>
+                <h2>We couldn't send your feedback</h2>
+                <p class="servicehub-report-intro">Your report may not have reached ServiceHub. Check your connection and try again. If the problem continues, please try later.</p>
+                <p class="servicehub-report-status is-error" id="serviceHubReportFailedStatus" role="status"></p>
+                <div class="servicehub-report-actions servicehub-report-failed-actions">
+                    <button class="servicehub-report-secondary" id="serviceHubReportBackToForm" type="button">Back</button>
+                    <button class="servicehub-report-submit" id="serviceHubReportRetryFailed" type="button">Try again</button>
+                </div>
             </section>
         </div>
     </div>

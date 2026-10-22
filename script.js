@@ -1014,7 +1014,10 @@ async function serviceHubReportSendPayload() {
             status.textContent = error && error.message ? error.message : "Please try again.";
             status.className = "servicehub-report-status is-error";
         }
-        if (retry) retry.hidden = false;
+        const failedStatus = document.getElementById("serviceHubReportFailedStatus");
+        if (failedStatus) failedStatus.textContent = error && error.message ? error.message : "Please check your connection and try again.";
+        serviceHubReportShowStage("serviceHubReportFailedStage");
+        if (retry) retry.hidden = true;
     }
 }
 
@@ -1026,8 +1029,16 @@ async function serviceHubReportSendPayload() {
     const backButton = document.getElementById("serviceHubReportBack");
     const sendButton = document.getElementById("serviceHubReportSend");
     const retryButton = document.getElementById("serviceHubReportRetry");
+    const retryFailedButton = document.getElementById("serviceHubReportRetryFailed");
+    const backToFormButton = document.getElementById("serviceHubReportBackToForm");
 
     if (closeButton) closeButton.addEventListener("click", closeServiceHubReportModal);
+    if (retryFailedButton) retryFailedButton.addEventListener("click", serviceHubReportSendPayload);
+    if (backToFormButton) backToFormButton.addEventListener("click", function () {
+        serviceHubReportShowStage("serviceHubReportChoiceStage");
+        const reasonField = document.getElementById("serviceHubReportReason");
+        if (reasonField) reasonField.focus();
+    });
     if (reason) reason.addEventListener("change", function () {
         const choiceStatus = document.getElementById("serviceHubReportChoiceStatus");
         if (choiceStatus) { choiceStatus.textContent = ""; choiceStatus.className = "servicehub-report-status"; }
@@ -5743,4 +5754,41 @@ function formatTime(timestamp) {
 function scrollMessagesToBottom(container) {
     if (container) container.scrollTop = container.scrollHeight;
 }
+}
+
+/* Safety reminder marquee: two readable right-to-left passes, then a 10-second pause. */
+function initServiceHubSafetyMarquee() {
+    const banner = document.getElementById("serviceHubSafetyMarquee");
+    const track = document.getElementById("serviceHubSafetyMarqueeTrack");
+    if (!banner || !track || banner.dataset.marqueeReady === "true") return;
+    banner.dataset.marqueeReady = "true";
+    let pauseTimer = null;
+    let disposed = false;
+    function startCycle() {
+        if (disposed) return;
+        banner.hidden = false;
+        track.classList.remove("is-running");
+        void track.offsetWidth;
+        track.classList.add("is-running");
+    }
+    track.addEventListener("animationend", function (event) {
+        if (event.target !== track || event.animationName !== "serviceHubSafetyScroll") return;
+        track.classList.remove("is-running");
+        banner.hidden = true;
+        pauseTimer = window.setTimeout(startCycle, 10000);
+    });
+    document.addEventListener("visibilitychange", function () {
+        if (document.hidden && pauseTimer) {
+            window.clearTimeout(pauseTimer);
+            pauseTimer = null;
+        } else if (!document.hidden && banner.hidden && !pauseTimer) {
+            pauseTimer = window.setTimeout(startCycle, 10000);
+        }
+    });
+    startCycle();
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initServiceHubSafetyMarquee, { once: true });
+} else {
+    initServiceHubSafetyMarquee();
 }
