@@ -5520,7 +5520,8 @@ if (jobListingForm) {
             listingId: listingId,
             jobTitle: jobName,
             service: jobName,
-            name: jobName,
+            name: providerName || company,
+            providerName: providerName || company,
             company: company,
             jobType: resolvedJobType,
             expectedQualifications: jobRequirementsText,
@@ -5556,7 +5557,8 @@ if (jobListingForm) {
         jobData.listingId = actualListingId;
         jobData.paymentCode = paymentCode;
         jobData.jobId = actualListingId;
-        jobData.providerName = jobName;
+        jobData.providerName = providerName || company;
+        jobData.name = providerName || company;
 
         const persistJob = function () {
             const json = JSON.stringify(jobData, null, 2);
