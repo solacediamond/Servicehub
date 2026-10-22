@@ -837,7 +837,8 @@ function serviceHubReportShowStage(stageId) {
         "serviceHubReportChoiceStage",
         "serviceHubReportDetailsStage",
         "serviceHubReportProgressStage",
-        "serviceHubReportSuccessStage"
+        "serviceHubReportSuccessStage",
+        "serviceHubReportFailedStage"
     ].forEach(function (id) {
         const stage = document.getElementById(id);
         if (stage) stage.hidden = id !== stageId;
