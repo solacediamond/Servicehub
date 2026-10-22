@@ -2541,8 +2541,8 @@ document.body.classList.remove("menu-open");
                 /* "job" words are added so queries such as "jobs",
                    "hiring" or "video editing vacancy" can reach jobs. */
                 primary: [
-                    pick("Service Name", "serviceName"),
-                    pick("Company", "company"),
+                    pick("Job Title", "jobTitle", "Service Name", "serviceName"),
+                    pick("Provider Name", "providerName", "Provider", "provider", "Name", "name", "Company", "company"),
                     pick("Job Type", "jobType"),
                     "job jobs hiring vacancy opening position work"
                 ].join(" "),
@@ -2566,8 +2566,8 @@ document.body.classList.remove("menu-open");
                 return "";
             };
 
-            const title = pick("Service Name", "serviceName") || "Job";
-            const company = pick("Company", "company");
+            const title = pick("Job Title", "jobTitle", "Service Name", "serviceName") || "Job";
+            const company = pick("Provider Name", "providerName", "Provider", "provider", "Name", "name", "Company", "company");
             const type = pick("Job Type", "jobType") || "Job";
             const req = String(
                 pick("Job Requirements", "jobRequirements", "About", "about")
