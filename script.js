@@ -2541,8 +2541,8 @@ document.body.classList.remove("menu-open");
                 /* "job" words are added so queries such as "jobs",
                    "hiring" or "video editing vacancy" can reach jobs. */
                 primary: [
-                    pick("Service Name", "serviceName"),
-                    pick("Company", "company"),
+                    pick("Job Title", "jobTitle", "Service Name", "serviceName"),
+                    pick("Provider Name", "providerName", "Provider", "provider", "Name", "name", "Company", "company"),
                     pick("Job Type", "jobType"),
                     "job jobs hiring vacancy opening position work"
                 ].join(" "),
@@ -2566,8 +2566,8 @@ document.body.classList.remove("menu-open");
                 return "";
             };
 
-            const title = pick("Service Name", "serviceName") || "Job";
-            const company = pick("Company", "company");
+            const title = pick("Job Title", "jobTitle", "Service Name", "serviceName") || "Job";
+            const company = pick("Provider Name", "providerName", "Provider", "provider", "Name", "name", "Company", "company");
             const type = pick("Job Type", "jobType") || "Job";
             const req = String(
                 pick("Job Requirements", "jobRequirements", "About", "about")
@@ -5520,7 +5520,8 @@ if (jobListingForm) {
             listingId: listingId,
             jobTitle: jobName,
             service: jobName,
-            name: jobName,
+            name: providerName || company,
+            providerName: providerName || company,
             company: company,
             jobType: resolvedJobType,
             expectedQualifications: jobRequirementsText,
@@ -5556,7 +5557,8 @@ if (jobListingForm) {
         jobData.listingId = actualListingId;
         jobData.paymentCode = paymentCode;
         jobData.jobId = actualListingId;
-        jobData.providerName = jobName;
+        jobData.providerName = providerName || company;
+        jobData.name = providerName || company;
 
         const persistJob = function () {
             const json = JSON.stringify(jobData, null, 2);
@@ -5569,18 +5571,26 @@ if (jobListingForm) {
         };
         persistJob();
 
-        /* Upload media into the created listing, one at a time (same as services). */
+        /* Upload media into the created listing, one at a time.
+           A media-upload problem must not strand a successfully created job
+           before its existing payment step. Keep the selected media metadata
+           and continue to payment if an individual upload fails. */
         if (mediaFiles.length) {
             if (overlayOn) showListingUploadOverlay("Uploading media, please wait for a moment");
+            const failedMediaUploads = [];
             for (const file of mediaFiles) {
                 try {
                     await uploadJobMedia(file, actualListingId);
                 } catch (uploadError) {
-                    throw new Error("Failed to upload " + file.name + ". " + (uploadError.message || "Unknown upload error."));
+                    console.error("ServiceHub job media upload error:", file.name, uploadError);
+                    failedMediaUploads.push(file.name);
                 }
             }
             jobData.media = mediaFiles.map(function (f) { return { name: f.name, type: f.type, size: f.size }; });
             persistJob();
+            if (failedMediaUploads.length) {
+                console.warn("Some job media could not be uploaded; continuing to payment:", failedMediaUploads);
+            }
         }
 
         /*
@@ -5594,7 +5604,8 @@ if (jobListingForm) {
          * Finally enter the EXISTING ServiceHub
          * payment flow.
          */
-        window.location.href = "payment.html";
+        window.location.assign(new URL("payment.html", window.location.href).href);
+        return;
 
     } catch (error) {
 
