@@ -9,7 +9,7 @@
 ================================= */
 
 window.SERVICEHUB_BACKEND_URL = "";
-window.SERVICEHUB_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyshp8ls2f-PTWGBaHveiAjDhhuOVxUhcdNjw7OWPVSfLyhSIwNAG4eGerwTH5SktRi/exec";
+window.SERVICEHUB_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOmIbTQIoVuGr3l8yYCxD94itn-S_urxW36sJ1sDI/dev";
 
 
 /* Keep existing diagnostic calls harmless without adding any visible UI. */
@@ -2541,8 +2541,8 @@ document.body.classList.remove("menu-open");
                 /* "job" words are added so queries such as "jobs",
                    "hiring" or "video editing vacancy" can reach jobs. */
                 primary: [
-                    pick("Job Title", "jobTitle", "Service Name", "serviceName"),
-                    pick("Provider Name", "providerName", "Provider", "provider", "Name", "name", "Company", "company"),
+                    pick("Service Name", "serviceName"),
+                    pick("Company", "company"),
                     pick("Job Type", "jobType"),
                     "job jobs hiring vacancy opening position work"
                 ].join(" "),
@@ -2566,8 +2566,8 @@ document.body.classList.remove("menu-open");
                 return "";
             };
 
-            const title = pick("Job Title", "jobTitle", "Service Name", "serviceName") || "Job";
-            const company = pick("Provider Name", "providerName", "Provider", "provider", "Name", "name", "Company", "company");
+            const title = pick("Service Name", "serviceName") || "Job";
+            const company = pick("Company", "company");
             const type = pick("Job Type", "jobType") || "Job";
             const req = String(
                 pick("Job Requirements", "jobRequirements", "About", "about")
@@ -5520,8 +5520,7 @@ if (jobListingForm) {
             listingId: listingId,
             jobTitle: jobName,
             service: jobName,
-            name: providerName || company,
-            providerName: providerName || company,
+            name: jobName,
             company: company,
             jobType: resolvedJobType,
             expectedQualifications: jobRequirementsText,
@@ -5557,8 +5556,7 @@ if (jobListingForm) {
         jobData.listingId = actualListingId;
         jobData.paymentCode = paymentCode;
         jobData.jobId = actualListingId;
-        jobData.providerName = providerName || company;
-        jobData.name = providerName || company;
+        jobData.providerName = jobName;
 
         const persistJob = function () {
             const json = JSON.stringify(jobData, null, 2);
@@ -5571,26 +5569,18 @@ if (jobListingForm) {
         };
         persistJob();
 
-        /* Upload media into the created listing, one at a time.
-           A media-upload problem must not strand a successfully created job
-           before its existing payment step. Keep the selected media metadata
-           and continue to payment if an individual upload fails. */
+        /* Upload media into the created listing, one at a time (same as services). */
         if (mediaFiles.length) {
             if (overlayOn) showListingUploadOverlay("Uploading media, please wait for a moment");
-            const failedMediaUploads = [];
             for (const file of mediaFiles) {
                 try {
                     await uploadJobMedia(file, actualListingId);
                 } catch (uploadError) {
-                    console.error("ServiceHub job media upload error:", file.name, uploadError);
-                    failedMediaUploads.push(file.name);
+                    throw new Error("Failed to upload " + file.name + ". " + (uploadError.message || "Unknown upload error."));
                 }
             }
             jobData.media = mediaFiles.map(function (f) { return { name: f.name, type: f.type, size: f.size }; });
             persistJob();
-            if (failedMediaUploads.length) {
-                console.warn("Some job media could not be uploaded; continuing to payment:", failedMediaUploads);
-            }
         }
 
         /*
@@ -5604,8 +5594,7 @@ if (jobListingForm) {
          * Finally enter the EXISTING ServiceHub
          * payment flow.
          */
-        window.location.assign(new URL("payment.html", window.location.href).href);
-        return;
+        window.location.href = "payment.html";
 
     } catch (error) {
 
