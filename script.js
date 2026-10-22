@@ -8,7 +8,7 @@
    now inlined here directly)
 ================================= */
 
-window.SERVICEHUB_BACKEND_URL = "";
+window.SERVICEHUB_BACKEND_URL = "https://script.google.com/macros/s/AKfycbwOmIbTQIoVuGr3l8yYCxD94itn-S_urxW36sJ1sDI/dev";
 window.SERVICEHUB_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOmIbTQIoVuGr3l8yYCxD94itn-S_urxW36sJ1sDI/dev";
 
 
