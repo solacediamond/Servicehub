@@ -5,7 +5,7 @@ const { URL } = require('url');
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = path.join(__dirname, 'servicehub');
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyshp8ls2f-PTWGBaHveiAjDhhuOVxUhcdNjw7OWPVSfLyhSIwNAG4eGerwTH5SktRi/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5A8etpNb1sL8aLLBZf5cuB2v-QZHioXAMRMFHUSaZchoxnca4dJ4sSaC57L23M4Fu/exec';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
