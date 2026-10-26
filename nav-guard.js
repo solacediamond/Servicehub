@@ -191,6 +191,79 @@
     if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
   });
 
+  /* ---------- 3. LOGO = HOME + FRESH HISTORY ----------
+   * Tapping the ServiceHub logo goes to the homepage AND makes the homepage the
+   * start of the history: pressing back afterwards no longer returns to the pages
+   * visited before the logo was tapped.
+   *
+   * A browser cannot delete history entries, so the homepage keeps a hidden extra
+   * entry in front of it and steps forward again whenever back lands behind it.
+   * Opening other pages from the homepage and coming back still works normally.
+   * It only switches on after the logo has been tapped (for that browser tab), so
+   * a first visit to the homepage behaves as usual.
+   */
+  var FLOOR_KEY = "serviceHubHomeFloor";
+
+  function isHome() {
+    var p = page();
+    return p === "index.html" || p === "index";
+  }
+  function floorOn() {
+    try { return sessionStorage.getItem(FLOOR_KEY) === "1"; } catch (_) { return false; }
+  }
+  function st() { return history.state && typeof history.state === "object" ? history.state : null; }
+  function atBase() { var s = st(); return !!(s && s.shHomeBase); }
+  function atFloor() { var s = st(); return !!(s && s.shHomeFloor); }
+
+  /* Adds the hidden entry. Needs a real tap/click/key press, because browsers
+     skip history entries a page adds without any user action. */
+  function armHomeFloor() {
+    if (!isHome() || !floorOn() || atFloor() || atBase()) return;
+    try {
+      var keep = st() || {};
+      var base = {}; for (var k in keep) base[k] = keep[k];
+      base.shHomeBase = 1;
+      history.replaceState(base, "", location.href);
+      history.pushState({ shHomeFloor: 1 }, "", location.href);
+    } catch (_) {}
+  }
+
+  /* Landed on the entry behind the hidden one: step forward again. */
+  function holdHomeFloor() {
+    if (!isHome() || !floorOn() || !atBase()) return;
+    history.go(1);
+    setTimeout(function () {
+      if (atBase()) {
+        try { history.pushState({ shHomeFloor: 1 }, "", location.href); } catch (_) {}
+      }
+    }, 300);
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var a = t && t.closest ? t.closest("a.logo") : null;
+    if (!a) return;
+    try { sessionStorage.setItem(FLOOR_KEY, "1"); } catch (_) {}
+    if (isHome()) {
+      /* already home: no new "#" entry, just back to the top, and switch it on now */
+      e.preventDefault();
+      armHomeFloor();
+      try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) { window.scrollTo(0, 0); }
+    }
+  }, true);
+
+  if (isHome()) {
+    var gestures = ["pointerup", "touchend", "click", "keydown"];
+    var onGesture = function () {
+      gestures.forEach(function (g) { document.removeEventListener(g, onGesture, true); });
+      armHomeFloor();
+    };
+    gestures.forEach(function (g) { document.addEventListener(g, onGesture, true); });
+    window.addEventListener("popstate", holdHomeFloor);
+    window.addEventListener("pageshow", holdHomeFloor);
+    holdHomeFloor();
+  }
+
   window.serviceHubNavGuard = {
     markPaymentConfirmed: markConfirmed,
     resetStuckUi: resetStuckUi
