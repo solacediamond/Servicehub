@@ -1,6 +1,10 @@
 /* ServiceHub "Support & Feedback" button
  *
- * - Round glass button (bottom-left) labelled "Support & Feedback".
+ * - Lives in the site's menu, never floating over the page:
+ *     phones (portrait):  a round glass button in the empty space at the top-right of the
+ *                         dropdown menu, next to "Explore" (nothing else moves)
+ *     wide / landscape:   a pill button at the end of the menu bar links
+ *   Pages without the site menu (e.g. provider.html) simply do not show it.
  * - Tap it: glass notification-style cards float over the site.
  *
  *     Feedback        -> "Talk to team" -> Suggestion | Complaint -> text box -> Google Sheet
@@ -52,23 +56,43 @@
    * Styles
    * ------------------------------------------------------------------ */
   var css = [
-    /* ---- the round button ---- */
-    ".shsd-btn{position:fixed;z-index:9980;left:max(14px,env(safe-area-inset-left));",
-    "bottom:calc(88px + env(safe-area-inset-bottom,0px));width:78px;height:78px;border-radius:50%;padding:0;margin:0;",
-    "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:#fff;",
+    /* ---- the menu button (shared look) ---- */
+    ".shsd-btn{box-sizing:border-box;margin:0;padding:0;cursor:pointer;color:#fff;flex:none;display:flex;align-items:center;justify-content:center;",
     "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,Arial,sans-serif;",
     "background:linear-gradient(150deg,rgba(255,255,255,.30),rgba(255,255,255,.05) 55%,rgba(255,255,255,.12)),rgba(35,136,255,.42);",
     "-webkit-backdrop-filter:blur(14px) saturate(190%);backdrop-filter:blur(14px) saturate(190%);",
     "border:1px solid rgba(255,255,255,.38);",
-    "box-shadow:inset 0 1.5px 1px rgba(255,255,255,.6),inset 0 -2px 6px rgba(255,255,255,.1),0 10px 28px rgba(0,0,0,.4),0 0 0 4px rgba(35,136,255,.14);",
-    "-webkit-tap-highlight-color:transparent;animation:shsd-bob 4.4s ease-in-out infinite;",
-    "transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}",
-    ".shsd-btn:active{transform:scale(.93)}",
+    "box-shadow:inset 0 1.5px 1px rgba(255,255,255,.6),inset 0 -2px 6px rgba(255,255,255,.1),0 8px 22px rgba(0,0,0,.35),0 0 0 3px rgba(35,136,255,.14);",
+    "-webkit-tap-highlight-color:transparent;transition:transform .2s cubic-bezier(.34,1.56,.64,1),filter .2s ease}",
+    ".shsd-btn:active{transform:scale(.94)}",
     ".shsd-btn:focus-visible{outline:3px solid rgba(255,255,255,.85);outline-offset:3px}",
-    ".shsd-btn.shsd-hide{opacity:0;pointer-events:none;transform:scale(.8)}",
-    ".shsd-btn svg{width:23px;height:23px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}",
-    ".shsd-btn span{display:block;font-size:10px;line-height:1.05;font-weight:800;letter-spacing:.1px;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.5)}",
-    "@keyframes shsd-bob{0%,100%{translate:0 0}50%{translate:0 -3px}}",
+    ".shsd-btn svg{flex:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}",
+    ".shsd-btn span{display:block;font-weight:800;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.5);white-space:nowrap}",
+
+    /* phones, portrait: round button in the free space at the top-right of the dropdown */
+    "@media (orientation:portrait) and (max-width:767px){",
+    ".shsd-btn{position:absolute;top:16px;right:5%;z-index:3;width:84px;height:84px;border-radius:50%;flex-direction:column;gap:4px}",
+    ".shsd-btn svg{width:25px;height:25px}",
+    ".shsd-btn span{font-size:10.5px;line-height:1.08;letter-spacing:.1px}}",
+
+    /* wide screens and landscape: pill at the end of the menu bar links */
+    "@media (orientation:landscape),(min-width:768px){",
+    ".shsd-btn{position:static;height:40px;padding:0 16px 0 12px;margin-left:10px;border-radius:999px;flex-direction:row;gap:8px}",
+    ".shsd-btn svg{width:19px;height:19px}",
+    ".shsd-btn span{font-size:14px;line-height:1;letter-spacing:.1px}",
+    ".shsd-br{display:none}}",
+    "@media (orientation:landscape) and (max-width:920px),(orientation:landscape) and (max-height:500px){",
+    ".shsd-btn{height:32px;padding:0 11px 0 9px;margin-left:4px;gap:6px}",
+    ".shsd-btn svg{width:15px;height:15px}",
+    ".shsd-btn span{font-size:12px}}",
+    /* medium widths (small tablets / narrow windows): keep the bar from getting crowded */
+    "@media (min-width:960px) and (max-width:1239px){.shsd-btn{width:32px;height:32px;padding:0;margin-left:-18px;border-radius:50%}",
+    ".shsd-btn svg{width:17px;height:17px}",
+    ".shsd-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}",
+    /* narrow tablets (768-959): the bar has no spare room, so the pill hangs from the bar's lower edge at the right instead of squeezing the links */
+    "@media (min-width:768px) and (max-width:959px){.shsd-btn{position:absolute;top:calc(100% + 8px);right:5%;margin:0;height:34px;padding:0 12px 0 10px;gap:6px;z-index:2}",
+    ".shsd-btn svg{width:16px;height:16px}.shsd-btn span{font-size:12.5px}}",
+    "@media (hover:hover){.shsd-btn:hover{filter:brightness(1.14)}}",
 
     /* ---- overlay ---- */
     ".shsd-ov{position:fixed;inset:0;z-index:2147482400;opacity:0;visibility:hidden;",
@@ -169,7 +193,16 @@
     "@keyframes shsd-shim{from{background-position:200% 0}to{background-position:-200% 0}}",
     ".shsd-retry{margin-top:12px}",
 
-    "@media (prefers-reduced-motion:reduce){.shsd-btn,.shsd-item,.shsd-ok,.shsd-skel::after{animation:none!important}",
+    /* wide screens */
+    "@media (min-width:768px){.shsd-stack{max-width:460px}.shsd-title{font-size:33px}.shsd-sub{font-size:15.5px}",
+    ".shsd-card{padding:17px 18px;gap:15px;border-radius:24px}.shsd-tile{width:50px;height:50px;border-radius:14px}.shsd-tile svg{width:25px;height:25px}",
+    ".shsd-txt b{font-size:17.5px}.shsd-txt small{font-size:14.5px}.shsd-form,.shsd-person{padding:18px}.shsd-ta{min-height:180px}}",
+    "@media (hover:hover){button.shsd-card:hover,a.shsd-card:hover{filter:brightness(1.14);transform:translateY(-2px)}",
+    ".shsd-round:hover{filter:brightness(1.2)}.shsd-chan:hover{background:rgba(255,255,255,.13)}.shsd-send:hover:not(:disabled){filter:brightness(1.08)}}",
+    /* short screens (landscape phones) */
+    "@media (max-height:520px){.shsd-scroll{padding-top:10px;padding-bottom:12px}.shsd-bar{margin-bottom:2px}.shsd-title{font-size:22px}.shsd-sub{display:none}",
+    ".shsd-card{padding:10px 12px}.shsd-ta{min-height:96px}.shsd-ok{width:46px;height:46px;margin-bottom:8px}}",
+    "@media (prefers-reduced-motion:reduce){.shsd-item,.shsd-ok,.shsd-skel::after{animation:none!important}",
     ".shsd-ov{transition:none}}",
     "@media print{.shsd-btn,.shsd-ov{display:none!important}}"
   ].join("");
@@ -248,8 +281,9 @@
   var btn = h("button", "shsd-btn");
   btn.type = "button";
   btn.setAttribute("aria-haspopup", "dialog");
+  btn.title = "Support & Feedback";
   btn.setAttribute("aria-label", "Support and feedback. Open help options");
-  btn.innerHTML = IC.chat + "<span>Support &amp;<br>Feedback</span>";
+  btn.innerHTML = IC.chat + '<span>Support &amp; <br class="shsd-br">Feedback</span>';
 
   /* ------------------------------------------------------------------ *
    * Overlay (built the first time it is needed)
@@ -288,7 +322,9 @@
     stack.classList.remove("shsd-leaving");
     prevOverflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
-    btn.classList.add("shsd-hide");
+    // phone dropdown: fold it away so the overlay is the only thing on screen
+    var panel = document.querySelector(".nav-panel.mobile-open"), mb = document.querySelector(".menu-btn");
+    if (panel && mb) mb.click();
     document.addEventListener("keydown", onKey);
     goRoot(true);
     requestAnimationFrame(function () {
@@ -306,7 +342,6 @@
     ov.classList.remove("shsd-on");
     document.documentElement.style.overflow = prevOverflow;
     document.removeEventListener("keydown", onKey);
-    btn.classList.remove("shsd-hide");
     try { btn.focus({ preventScroll: true }); } catch (e) {}
     // clear the cards once the fade finishes so the next open starts fresh
     setTimeout(function () { if (!isOpen && stack) stack.innerHTML = ""; }, 320);
@@ -619,7 +654,12 @@
    * ------------------------------------------------------------------ */
   btn.addEventListener("click", open);
 
-  function boot() { document.body.appendChild(btn); }
-  if (document.body) boot();
-  else document.addEventListener("DOMContentLoaded", boot);
+  // Goes inside the site's menu (".nav-links"), so it appears in the dropdown on phones and
+  // in the menu bar on wide screens. No menu on the page -> nothing is added.
+  function boot() {
+    var links = document.querySelector(".nav-panel .nav-links");
+    if (links && !btn.parentNode) links.appendChild(btn);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 })();
