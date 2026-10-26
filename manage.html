@@ -231,14 +231,13 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 
     <div class="sound-group">
       <h3>New-message notification</h3>
-      <label class="sound-option"><input type="radio" name="notifySound" value="short"><span class="sound-name">Short notification</span><small>Quick beep</small><button type="button" class="sound-preview" data-preview="short" aria-label="Preview short notification"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
-      <label class="sound-option"><input type="radio" name="notifySound" value="ring"><span class="sound-name">Classic ringtone</span><small>Long repeating ring</small><button type="button" class="sound-preview" data-preview="ring" aria-label="Preview classic ringtone"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
-      <label class="sound-option"><input type="radio" name="notifySound" value="digital"><span class="sound-name">Digital ringtone</span><small>Longer modern alert</small><button type="button" class="sound-preview" data-preview="digital" aria-label="Preview digital ringtone"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
-      <label class="sound-option"><input type="radio" name="notifySound" value="soft"><span class="sound-name">Soft ringtone</span><small>Long gentle chime</small><button type="button" class="sound-preview" data-preview="soft" aria-label="Preview soft ringtone"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
-      <label class="sound-option"><input type="radio" name="notifySound" value="pulse"><span class="sound-name">Pulse</span><small>Short three-note alert</small><button type="button" class="sound-preview" data-preview="pulse" aria-label="Preview pulse"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
-      <label class="sound-option"><input type="radio" name="notifySound" value="song1"><span class="sound-name">Aurora Song</span><small>18-second musical ringtone</small><button type="button" class="sound-preview" data-preview="song1" aria-label="Preview Aurora Song"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
-      <label class="sound-option"><input type="radio" name="notifySound" value="song2"><span class="sound-name">Neon Journey</span><small>20-second musical ringtone</small><button type="button" class="sound-preview" data-preview="song2" aria-label="Preview Neon Journey"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
-      <label class="sound-option"><input type="radio" name="notifySound" value="oldPhone"><span class="sound-name">Old Telephone Bell</span><small>Classic mechanical trrring-trrring</small><button type="button" class="sound-preview" data-preview="oldPhone" aria-label="Preview old telephone bell"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <p class="sound-note" style="margin:0 0 4px"><strong>Short notifications</strong> — about 1 second</p>
+      <label class="sound-option"><input type="radio" name="notifySound" value="crystal"><span class="sound-name">Crystal Drip</span><small>Two glass-bell drops with a sparkle</small><button type="button" class="sound-preview" data-preview="crystal" aria-label="Preview Crystal Drip"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="sonar"><span class="sound-name">Hub Sonar</span><small>Underwater-style ping with a soft echo</small><button type="button" class="sound-preview" data-preview="sonar" aria-label="Preview Hub Sonar"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="zap"><span class="sound-name">Zap Chime</span><small>Fast rising electric chirp</small><button type="button" class="sound-preview" data-preview="zap" aria-label="Preview Zap Chime"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <p class="sound-note" style="margin:14px 0 4px"><strong>Long ringtones</strong> — about 10 seconds</p>
+      <label class="sound-option"><input type="radio" name="notifySound" value="beacon"><span class="sound-name">Neon Beacon</span><small>Glowing synth arpeggio over a deep bass</small><button type="button" class="sound-preview" data-preview="beacon" aria-label="Preview Neon Beacon"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
+      <label class="sound-option"><input type="radio" name="notifySound" value="gamelan"><span class="sound-name">Midnight Gamelan</span><small>Interlocking metal bells and a rolling gong</small><button type="button" class="sound-preview" data-preview="gamelan" aria-label="Preview Midnight Gamelan"><svg viewBox="0 0 24 24"><path d="M11 5l-5 4H3v6h3l5 4zM15 9.5a4 4 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button></label>
     </div>
 
     <div class="sound-group">
@@ -298,7 +297,7 @@ var chat={
   var SOUND_DB_NAME="ServiceHubNotificationSounds";
   var SOUND_DB_VERSION=1;
   var SOUND_STORE="sounds";
-  var soundSettings={type:"short",customData:"",customBlob:null,customName:""};
+  var soundSettings={type:"crystal",customData:"",customBlob:null,customName:""};
   var audioCtx=null, customAudio=null, customObjectUrl="";
   var lastUnreadSnapshot={};
   var lastThreadMessageId=null;
@@ -355,7 +354,12 @@ var chat={
     soundSettingsReady=(function(){
       try{
         var s=JSON.parse(localStorage.getItem(SOUND_KEY)||"{}");
-        if(s&&["short","ring","digital","soft","pulse","song1","song2","oldPhone","custom"].indexOf(s.type)>-1)soundSettings.type=s.type;
+        if(s){
+          /* Older saved choices are mapped onto the new ServiceHub sound set. */
+          var LEGACY_SOUNDS={short:"crystal",pulse:"zap",soft:"crystal",ring:"beacon",digital:"beacon",song1:"beacon",song2:"gamelan",oldPhone:"gamelan"};
+          if(LEGACY_SOUNDS[s.type])s.type=LEGACY_SOUNDS[s.type];
+          if(["crystal","sonar","zap","beacon","gamelan","custom"].indexOf(s.type)>-1)soundSettings.type=s.type;
+        }
       }catch(_){}
 
       /* IndexedDB stores the actual audio file safely instead of putting a
@@ -440,29 +444,123 @@ var chat={
     o.start(t0);o.stop(t0+duration+0.04);
   }
 
+  /* ---- ServiceHub signature sounds ----
+     Built with Web Audio (no audio files): inharmonic bell partials, FM
+     synthesis, a pitch-swept sonar ping and gamelan-style metal tuning, all
+     with a soft echo. These timbres are deliberately unlike the stock tones on
+     phones, so a ServiceHub alert is recognisable on sight... or on sound. */
+  var currentBus=null;
+  function stopAllSounds(){
+    var bus=currentBus;currentBus=null;
+    if(bus){
+      try{var g0=bus.out.gain,n=audioCtx.currentTime;g0.cancelScheduledValues(n);g0.setValueAtTime(g0.value,n);g0.linearRampToValueAtTime(0.0001,n+0.03)}catch(_){}
+      setTimeout(function(){
+        bus.srcs.forEach(function(o){try{o.stop()}catch(_){}});
+        try{bus.out.disconnect()}catch(_){}
+        try{bus.input.disconnect()}catch(_){}
+      },60);
+    }
+    if(customAudio){try{customAudio.pause();customAudio.currentTime=0}catch(_){}}
+  }
+  function makeBus(){
+    var ctx=ensureAudio();if(!ctx)return null;
+    stopAllSounds(); /* only the sound touched last may play */
+    var out=ctx.createGain();out.gain.value=0.9;
+    var comp=ctx.createDynamicsCompressor();
+    comp.threshold.value=-14;comp.knee.value=18;comp.ratio.value=5;comp.attack.value=0.004;comp.release.value=0.25;
+    var input=ctx.createGain();
+    var delay=ctx.createDelay(1.0);delay.delayTime.value=0.27;
+    var fb=ctx.createGain();fb.gain.value=0.36;
+    var wet=ctx.createGain();wet.gain.value=0.30;
+    var lp=ctx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=3600;
+    input.connect(out);
+    input.connect(delay);delay.connect(lp);lp.connect(fb);fb.connect(delay);lp.connect(wet);wet.connect(out);
+    out.connect(comp);comp.connect(ctx.destination);
+    currentBus={input:input,out:out,srcs:[]};
+    return currentBus;
+  }
+  function envGain(ctx,t0,peak,attack,dur){
+    var g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak,0.0002),t0+attack);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    return g;
+  }
+  /* metallic bell: inharmonic partials, higher partials die away faster */
+  function bell(bus,f,start,dur,vol){
+    var ctx=audioCtx,t0=ctx.currentTime+start;
+    [[1,1,1],[2.76,.42,.6],[5.4,.2,.36],[8.93,.08,.2]].forEach(function(p){
+      var o=ctx.createOscillator();o.type="sine";o.frequency.value=f*p[0];
+      var g=envGain(ctx,t0,vol*p[1],.004,dur*p[2]);
+      o.connect(g);g.connect(bus.input);bus.srcs.push(o);o.start(t0);o.stop(t0+dur*p[2]+.05);
+    });
+  }
+  /* FM voice: carrier + decaying modulator = glassy electric-piano pluck */
+  function fmv(bus,f,start,dur,vol,ratio,index){
+    var ctx=audioCtx,t0=ctx.currentTime+start;
+    var c=ctx.createOscillator(),m=ctx.createOscillator(),mg=ctx.createGain();
+    c.type="sine";m.type="sine";c.frequency.value=f;m.frequency.value=f*ratio;
+    mg.gain.setValueAtTime(f*index,t0);mg.gain.exponentialRampToValueAtTime(Math.max(f*.02,1),t0+dur*.7);
+    m.connect(mg);mg.connect(c.frequency);
+    var g=envGain(ctx,t0,vol,.006,dur);
+    c.connect(g);g.connect(bus.input);
+    bus.srcs.push(c,m);c.start(t0);m.start(t0);c.stop(t0+dur+.05);m.stop(t0+dur+.05);
+  }
+  function sweep(bus,f0,f1,start,sweepTime,dur,vol){
+    var ctx=audioCtx,t0=ctx.currentTime+start;
+    var o=ctx.createOscillator();o.type="sine";
+    o.frequency.setValueAtTime(f0,t0);o.frequency.exponentialRampToValueAtTime(f1,t0+sweepTime);
+    var g=envGain(ctx,t0,vol,.005,dur);
+    o.connect(g);g.connect(bus.input);bus.srcs.push(o);o.start(t0);o.stop(t0+dur+.05);
+  }
+  function mtof(n){return 440*Math.pow(2,(n-69)/12)}
+  function slendro(d){return 440*Math.pow(2,d/5)}
+
   function playBuiltIn(type){
-    if(type==="ring"){
-      [0,0.16,0.32,0.48,1.05,1.21,1.37,1.53,2.10,2.26,2.42,2.58].forEach(function(t,i){var f=i%4<2?880:660;tone(f,t,.125,.34,"sine");tone(f*2,t,.09,.12,"triangle")});
-    }else if(type==="digital"){
-      [0,0.12,0.24,0.48,0.60,0.72,0.96,1.08,1.20,1.44,1.56,1.68,1.92,2.04,2.16].forEach(function(t,i){var f=i%3===0?1047:(i%3===1?784:988);tone(f,t,.095,.34,"square");tone(f*2,t,.065,.10,"triangle")});
-    }else if(type==="soft"){
-      [0,0.18,0.36,0.82,1.00,1.18,1.64,1.82,2.00,2.46,2.64,2.82].forEach(function(t,i){var f=i%3===0?740:(i%3===1?880:988);tone(f,t,.16,.31,"sine");tone(f*2,t,.10,.09,"triangle")});
-    }else if(type==="pulse"){
-      tone(820,0,.10,.30,"triangle");tone(980,.12,.10,.30,"triangle");tone(820,.24,.15,.30,"triangle");tone(1640,.12,.055,.08,"sine");
-    }else if(type==="song1"){
-      var melody1=[[523.25,0],[659.25,.32],[783.99,.64],[659.25,.96],[587.33,1.35],[698.46,1.67],[880,1.99],[698.46,2.31],[523.25,2.70],[659.25,3.02],[783.99,3.34],[987.77,3.66],[880,4.05],[783.99,4.37],[659.25,4.69],[523.25,5.01],[659.25,5.70],[783.99,6.02],[1046.50,6.34],[783.99,6.66],[698.46,7.05],[880,7.37],[1046.50,7.69],[880,8.01],[659.25,8.40],[783.99,8.72],[987.77,9.04],[1174.66,9.36],[1046.50,9.75],[880,10.07],[783.99,10.39],[659.25,10.71],[523.25,11.40],[659.25,11.72],[783.99,12.04],[659.25,12.36],[587.33,12.75],[698.46,13.07],[880,13.39],[698.46,13.71],[523.25,14.10],[659.25,14.42],[783.99,14.74],[987.77,15.06],[783.99,15.45],[659.25,15.77],[523.25,16.09],[783.99,16.41],[1046.50,16.80],[783.99,17.12],[659.25,17.44],[523.25,17.76]];
-      melody1.forEach(function(n){tone(n[0],n[1],.27,.34,"sine");tone(n[0]*2,n[1]+.015,.12,.075,"triangle")});
-      [0,1.35,2.70,4.05,5.70,7.05,8.40,9.75,11.40,12.75,14.10,15.45,16.80].forEach(function(t){tone(130.81,t,.38,.10,"triangle")});
-    }else if(type==="song2"){
-      var melody2=[[392,0],[494,.25],[587.33,.50],[659.25,.75],[587.33,1.00],[494,1.25],[392,1.50],[440,1.90],[523.25,2.15],[659.25,2.40],[783.99,2.65],[659.25,2.90],[523.25,3.15],[440,3.40],[392,3.80],[494,4.05],[587.33,4.30],[783.99,4.55],[880,4.80],[783.99,5.05],[587.33,5.30],[494,5.55],[523.25,5.95],[659.25,6.20],[783.99,6.45],[987.77,6.70],[783.99,6.95],[659.25,7.20],[523.25,7.45],[440,7.85],[523.25,8.10],[659.25,8.35],[880,8.60],[1046.50,8.85],[880,9.10],[659.25,9.35],[523.25,9.60],[392,10.00],[494,10.25],[587.33,10.50],[659.25,10.75],[587.33,11.00],[494,11.25],[392,11.50],[440,11.90],[523.25,12.15],[659.25,12.40],[783.99,12.65],[659.25,12.90],[523.25,13.15],[440,13.40],[392,13.80],[494,14.05],[587.33,14.30],[783.99,14.55],[880,14.80],[783.99,15.05],[587.33,15.30],[494,15.55],[523.25,15.95],[659.25,16.20],[783.99,16.45],[987.77,16.70],[1174.66,16.95],[987.77,17.20],[783.99,17.45],[659.25,17.70],[523.25,18.00],[659.25,18.35],[783.99,18.70],[1046.50,19.05],[783.99,19.40]];
-      melody2.forEach(function(n){tone(n[0],n[1],.21,.34,"triangle");tone(n[0]*2,n[1]+.012,.09,.07,"sine")});
-      [0,1.9,3.8,5.95,7.85,10,11.9,13.8,15.95,18].forEach(function(t){tone(98,t,.30,.11,"sine")});
-    }else if(type==="oldPhone"){
-      var cycles=[0,1.45,2.90,4.35,5.80,7.25,8.70,10.15,11.60,13.05];
-      cycles.forEach(function(t){[0,.13].forEach(function(off,j){var base=j===0?930:760;tone(base,t+off,.22,.39,"square");tone(base*2.03,t+off+.008,.18,.16,"triangle");tone(base*3.01,t+off+.014,.13,.10,"sine");tone(base*.51,t+off,.26,.16,"sine")})});
-      [14.65,14.78,14.91].forEach(function(t,i){var f=i===1?760:930;tone(f,t,.24,.39,"square");tone(f*2.03,t+.008,.18,.16,"triangle");tone(f*3.01,t+.014,.13,.10,"sine");tone(f*.51,t,.27,.16,"sine")});
+    var bus=makeBus();if(!bus)return;
+    if(type==="sonar"){
+      sweep(bus,2100,1350,0,.10,.75,.5);
+      sweep(bus,4200,2700,0,.10,.25,.05);
+      sweep(bus,2100,1350,.34,.10,.55,.24);
+    }else if(type==="zap"){
+      [784,880,988,1109,1245].forEach(function(f,i){fmv(bus,f,i*.075,i===4?.7:.22,i===4?.34:.26,3.5,2.2)});
+      bell(bus,2489,.36,.7,.10);
+    }else if(type==="beacon"){
+      /* D Lydian — four bars of glowing arpeggio over a deep FM bass */
+      var bars=[
+        {root:38,arp:[62,66,69,73,76,73,69,66]},
+        {root:35,arp:[59,62,66,69,74,69,66,62]},
+        {root:31,arp:[67,71,74,78,79,78,74,71]},
+        {root:33,arp:[64,69,73,76,81,76,73,69]}
+      ];
+      bars.forEach(function(b,bi){
+        var t=bi*2.2;
+        fmv(bus,mtof(b.root),t,2.1,.30,1,1.4);
+        b.arp.forEach(function(n,i){fmv(bus,mtof(n),t+i*.275,.55,i===4?.27:.2,2,1.7)});
+        fmv(bus,mtof(b.arp[4]+12),t+.01,1.4,.07,2,1.0);
+      });
+      bell(bus,mtof(86),8.8,2.6,.26);bell(bus,mtof(74),8.8,2.6,.16);fmv(bus,mtof(38),8.8,2.6,.26,1,1.4);
+    }else if(type==="gamelan"){
+      /* slendro-style five-note tuning, two interlocking players, rolling gong */
+      var A=[0,2,3,2,4,3,2,0,1,2,4,3,2,1,0,null];
+      var cyc=[0,1,0];
+      cyc.forEach(function(shift,ci){
+        var t0=ci*3.2;
+        A.forEach(function(d,i){
+          if(d===null)return;
+          var t=t0+i*.2;
+          bell(bus,slendro(d+shift),t,.9,.24);
+          if(i%2===1)bell(bus,slendro(d+shift+5),t+.1,.55,.12);
+        });
+        bell(bus,slendro(-10),t0,3.0,.30);
+        bell(bus,slendro(-5),t0+1.6,1.4,.16);
+      });
+      bell(bus,slendro(5),9.6,2.0,.22);bell(bus,slendro(0),9.6,2.4,.18);bell(bus,slendro(-10),9.6,3.2,.30);
     }else{
-      tone(1040,0,.12,.30,"sine");tone(2080,.018,.075,.08,"triangle");
+      /* crystal (default) */
+      bell(bus,1568,0,.9,.30);
+      bell(bus,1175,.14,1.0,.26);
+      bell(bus,2349,.30,.8,.12);
     }
   }
 
@@ -479,7 +577,7 @@ var chat={
         source=soundSettings.customData;
       }
       if(!source)return Promise.reject(new Error("No custom sound is available."));
-      if(customAudio){try{customAudio.pause();customAudio.currentTime=0}catch(_){}}
+      stopAllSounds();
       customAudio=new Audio();
       customAudio.preload="auto";
       customAudio.volume=1;
@@ -497,11 +595,11 @@ var chat={
       if(soundSettings.type==="custom"&&(soundSettings.customBlob||soundSettings.customData)){
         playCustomSound().catch(function(err){
           console.warn("ServiceHub custom notification sound could not play:",err);
-          playBuiltIn("short");
+          playBuiltIn("crystal");
         });
         return;
       }
-      playBuiltIn(soundSettings.type==="custom"?"short":soundSettings.type);
+      playBuiltIn(soundSettings.type==="custom"?"crystal":soundSettings.type);
     });
   }
 
