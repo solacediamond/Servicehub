@@ -11,8 +11,8 @@ jobs:
     steps:
       - name: Ping Supabase
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: https://bbnufbjuhmaokyewqyov.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJibnVmYmp1aG1hb2t5ZXdxeW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1ODg5NDksImV4cCI6MjEwNjE2NDk0OX0.k-_Tzi5mS1Bt-9SdnOop09a41cRuWkh_I6CYkVnFCKo
         run: |
           curl -fsS --retry 3 --retry-delay 10 \
             -X POST "$SUPABASE_URL/rest/v1/rpc/customer_messages" \
