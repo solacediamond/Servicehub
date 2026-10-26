@@ -3736,6 +3736,23 @@ if (listingForm) {
 
     let listingSubmitInFlight = false;
 
+    /* Coming back to this form from the browser's back/forward cache would
+       otherwise keep the "Saving your listing" loader on screen and the form
+       locked (the cause of the blurry, unresponsive page). */
+    window.addEventListener("pageshow", function (event) {
+        if (!event.persisted) return;
+
+        listingSubmitInFlight = false;
+        hideListingUploadOverlay();
+
+        const restoredSubmit =
+            listingForm.querySelector(".listing-submit");
+
+        if (restoredSubmit) {
+            restoredSubmit.disabled = false;
+        }
+    });
+
     listingForm.addEventListener(
         "submit",
         async function (event) {
@@ -4337,6 +4354,9 @@ if (listingForm) {
                     "serviceHubPaymentCode",
                     paymentCode
                 );
+
+                /* A brand-new listing is not a renewal. */
+                localStorage.removeItem("serviceHubRenewal");
 
                 /* ---------- UPLOAD MEDIA INTO THE EXISTING LISTING ---------- */
                 if (mediaInput && mediaInput.files && mediaInput.files.length) {
@@ -5087,6 +5107,12 @@ if (featuredServices && typeof services !== "undefined") {
             if (listingId) localStorage.setItem("serviceHubManageLinkPending", String(listingId));
         } catch (_) {}
 
+        /* Remember this payment is confirmed so pressing Back later never
+           returns to the payment pages (see nav-guard.js). */
+        try {
+            if (window.serviceHubNavGuard) window.serviceHubNavGuard.markPaymentConfirmed();
+        } catch (_) {}
+
         if (waitingStep) waitingStep.style.display = "none";
         if (approvedStep) approvedStep.style.display = "block";
 
@@ -5551,6 +5577,8 @@ if (jobListingForm) {
             localStorage.setItem("serviceHubListingId", actualListingId);
             localStorage.setItem("serviceHubPaymentCode", paymentCode);
             localStorage.setItem("serviceHubListingType", "job");
+            /* A brand-new job is not a renewal. */
+            localStorage.removeItem("serviceHubRenewal");
         };
         persistJob();
 
