@@ -4864,15 +4864,23 @@ body.listing-upload-locked {
     display: flex; align-items: center; margin: 0; padding: 0;
     border-top: 1px solid rgba(255, 209, 102, .18);
     border-bottom: 1px solid rgba(255, 209, 102, .18);
-    background: linear-gradient(90deg, rgba(255, 190, 70, .075), rgba(35, 136, 255, .055), rgba(168, 85, 247, .075));
+    background: linear-gradient(90deg, rgba(255, 190, 70, .075), rgba(35, 136, 255, .055), rgba(168, 85, 247, .075)), var(--bg, #080b12);
     color: #e8edf8;
 }
 .sh-safety-marquee[hidden] { display: none !important; }
+/* Pinned to the top of the screen once the page scrolls past it (class set from script.js);
+   the page scrolls underneath. A spacer keeps the layout from jumping. */
+.sh-safety-marquee.is-pinned {
+    position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 7;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+}
+.sh-safety-marquee-spacer { width: 100%; height: 0; pointer-events: none; }
 .sh-safety-marquee-track { flex: 0 0 auto; width: max-content; white-space: nowrap; padding-left: 100vw; transform: translateX(0); }
 .sh-safety-marquee-track span { display: inline-block; padding: 9px 28px 9px 0; font-size: 12px; line-height: 1.5; letter-spacing: .01em; }
 .sh-safety-marquee-track span::first-letter { color: #ffd166; }
-.sh-safety-marquee-track.is-running { animation: serviceHubSafetyScroll 18s linear 2; }
-@keyframes serviceHubSafetyScroll { from { transform: translateX(0); } to { transform: translateX(calc(-100% - 100vw)); } }
+/* Duration is set from script.js (--sh-marquee-duration) at a fixed, readable speed. */
+.sh-safety-marquee-track.is-running { animation: serviceHubSafetyScroll var(--sh-marquee-duration, 45s) linear 2; }
+@keyframes serviceHubSafetyScroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 
 /* Clear, rectangular liquid-glass failure state for report submissions */
 .servicehub-report-failed-stage {
@@ -4893,7 +4901,7 @@ body.listing-upload-locked {
 .servicehub-report-failed-stage .servicehub-report-intro { max-width: 390px; margin-bottom: 12px; }
 .servicehub-report-failed-actions { width: 100%; margin-top: 14px; }
 @media (prefers-reduced-motion: reduce) {
-    .sh-safety-marquee-track.is-running { animation-duration: 30s; }
+    .sh-safety-marquee-track.is-running { animation-duration: calc(var(--sh-marquee-duration, 45s) * 1.5); }
 }
 
 
@@ -4968,3 +4976,118 @@ body.listing-upload-locked {
 .job-card-rendered .job-report-btn { position:static; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:30px; padding:5px 9px; font-size:11px; line-height:1; white-space:nowrap; }
 .job-card-rendered .job-report-btn svg { width:13px; height:13px; }
 @media (max-width:380px) { .job-card-rendered .job-report-btn { padding:5px 7px; gap:3px; } .job-card-rendered .job-card-title-row { gap:6px; } }
+
+
+/* ========================================
+   HOW IT WORKS — NEW CARDS, DOCS LINK,
+   SUPPORT BUTTON, CENTRE-OF-SCREEN FOCUS
+   Cards 8 and 9 simply continue the existing
+   PINK / BLUE alternation (odd = pink, even = blue).
+======================================== */
+
+.service-detail-card:nth-child(7) { animation-delay: 1s; }
+.service-detail-card:nth-child(8) { animation-delay: 1.1s; }
+.service-detail-card:nth-child(9) { animation-delay: 1.2s; }
+
+/* Card that sits in the middle of the screen: a touch brighter and a very slight zoom.
+   Uses the standalone `scale` property so it never fights the fade-in / hover transforms. */
+.service-detail-card {
+    transition:
+        transform 0.3s ease,
+        scale 0.5s cubic-bezier(.22, .8, .2, 1),
+        border-color 0.5s ease,
+        background 0.5s ease,
+        box-shadow 0.5s ease;
+}
+
+.service-detail-card.is-centered {
+    scale: 1.018;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.service-detail-card:nth-child(odd).is-centered {
+    border-color: rgba(255, 79, 216, 0.62);
+    box-shadow:
+        0 14px 32px rgba(0, 0, 0, 0.28),
+        0 0 24px rgba(255, 79, 216, 0.15),
+        inset 0 0 28px rgba(255, 79, 216, 0.045);
+}
+
+.service-detail-card:nth-child(even).is-centered {
+    border-color: rgba(35, 136, 255, 0.62);
+    box-shadow:
+        0 14px 32px rgba(0, 0, 0, 0.28),
+        0 0 24px rgba(35, 136, 255, 0.15),
+        inset 0 0 28px rgba(35, 136, 255, 0.045);
+}
+
+@media (max-width: 650px) {
+    .service-detail-card.is-centered { scale: 1.012; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .service-detail-card.is-centered { scale: none; }
+}
+
+/* "our documentation" line */
+.how-doc-line {
+    margin: 26px 0 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+}
+
+.how-doc-link {
+    color: var(--blue);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(35, 136, 255, 0.45);
+    cursor: pointer;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.how-doc-link:hover,
+.how-doc-link:focus-visible {
+    color: #5aa8ff;
+    text-decoration-color: currentColor;
+}
+
+/* Support & Feedback button at the bottom (opens the same window as the menu button) */
+.how-support-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+
+    width: fit-content;
+    max-width: 100%;
+    margin: 18px auto 6px;
+    padding: 12px 22px;
+
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+
+    background:
+        linear-gradient(150deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.1)),
+        rgba(35, 136, 255, 0.42);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    backdrop-filter: blur(14px) saturate(180%);
+
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+
+    box-shadow:
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.5),
+        0 8px 22px rgba(0, 0, 0, 0.3),
+        0 0 0 3px rgba(35, 136, 255, 0.12);
+
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.how-support-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.how-support-btn:active { transform: scale(0.96); }
+.how-support-btn:focus-visible { outline: 3px solid rgba(255, 255, 255, 0.85); outline-offset: 3px; }
+.how-support-btn svg { flex: none; }

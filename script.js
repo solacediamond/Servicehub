@@ -5770,20 +5770,67 @@ function scrollMessagesToBottom(container) {
 }
 }
 
-/* Safety reminder marquee: two readable right-to-left passes, then a 10-second pause. */
+/* Safety reminder marquee: two slow, readable right-to-left passes, then a 10-second pause.
+   The banner pins itself to the top of the screen once the page scrolls past it, so the
+   page scrolls underneath and the warning stays visible. */
 function initServiceHubSafetyMarquee() {
     const banner = document.getElementById("serviceHubSafetyMarquee");
     const track = document.getElementById("serviceHubSafetyMarqueeTrack");
     if (!banner || !track || banner.dataset.marqueeReady === "true") return;
     banner.dataset.marqueeReady = "true";
+
+    const SPEED_PX_PER_SECOND = 40; /* lower = slower */
     let pauseTimer = null;
     let disposed = false;
+
+    /* Spacer that holds the banner's place in the page while it is pinned. */
+    const spacer = document.createElement("div");
+    spacer.className = "sh-safety-marquee-spacer";
+    spacer.setAttribute("aria-hidden", "true");
+    banner.parentNode.insertBefore(spacer, banner);
+    let bannerHeight = 36;
+
+    function updatePin() {
+        const pinned = banner.classList.contains("is-pinned");
+        if (!pinned) {
+            if (banner.hidden) return;
+            if (banner.getBoundingClientRect().top <= 0) {
+                bannerHeight = banner.offsetHeight || bannerHeight;
+                spacer.style.height = bannerHeight + "px";
+                banner.classList.add("is-pinned");
+            }
+        } else if (spacer.getBoundingClientRect().top > 0) {
+            banner.classList.remove("is-pinned");
+            spacer.style.height = "0px";
+        }
+    }
+
+    let pinTicking = false;
+    function onScrollOrResize() {
+        if (pinTicking) return;
+        pinTicking = true;
+        window.requestAnimationFrame(function () {
+            pinTicking = false;
+            updatePin();
+        });
+    }
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+
+    function setSpeed() {
+        const distance = track.scrollWidth || (window.innerWidth + 900);
+        const seconds = Math.max(20, distance / SPEED_PX_PER_SECOND);
+        track.style.setProperty("--sh-marquee-duration", seconds.toFixed(1) + "s");
+    }
+
     function startCycle() {
         if (disposed) return;
         banner.hidden = false;
+        setSpeed();
         track.classList.remove("is-running");
         void track.offsetWidth;
         track.classList.add("is-running");
+        updatePin();
     }
     track.addEventListener("animationend", function (event) {
         if (event.target !== track || event.animationName !== "serviceHubSafetyScroll") return;
@@ -5806,3 +5853,80 @@ if (document.readyState === "loading") {
 } else {
     initServiceHubSafetyMarquee();
 }
+
+
+/* =================================
+   HOW IT WORKS PAGE
+   - the card nearest the middle of the screen gets a gentle highlight + very slight zoom
+   - the bottom "Support & Feedback" button opens the same window as the menu button
+================================= */
+(function initHowItWorksExtras() {
+    function setup() {
+        const cards = Array.prototype.slice.call(document.querySelectorAll(".service-details .service-detail-card"));
+        if (!cards.length) return;
+
+        let current = null;
+        let ticking = false;
+        const REACH = 40; /* px: how close to the screen's middle a card must be */
+
+        function update() {
+            ticking = false;
+            const middle = window.innerHeight / 2;
+            let best = null;
+            let bestDistance = Infinity;
+
+            cards.forEach(function (card) {
+                const rect = card.getBoundingClientRect();
+                const distance = middle < rect.top ? rect.top - middle
+                    : middle > rect.bottom ? middle - rect.bottom : 0;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = card;
+                }
+            });
+
+            if (bestDistance > REACH) best = null;
+            if (best === current) return;
+            if (current) current.classList.remove("is-centered");
+            if (best) best.classList.add("is-centered");
+            current = best;
+        }
+
+        function request() {
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(update);
+        }
+
+        window.addEventListener("scroll", request, { passive: true });
+        window.addEventListener("resize", request);
+        window.addEventListener("load", request);
+        /* cards fade in on load, so check once they have settled */
+        window.setTimeout(request, 400);
+        window.setTimeout(request, 1500);
+        request();
+    }
+
+    function setupSupportButton() {
+        const button = document.getElementById("howSupportBtn");
+        if (!button) return;
+        button.addEventListener("click", function () {
+            const menuButton = document.querySelector(".shsd-btn");
+            if (menuButton) {
+                menuButton.click();
+            } else {
+                showServiceHubToast("Support is still loading. Please try again in a moment.");
+            }
+        });
+    }
+
+    function boot() {
+        setup();
+        setupSupportButton();
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot, { once: true });
+    } else {
+        boot();
+    }
+})();
