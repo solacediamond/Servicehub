@@ -4858,28 +4858,28 @@ body.listing-upload-locked {
 }
 
 
-/* ServiceHub moving safety reminder */
+/* ServiceHub moving safety reminder
+   Fixed at the top of the screen (directly under the fixed navbar) at all times; the page
+   scrolls underneath it.
+   script.js adds body.has-safety-marquee and sets --sh-marquee-h so the page content
+   starts just below the banner. */
 .sh-safety-marquee {
-    position: relative; z-index: 4; width: 100%; min-height: 36px; overflow: hidden;
+    position: fixed; top: calc(var(--nav-height, 72px) + env(safe-area-inset-top, 0px)); left: 0; right: 0; width: 100%; z-index: 1990;
+    min-height: 36px; overflow: hidden;
     display: flex; align-items: center; margin: 0; padding: 0;
     border-top: 1px solid rgba(255, 209, 102, .18);
     border-bottom: 1px solid rgba(255, 209, 102, .18);
     background: linear-gradient(90deg, rgba(255, 190, 70, .075), rgba(35, 136, 255, .055), rgba(168, 85, 247, .075)), var(--bg, #080b12);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
     color: #e8edf8;
 }
 .sh-safety-marquee[hidden] { display: none !important; }
-/* Pinned to the top of the screen once the page scrolls past it (class set from script.js);
-   the page scrolls underneath. A spacer keeps the layout from jumping. */
-.sh-safety-marquee.is-pinned {
-    position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 7;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
-}
-.sh-safety-marquee-spacer { width: 100%; height: 0; pointer-events: none; }
+body.has-safety-marquee { padding-top: calc(var(--nav-height, 72px) + env(safe-area-inset-top, 0px) + var(--sh-marquee-h, 36px)); }
 .sh-safety-marquee-track { flex: 0 0 auto; width: max-content; white-space: nowrap; padding-left: 100vw; transform: translateX(0); }
 .sh-safety-marquee-track span { display: inline-block; padding: 9px 28px 9px 0; font-size: 12px; line-height: 1.5; letter-spacing: .01em; }
 .sh-safety-marquee-track span::first-letter { color: #ffd166; }
-/* Duration is set from script.js (--sh-marquee-duration) at a fixed, readable speed. */
-.sh-safety-marquee-track.is-running { animation: serviceHubSafetyScroll var(--sh-marquee-duration, 45s) linear 2; }
+/* Slow, steady loop. Duration is set from script.js (--sh-marquee-duration). */
+.sh-safety-marquee-track.is-running { animation: serviceHubSafetyScroll var(--sh-marquee-duration, 45s) linear infinite; }
 @keyframes serviceHubSafetyScroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 
 /* Clear, rectangular liquid-glass failure state for report submissions */

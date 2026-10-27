@@ -5770,9 +5770,8 @@ function scrollMessagesToBottom(container) {
 }
 }
 
-/* Safety reminder marquee: two slow, readable right-to-left passes, then a 10-second pause.
-   The banner pins itself to the top of the screen once the page scrolls past it, so the
-   page scrolls underneath and the warning stays visible. */
+/* Safety reminder marquee: fixed to the top of the screen at all times (the page scrolls
+   underneath it) and scrolls its text slowly and continuously. */
 function initServiceHubSafetyMarquee() {
     const banner = document.getElementById("serviceHubSafetyMarquee");
     const track = document.getElementById("serviceHubSafetyMarqueeTrack");
@@ -5780,42 +5779,12 @@ function initServiceHubSafetyMarquee() {
     banner.dataset.marqueeReady = "true";
 
     const SPEED_PX_PER_SECOND = 40; /* lower = slower */
-    let pauseTimer = null;
-    let disposed = false;
 
-    /* Spacer that holds the banner's place in the page while it is pinned. */
-    const spacer = document.createElement("div");
-    spacer.className = "sh-safety-marquee-spacer";
-    spacer.setAttribute("aria-hidden", "true");
-    banner.parentNode.insertBefore(spacer, banner);
-    let bannerHeight = 36;
-
-    function updatePin() {
-        const pinned = banner.classList.contains("is-pinned");
-        if (!pinned) {
-            if (banner.hidden) return;
-            if (banner.getBoundingClientRect().top <= 0) {
-                bannerHeight = banner.offsetHeight || bannerHeight;
-                spacer.style.height = bannerHeight + "px";
-                banner.classList.add("is-pinned");
-            }
-        } else if (spacer.getBoundingClientRect().top > 0) {
-            banner.classList.remove("is-pinned");
-            spacer.style.height = "0px";
-        }
+    /* Page content starts just below the fixed banner. */
+    function reserveSpace() {
+        const height = banner.offsetHeight || 36;
+        document.documentElement.style.setProperty("--sh-marquee-h", height + "px");
     }
-
-    let pinTicking = false;
-    function onScrollOrResize() {
-        if (pinTicking) return;
-        pinTicking = true;
-        window.requestAnimationFrame(function () {
-            pinTicking = false;
-            updatePin();
-        });
-    }
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
-    window.addEventListener("resize", onScrollOrResize);
 
     function setSpeed() {
         const distance = track.scrollWidth || (window.innerWidth + 900);
@@ -5823,30 +5792,20 @@ function initServiceHubSafetyMarquee() {
         track.style.setProperty("--sh-marquee-duration", seconds.toFixed(1) + "s");
     }
 
-    function startCycle() {
-        if (disposed) return;
-        banner.hidden = false;
-        setSpeed();
-        track.classList.remove("is-running");
-        void track.offsetWidth;
-        track.classList.add("is-running");
-        updatePin();
-    }
-    track.addEventListener("animationend", function (event) {
-        if (event.target !== track || event.animationName !== "serviceHubSafetyScroll") return;
-        track.classList.remove("is-running");
-        banner.hidden = true;
-        pauseTimer = window.setTimeout(startCycle, 10000);
+    banner.hidden = false;
+    document.body.classList.add("has-safety-marquee");
+    reserveSpace();
+    setSpeed();
+    track.classList.add("is-running");
+
+    let resizeTimer = null;
+    window.addEventListener("resize", function () {
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(function () {
+            reserveSpace();
+            setSpeed();
+        }, 150);
     });
-    document.addEventListener("visibilitychange", function () {
-        if (document.hidden && pauseTimer) {
-            window.clearTimeout(pauseTimer);
-            pauseTimer = null;
-        } else if (!document.hidden && banner.hidden && !pauseTimer) {
-            pauseTimer = window.setTimeout(startCycle, 10000);
-        }
-    });
-    startCycle();
 }
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initServiceHubSafetyMarquee, { once: true });
