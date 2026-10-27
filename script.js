@@ -5914,9 +5914,9 @@ if (document.readyState === "loading") {
 
             /* [element, milliseconds per character] */
             const plan = [
-                [content.querySelector(".eyebrow"), 30],
-                [content.querySelector("h1"), 42],
-                [content.querySelector(".hero-description"), 17]
+                [content.querySelector(".eyebrow"), 55],
+                [content.querySelector("h1"), 80],
+                [content.querySelector(".hero-description"), 32]
             ];
 
             const steps = [];
@@ -5958,7 +5958,7 @@ if (document.readyState === "loading") {
                 });
 
                 el.insertBefore(reader, el.firstChild);
-                clock += 250; /* breath between lines */
+                clock += 400; /* breath between lines */
             });
 
             if (!steps.length) { reveal(); return; }
