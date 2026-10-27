@@ -315,17 +315,21 @@ textarea {
 .hero h1 span {
     display: block;
 
+    /* slightly lighter than the brand colours so it stays readable over the purple artwork */
     background: linear-gradient(
         90deg,
-        var(--blue),
-        var(--purple),
-        var(--pink)
+        #4aa3ff,
+        #c084fc,
+        #ff74e4
     );
 
     -webkit-background-clip: text;
     background-clip: text;
 
     color: transparent;
+
+    text-shadow: none;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
 }
 
 /* ========================================
@@ -5091,3 +5095,57 @@ body.has-safety-marquee { padding-top: calc(var(--nav-height, 72px) + env(safe-a
 .how-support-btn:active { transform: scale(0.96); }
 .how-support-btn:focus-visible { outline: 3px solid rgba(255, 255, 255, 0.85); outline-offset: 3px; }
 .how-support-btn svg { flex: none; }
+
+
+/* ========================================
+   HERO TEXT: READABILITY + TYPE-IN
+======================================== */
+
+/* Soft shadow keeps the white text readable when a bright part of a slide slides behind it */
+.hero .hero-content .eyebrow,
+.hero .hero-content h1,
+.hero .hero-content .hero-description {
+    text-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.7),
+        0 2px 14px rgba(0, 0, 0, 0.55);
+}
+
+/* Hidden until the typing starts (class is set by a tiny script in <head>) */
+.hero-typing-pending .hero-content .eyebrow,
+.hero-typing-pending .hero-content h1,
+.hero-typing-pending .hero-content .hero-description {
+    visibility: hidden;
+}
+
+/* Typing helpers. Custom tag names on purpose: ".hero h1 span" styles must not hit them. */
+tw-shown,
+tw-rest,
+tw-caret { display: inline; }
+tw-rest { visibility: hidden; }
+tw-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+tw-caret {
+    position: relative;
+    display: inline-block;
+    width: 0;
+    height: 1em;
+    vertical-align: -0.12em;
+}
+tw-caret::after {
+    content: "";
+    position: absolute;
+    left: 1px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    border-radius: 1px;
+    background: #fff;
+    animation: twCaretBlink 0.8s steps(1) infinite;
+}
+@keyframes twCaretBlink { 50% { opacity: 0; } }

@@ -5889,3 +5889,136 @@ if (document.readyState === "loading") {
         boot();
     }
 })();
+
+
+/* =================================
+   HOME HERO: TYPE-IN TEXT
+   The three lines above the search bar write themselves in once per visit
+   (per browser session). Navigating around and coming back to the home page
+   does not replay it; a new visit does.
+================================= */
+(function initHeroTypewriter() {
+    const root = document.documentElement;
+    const STORAGE_KEY = "serviceHubHeroTyped";
+
+    function reveal() { root.classList.remove("hero-typing-pending"); }
+
+    function run() {
+        if (window.__heroTypingSkip || !root.classList.contains("hero-typing-pending")) return;
+
+        try {
+            const content = document.querySelector(".hero .hero-content");
+            if (!content) { reveal(); return; }
+
+            try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch (_) {}
+
+            /* [element, milliseconds per character] */
+            const plan = [
+                [content.querySelector(".eyebrow"), 30],
+                [content.querySelector("h1"), 42],
+                [content.querySelector(".hero-description"), 17]
+            ];
+
+            const steps = [];
+            const readers = [];
+            let clock = 250;
+
+            plan.forEach(function (item) {
+                const el = item[0];
+                const speed = item[1];
+                if (!el) return;
+
+                /* Screen readers get the whole sentence straight away */
+                const full = (el.textContent || "").replace(/\s+/g, " ").trim();
+                const nodes = [];
+                const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+                while (walker.nextNode()) nodes.push(walker.currentNode);
+
+                const reader = document.createElement("tw-sr");
+                reader.textContent = full;
+                readers.push(reader);
+
+                let first = true;
+                nodes.forEach(function (node) {
+                    let text = node.nodeValue.replace(/\s+/g, " ");
+                    if (!text.trim()) return;
+                    if (first) { text = text.replace(/^\s+/, ""); first = false; }
+
+                    /* Typed part + invisible rest: the rest keeps the final line breaks in place */
+                    const shown = document.createElement("tw-shown");
+                    const rest = document.createElement("tw-rest");
+                    shown.setAttribute("aria-hidden", "true");
+                    rest.setAttribute("aria-hidden", "true");
+                    rest.textContent = text;
+                    node.parentNode.replaceChild(rest, node);
+                    rest.parentNode.insertBefore(shown, rest);
+
+                    steps.push({ shown: shown, rest: rest, text: text, start: clock, speed: speed, n: 0 });
+                    clock += text.length * speed;
+                });
+
+                el.insertBefore(reader, el.firstChild);
+                clock += 250; /* breath between lines */
+            });
+
+            if (!steps.length) { reveal(); return; }
+
+            const caret = document.createElement("tw-caret");
+            caret.setAttribute("aria-hidden", "true");
+            steps[0].shown.parentNode.insertBefore(caret, steps[0].shown);
+
+            reveal();
+
+            const startedAt = performance.now();
+            let placedAt = 0;
+
+            function finish() {
+                caret.remove();
+                steps.forEach(function (s) {
+                    s.shown.replaceWith(document.createTextNode(s.text));
+                    s.rest.remove();
+                });
+                readers.forEach(function (r) { r.remove(); });
+            }
+
+            function frame(now) {
+                const elapsed = now - startedAt;
+                let allDone = true;
+                let current = 0;
+
+                steps.forEach(function (s, i) {
+                    const n = Math.max(0, Math.min(s.text.length, Math.floor((elapsed - s.start) / s.speed)));
+                    if (n !== s.n) {
+                        s.n = n;
+                        s.shown.textContent = s.text.slice(0, n);
+                        s.rest.textContent = s.text.slice(n);
+                    }
+                    if (n < s.text.length) allDone = false;
+                    if (elapsed >= s.start) current = i;
+                });
+
+                if (current !== placedAt || !caret.parentNode) {
+                    placedAt = current;
+                    steps[current].shown.after(caret);
+                }
+
+                if (allDone) {
+                    window.setTimeout(finish, 700);
+                    return;
+                }
+                window.requestAnimationFrame(frame);
+            }
+
+            window.requestAnimationFrame(frame);
+        } catch (error) {
+            console.warn("Hero typing skipped:", error);
+            reveal();
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", run, { once: true });
+    } else {
+        run();
+    }
+})();
