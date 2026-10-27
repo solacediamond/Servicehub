@@ -38,9 +38,10 @@
         return;
     }
 
-    var manageUrl =
-        new URL("manage.html", window.location.href).href.split("#")[0] +
-        "#" + token;
+    /* Always the live Vercel address, whatever address the site was opened on. */
+    var MANAGE_PAGE = "https://servicehub-amber.vercel.app/manage.html";
+
+    var manageUrl = MANAGE_PAGE + "#" + token;
 
     /* ---------- styles ---------- */
     var style = document.createElement("style");
