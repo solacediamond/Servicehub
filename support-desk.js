@@ -560,6 +560,16 @@
     });
   }
 
+  // Pre-typed first message, so the supporter knows straight away who is writing and why.
+  // The person only has to add their problem after "I need help with:" and press send.
+  function supportText(c) {
+    var page = (document.title || "").replace(/\s*[|\u2014\u2013-]\s*ServiceHub.*$/i, "").trim();
+    if (/^servicehub$/i.test(page)) page = "";   // the home page title is just the site name
+    var name = (c && c.name ? String(c.name).trim() : "");
+    return "[ServiceHub Support] Hi" + (name ? " " + name : "") + ", I'm contacting you from the ServiceHub website (Private support)" +
+      (page ? ", from the \"" + page + "\" page" : "") + ". I need help with: ";
+  }
+
   var contactsCache = null, contactsAt = 0;
   var CONTACTS_TTL = 5 * 60 * 1000;   // reuse the loaded list for 5 minutes
 
@@ -592,9 +602,15 @@
         who.appendChild(t);
         el.appendChild(who);
 
-        function chan(cls, icon, name, value, href) {
+        var msg = supportText(c);
+        function chan(cls, icon, name, value, href, copyText) {
           var a = h("a", "shsd-chan " + cls);
           a.href = href;
+          if (copyText) {   // Telegram may ignore the pre-typed text, so also copy it: the person can just paste it
+            a.addEventListener("click", function () {
+              try { navigator.clipboard.writeText(copyText).catch(function () {}); } catch (e) {}
+            });
+          }
           a.target = "_blank";
           a.rel = "noopener noreferrer";
           var ci = h("span", "shsd-ci");
@@ -609,8 +625,8 @@
           a.appendChild(chev);
           el.appendChild(a);
         }
-        if (wa) chan("wa", IC.wa, "WhatsApp", "+" + wa, "https://wa.me/" + wa);
-        if (tg) chan("tg", IC.tg, "Telegram", tg.label, tg.href);
+        if (wa) chan("wa", IC.wa, "WhatsApp", "+" + wa, "https://wa.me/" + wa + "?text=" + encodeURIComponent(msg));
+        if (tg) chan("tg", IC.tg, "Telegram", tg.label, tg.href.indexOf("/+") > -1 ? tg.href : tg.href + "?text=" + encodeURIComponent(msg), msg);
         out.push(el);
       });
 

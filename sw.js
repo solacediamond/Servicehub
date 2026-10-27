@@ -8,7 +8,7 @@
  *
  * Bump VERSION whenever you want every phone to drop its old saved files.
  */
-const VERSION = "v5";
+const VERSION = "v6";
 const SHELL = "sh-shell-" + VERSION;
 const RUNTIME = "sh-runtime-" + VERSION;
 const STATE = "sh-state";
