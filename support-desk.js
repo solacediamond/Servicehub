@@ -44,6 +44,7 @@
     alert: stroke('<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'),
     lock: stroke('<rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
     globe: stroke('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
+    gear: stroke('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
     next: stroke('<path d="m9 6 6 6-6 6"/>'),
     back: stroke('<path d="m15 6-6 6 6 6"/>'),
     close: stroke('<path d="M6 6l12 12M18 6 6 18"/>'),
@@ -93,6 +94,13 @@
     "@media (min-width:768px) and (max-width:959px){.shsd-btn{position:absolute;top:calc(100% + 8px);right:5%;margin:0;height:34px;padding:0 12px 0 10px;gap:6px;z-index:2}",
     ".shsd-btn svg{width:16px;height:16px}.shsd-btn span{font-size:12.5px}}",
     "@media (hover:hover){.shsd-btn:hover{filter:brightness(1.14)}}",
+
+    /* ---- Settings button: sits right under Support & Feedback ---- */
+    ".nav-links a.shsd-set,.nav-links a.shsd-set:hover{color:#fff;text-decoration:none}",
+    "@media (orientation:portrait) and (max-width:767px){.nav-links a.shsd-set{position:absolute;top:108px;right:calc(5% + 13px);width:58px;height:58px;min-height:0;padding:0;gap:2px;flex-direction:column;justify-content:center;align-items:center;font-size:inherit}",
+    ".nav-links a.shsd-set svg{width:21px;height:21px}.nav-links a.shsd-set span{font-size:9.5px;letter-spacing:0}}",
+    "@media (min-width:960px) and (max-width:1239px){.shsd-set{margin-left:6px}}",
+    "@media (min-width:768px) and (max-width:959px){.shsd-set{top:calc(100% + 50px)}}",
 
     /* ---- overlay ---- */
     ".shsd-ov{position:fixed;inset:0;z-index:2147482400;opacity:0;visibility:hidden;",
@@ -284,6 +292,13 @@
   btn.title = "Support & Feedback";
   btn.setAttribute("aria-label", "Support and feedback. Open help options");
   btn.innerHTML = IC.chat + '<span>Support &amp; <br class="shsd-br">Feedback</span>';
+
+  /* Settings: a plain link to settings.html, styled like the Support button */
+  var setBtn = h("a", "shsd-btn shsd-set");
+  setBtn.href = "settings.html";
+  setBtn.title = "Settings";
+  setBtn.setAttribute("aria-label", "Settings");
+  setBtn.innerHTML = IC.gear + "<span>Settings</span>";
 
   /* ------------------------------------------------------------------ *
    * Overlay (built the first time it is needed)
@@ -675,6 +690,7 @@
   function boot() {
     var links = document.querySelector(".nav-panel .nav-links");
     if (links && !btn.parentNode) links.appendChild(btn);
+    if (links && !setBtn.parentNode) links.appendChild(setBtn);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();

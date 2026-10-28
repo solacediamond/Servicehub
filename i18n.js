@@ -216,6 +216,7 @@
     applyAll();
     run();
     refreshPicker();
+    try { window.dispatchEvent(new CustomEvent('servicehub-lang', { detail: { lang: lang } })); } catch (e) {}
   }
 
   /* ---------- for your own JS (alerts, toasts) ---------- */
@@ -242,9 +243,9 @@
   function buildPicker() {
     var css = document.createElement('style');
     css.textContent =
-      '#sh-lang-btn{position:fixed;left:14px;bottom:calc(' + (window.SERVICEHUB_I18N_BOTTOM || 14) + 'px + env(safe-area-inset-bottom,0px));width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(25,25,40,.78);color:#fff;display:flex;align-items:center;justify-content:center;z-index:99990;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.35)}' +
+      '#sh-lang-btn{position:fixed;left:14px;bottom:calc(' + (window.SERVICEHUB_I18N_BOTTOM || 14) + 'px + env(safe-area-inset-bottom,0px));width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(25,25,40,.78);color:#fff;display:flex;align-items:center;justify-content:center;z-index:2147482900;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.35)}' +
       '#sh-lang-btn svg{width:22px;height:22px}' +
-      '#sh-lang-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99991;display:none;align-items:flex-end;justify-content:center}' +
+      '#sh-lang-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2147483000;display:none;align-items:flex-end;justify-content:center}' +
       '#sh-lang-ov.open{display:flex}' +
       '#sh-lang-sheet{width:100%;max-width:480px;max-height:78vh;background:rgba(24,24,38,.96);border:1px solid rgba(255,255,255,.14);border-radius:22px 22px 0 0;display:flex;flex-direction:column;color:#fff;font-family:inherit}' +
       '#sh-lang-sheet h3{margin:0;padding:16px 18px 8px;font-size:17px}' +
@@ -269,7 +270,7 @@
     sheet.setAttribute('data-no-translate', '');
     sheet.innerHTML = '<div id="sh-lang-sheet"><h3>Language</h3><input id="sh-lang-search" type="search" placeholder="Search" autocomplete="off"><div id="sh-lang-list"></div></div>';
     sheet.addEventListener('click', function (e) { if (e.target === sheet) sheet.classList.remove('open'); });
-    document.body.appendChild(btn);
+    if (window.SERVICEHUB_I18N_FLOATING === true) document.body.appendChild(btn);   // off by default: language lives in Settings
     document.body.appendChild(sheet);
     listEl = sheet.querySelector('#sh-lang-list');
     searchEl = sheet.querySelector('#sh-lang-search');
@@ -304,6 +305,18 @@
     });
   }
   function refreshPicker() { if (listEl) fillList(searchEl ? searchEl.value : ''); }
+  function openPicker() {
+    if (!sheet) return;
+    sheet.classList.add('open');
+    searchEl.value = '';
+    fillList('');
+  }
+  function label() {
+    var saved = 'auto';
+    try { saved = localStorage.getItem(STORE_LANG) || 'auto'; } catch (e) {}
+    var n = names(lang).nat;
+    return saved === 'auto' ? 'Auto \u00b7 ' + n : n;
+  }
 
   /* ---------- start ---------- */
   function init() {
@@ -316,6 +329,6 @@
     h.setAttribute('dir', RTL[lang.split('-')[0]] ? 'rtl' : 'ltr');
     run();
   }
-  window.ServiceHubI18n = { setLang: setLang, getLang: function () { return lang; }, translate: translate };
+  window.ServiceHubI18n = { setLang: setLang, openPicker: openPicker, label: label, getLang: function () { return lang; }, translate: translate };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
