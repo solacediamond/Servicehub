@@ -26,6 +26,11 @@
 
   var CODES = ('af sq am ar hy az eu be bn bs bg ca ceb zh-CN zh-TW co hr cs da nl en eo et fi fr fy gl ka de el gu ht ha haw he hi hmn hu is ig id ga it ja jv kn kk km rw ko ku ky lo la lv lt lb mk mg ms ml mt mi mr mn my ne no ny or ps fa pl pt pa ro ru sm gd sr st sn sd si sk sl so es su sw sv tl tg ta tt te th tr tk uk ur ug uz vi cy xh yi yo zu').split(' ');
 
+  // Texts of offline.html. Translated and saved while the visitor is ONLINE, so the offline page
+  // can show them in the visitor's language later with no internet.
+  var OFFLINE_STRINGS = ["No internet connection", "You're offline", "ServiceHub is still here.", "We can't reach the internet right now. You can still look around what you've opened before.", "That page hasn't been opened before, so it isn't saved on this device. Continue to the home page instead.", "The site can't update in offline mode.", "Whatever you see is based on what was loaded the last time you opened ServiceHub, so it may be out of date.", "Continue in offline mode", "Try again", "Checking connection…", "Still offline. Check your data or Wi-Fi."];
+  var offlineDone = {};
+
   var lang = 'en';
   var cache = {};                 // source text -> translation (current language)
   var failed = {};                // source texts the server could not translate this visit
@@ -150,7 +155,8 @@
   function run() {
     if (busy || lang === 'en') return;
     var missing = applyAll();
-    if (!missing.length) return;
+    if (!navigator.onLine) return;               // offline: use saved translations only
+    if (!missing.length) { prefetchOffline(); return; }
     busy = true;
     var code = lang;
     (function next() {
@@ -168,6 +174,22 @@
       });
     })();
   }
+
+  function prefetchOffline() {
+    if (lang === 'en' || offlineDone[lang] || !navigator.onLine) return;
+    var code = lang;
+    var need = OFFLINE_STRINGS.filter(function (k) { return cache[k] === undefined; });
+    offlineDone[code] = 1;
+    if (!need.length) return;
+    ask(code, need).then(function (res) {
+      var got = (res && res.ok && res.translations) || {};
+      var any = false;
+      need.forEach(function (k) { if (got[k] !== undefined) { if (code === lang) cache[k] = got[k]; any = true; } });
+      if (any && code === lang) saveCache();
+      if (!any) offlineDone[code] = 0;           // try again on a later visit
+    }).catch(function () { offlineDone[code] = 0; });
+  }
+  window.addEventListener('online', function () { run(); });
 
   /* ---------- watching the page ---------- */
   var obs = null, timer = null;
@@ -261,6 +283,12 @@
     var rows = [{ code: 'auto', nat: 'Auto (device language)', eng: '' }];
     CODES.forEach(function (c) { var n = names(c); rows.push({ code: c, nat: n.nat, eng: n.eng }); });
     var rest = rows.slice(1).sort(function (a, b) { return a.eng.localeCompare(b.eng); });
+    if (!navigator.onLine) {
+      rest = rest.filter(function (r) {
+        if (r.code === 'en') return true;
+        try { return !!localStorage.getItem(STORE_CACHE + r.code); } catch (e) { return false; }
+      });
+    }
     rows = [rows[0]].concat(rest);
     listEl.innerHTML = '';
     rows.forEach(function (r) {
