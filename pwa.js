@@ -84,7 +84,12 @@
     var isStandalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
       window.navigator.standalone === true;
 
-    if (isStandalone) {
+    /* The Android-back exit confirmation belongs only on the homepage.
+       Other pages must keep their normal in-app/browser back behaviour. */
+    var currentPage = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+    var isHomePage = currentPage === "index.html" || currentPage === "";
+
+    if (isStandalone && isHomePage) {
       var exitDialog = document.createElement("div");
       exitDialog.id = "sh-exit-confirm";
       exitDialog.setAttribute("role", "dialog");
@@ -144,10 +149,21 @@
         message.textContent = "Your next great connection starts here. See you again soon.";
         window.setTimeout(function () {
           exitAllowed = true;
-          /* Browsers may ignore window.close() for installed web apps. Going back
-             after the animation lets Android close/leave the standalone window when supported. */
+
+          /* Release the homepage history floor first. Otherwise nav-guard.js can
+             immediately push the user back into the app and leave the screen stuck. */
+          try { sessionStorage.removeItem("serviceHubHomeFloor"); } catch (_) {}
+
+          /* A web page cannot force-close every browser/PWA host. Try the native
+             close first, then leave the synthetic exit entry and finally use a
+             blank fallback only if the host refuses both operations. */
           try { window.close(); } catch (_) {}
-          try { history.back(); } catch (_) {}
+          try { history.go(-2); } catch (_) {}
+          window.setTimeout(function () {
+            if (document.visibilityState === "visible" && !document.hidden) {
+              try { location.replace("about:blank"); } catch (_) {}
+            }
+          }, 700);
         }, reduce ? 2200 : 3500);
       });
     }
