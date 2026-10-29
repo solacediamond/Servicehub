@@ -118,7 +118,7 @@ function renderRows(rows){
     if(m.id<=lastId)return;
     lastId=m.id;
     var b=document.createElement("div");b.className="bubble "+(m.sender==="customer"?"user":"provider");
-    var txt=document.createElement("span");txt.className="msg-text";if(window.ServiceHubLinkGuard&&window.ServiceHubLinkGuard.renderLinkText){window.ServiceHubLinkGuard.renderLinkText(txt,m.body||"","all");}else{txt.textContent=window.ServiceHubLinkGuard?window.ServiceHubLinkGuard.clean(m.body||"","all"):(m.body||"");}
+    var txt=document.createElement("span");txt.className="msg-text";txt.textContent=window.ServiceHubLinkGuard?window.ServiceHubLinkGuard.clean(m.body||"","all"):(m.body||"");
     if(m.sender!=="customer")txt.setAttribute("data-chat-in","");   /* incoming: i18n.js translates it for the reader */
     b.appendChild(txt);
     var time=document.createElement("span");time.className="time";time.textContent=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";

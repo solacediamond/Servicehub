@@ -2574,8 +2574,7 @@ document.body.classList.remove("menu-open");
             const req = String(
                 clean(pick("Job Requirements", "jobRequirements", "About", "about"))
             );
-            const rawForm = String(pick("Google Form Link", "googleFormLink") || "").trim();
-            const form = LG ? LG.safeHref(rawForm, "googleform") : rawForm;
+            const form = LG ? LG.safeHref(pick("Google Form Link", "googleFormLink"), "googleform") : "";
             const price = pick("Price", "price");
             const currency = String(pick("Currency", "currency") || "NGN").toUpperCase();
 
@@ -2616,16 +2615,8 @@ document.body.classList.remove("menu-open");
                     (form
                         ? '<a class="apply-job-btn" href="' + escapeServiceHubAttribute(form) +
                             '" target="_blank" rel="noopener noreferrer">Apply via Form <span>↗</span></a>'
-                        : (rawForm
-                            ? '<div class="job-unsupported-link-field" data-unsupported-url="' + escapeServiceHubAttribute(rawForm) + '"></div>'
-                            : '<p class="job-company">Application link unavailable</p>')) +
+                        : '<p class="job-company">Application link unavailable</p>') +
                 '</div>';
-
-            const unsupportedFormField = article.querySelector(".job-unsupported-link-field");
-            if (unsupportedFormField && LG && LG.renderLinkText) {
-                LG.renderLinkText(unsupportedFormField, unsupportedFormField.getAttribute("data-unsupported-url") || rawForm, "googleform");
-                unsupportedFormField.removeAttribute("data-unsupported-url");
-            }
 
             return article;
 
@@ -3130,11 +3121,7 @@ categorySearchLinks.forEach(function (card) {
                 ? "chat-message-user"
                 : "chat-message-provider");
 
-        if (window.ServiceHubLinkGuard && window.ServiceHubLinkGuard.renderLinkText) {
-            window.ServiceHubLinkGuard.renderLinkText(bubble, String(text == null ? "" : text), "all");
-        } else {
-            bubble.textContent = serviceHubClean(String(text == null ? "" : text), "all");
-        }
+        bubble.textContent = serviceHubClean(String(text == null ? "" : text), "all");
 
         chatMessages.appendChild(bubble);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -3621,15 +3608,6 @@ function renderServiceProviderDetails(card) {
     if (serviceHubSafeLink(card.portfolio, "social")) {
         const url = /^https?:\/\//i.test(card.portfolio) ? card.portfolio : "https://" + card.portfolio;
         addRow("Portfolio", link(url, card.portfolio, true));
-        count++;
-    } else if (String(card.portfolio || "").trim()) {
-        const portfolioNode = document.createElement("span");
-        if (window.ServiceHubLinkGuard && window.ServiceHubLinkGuard.renderLinkText) {
-            window.ServiceHubLinkGuard.renderLinkText(portfolioNode, String(card.portfolio), "social");
-        } else {
-            portfolioNode.textContent = serviceHubClean(String(card.portfolio), "social");
-        }
-        addRow("Portfolio", portfolioNode);
         count++;
     }
 
@@ -5773,11 +5751,7 @@ if (jobListingForm) {
             name.className = "message-name";
             name.textContent = message.sender === "provider" ? PROVIDER_NAME : (conversation.customerName || "Customer");
             const text = document.createElement("div");
-            if (window.ServiceHubLinkGuard && window.ServiceHubLinkGuard.renderLinkText) {
-                window.ServiceHubLinkGuard.renderLinkText(text, String(message.message || ""), "all");
-            } else {
-                text.textContent = serviceHubClean(String(message.message || ""), "all");
-            }
+            text.textContent = serviceHubClean(String(message.message || ""), "all");
             el.appendChild(name);
             el.appendChild(text);
             messages.appendChild(el);

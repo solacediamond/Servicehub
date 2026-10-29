@@ -450,59 +450,6 @@
     return analyse(v, pol, false) ? v : "";
   }
 
-  /* ---------------- 5b. Opt-in display for URLs in chat/card link fields ----------------
-     Do not run this against general page text, labels, buttons, or navigation.
-     Existing clean()/sanitize() behavior remains unchanged everywhere else. */
-  function ensureUnsupportedLinkStyle() {
-    if (document.getElementById("sh-unsupported-link-style")) return;
-    var style = document.createElement("style");
-    style.id = "sh-unsupported-link-style";
-    style.textContent = ".sh-unsupported-link-wrap{display:inline-block;max-width:100%;vertical-align:middle}.sh-unsupported-link{overflow-wrap:anywhere;word-break:break-word;color:inherit}.sh-unsupported-link-tag{display:block;margin:2px 0 5px;color:#ffb4bd;font-size:11px;line-height:1.3;font-weight:500}";
-    (document.head || document.documentElement).appendChild(style);
-  }
-
-  function renderLinkText(container, text, policyName) {
-    if (!container) return;
-    ensureUnsupportedLinkStyle();
-    var source = String(text == null ? "" : text);
-    container.textContent = "";
-    var re = /(?:https?:\/\/|www\.)[^\s<>"']+/ig;
-    var last = 0, match;
-    while ((match = re.exec(source))) {
-      var raw = match[0], url = raw, trailing = "";
-      while (/[),.!?;:]$/.test(url)) { trailing = url.slice(-1) + trailing; url = url.slice(0, -1); }
-      if (!url) continue;
-      container.appendChild(document.createTextNode(source.slice(last, match.index)));
-      var candidate = /^www\./i.test(url) ? "https://" + url : url;
-      var allowed = safeHref(candidate, policyName || "all");
-      if (allowed) {
-        var a = document.createElement("a");
-        a.href = allowed;
-        a.textContent = url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer nofollow";
-        a.referrerPolicy = "no-referrer";
-        container.appendChild(a);
-      } else {
-        var wrap = document.createElement("span");
-        wrap.className = "sh-unsupported-link-wrap";
-        var visible = document.createElement("span");
-        visible.className = "sh-unsupported-link";
-        visible.textContent = url;
-        visible.title = "This link is not supported and may be malicious or dangerous.";
-        var note = document.createElement("small");
-        note.className = "sh-unsupported-link-tag";
-        note.textContent = "⚠ This link is not supported; it may be malicious or dangerous.";
-        wrap.appendChild(visible);
-        wrap.appendChild(note);
-        container.appendChild(wrap);
-      }
-      if (trailing) container.appendChild(document.createTextNode(trailing));
-      last = match.index + match[0].length;
-    }
-    container.appendChild(document.createTextNode(source.slice(last)));
-  }
-
   /* ---------------- 6. Wiring up the text boxes ---------------- */
 
   var BY_ID = {
@@ -637,7 +584,7 @@
 
   window.ServiceHubLinkGuard = {
     version: "1.0",
-    sanitize: sanitize, clean: clean, safeHref: safeHref, renderLinkText: renderLinkText,
+    sanitize: sanitize, clean: clean, safeHref: safeHref,
     isAllowed: function (url, policy) { return !!safeHref(url, policy); },
     checkField: checkField, checkAll: checkAll, policyFor: policyFor,
     policyMessage: function (p) { return getPolicy(p).msg; },
