@@ -450,6 +450,81 @@
     return analyse(v, pol, false) ? v : "";
   }
 
+
+  /* ---------------- 5b. Protect links rendered from remote data ----------------
+     Frontend input filtering is not a security boundary: messages/listings can be
+     inserted by scripts or submitted directly to an API. Re-check every rendered
+     anchor and turn unsupported URLs into visibly labelled, non-clickable text. */
+  function installRenderedLinkGuard() {
+    if (document.getElementById("sh-unsupported-link-style")) return;
+    var style = document.createElement("style");
+    style.id = "sh-unsupported-link-style";
+    style.textContent =
+      ".sh-unsupported-link{display:inline!important;max-width:100%;overflow-wrap:anywhere;" +
+      "color:#ffd0d5!important;background:rgba(255,86,105,.10);border:1px solid rgba(255,107,129,.48);" +
+      "border-radius:7px;padding:2px 6px;font-size:.92em;cursor:not-allowed;white-space:normal}" +
+      ".sh-unsupported-link-tag{display:inline-block;margin-left:5px;color:#ffb4bd;font-size:.76em;" +
+      "font-weight:700;letter-spacing:.01em;vertical-align:middle}";
+    (document.head || document.documentElement).appendChild(style);
+
+    function protect(root) {
+      if (!root || root.nodeType !== 1) return;
+      var links = [];
+      if (root.matches && root.matches("a[href]")) links.push(root);
+      if (root.querySelectorAll) {
+        var found = root.querySelectorAll("a[href]");
+        for (var i = 0; i < found.length; i++) links.push(found[i]);
+      }
+      links.forEach(function (a) {
+        if (!a || a.dataset.shLinkChecked === "1") return;
+        var raw = a.getAttribute("href") || "";
+        if (!/^(https?:)?\/\//i.test(raw) && !/^(mailto:|tel:|tg:|whatsapp:|skype:)/i.test(raw)) {
+          /* Non-web anchors such as #section are not external links. */
+          if (raw.charAt(0) === "#" || raw.charAt(0) === "/" || raw.charAt(0) === ".") {
+            a.dataset.shLinkChecked = "1";
+            return;
+          }
+        }
+        a.dataset.shLinkChecked = "1";
+        if (safeHref(raw, "all")) {
+          if (/^https?:/i.test(raw)) {
+            a.setAttribute("rel", "noopener noreferrer nofollow");
+            if (a.target === "_blank") a.setAttribute("referrerpolicy", "no-referrer");
+          }
+          return;
+        }
+        var span = document.createElement("span");
+        span.className = "sh-unsupported-link";
+        span.setAttribute("role", "note");
+        span.setAttribute("aria-label", "Unsupported link. It may be malicious or dangerous.");
+        span.setAttribute("title", "This link is not supported and may be malicious or dangerous.");
+        span.textContent = a.textContent || raw;
+        var tag = document.createElement("span");
+        tag.className = "sh-unsupported-link-tag";
+        tag.textContent = "⚠ Link not supported · may be dangerous";
+        span.appendChild(tag);
+        if (a.parentNode) a.parentNode.replaceChild(span, a);
+      });
+    }
+    function start() {
+      protect(document.body);
+      if (window.MutationObserver && document.body) {
+        var observer = new MutationObserver(function (records) {
+          records.forEach(function (r) {
+            for (var i = 0; i < r.addedNodes.length; i++) {
+              var node = r.addedNodes[i];
+              if (node.nodeType === 1) protect(node);
+            }
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
+    else start();
+  }
+  installRenderedLinkGuard();
+
   /* ---------------- 6. Wiring up the text boxes ---------------- */
 
   var BY_ID = {
