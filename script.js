@@ -1692,6 +1692,25 @@ function serviceHubSafeLink(value, policy) {
     return LG.safeHref(v, policy) ? v : "";
 }
 
+/* Display helpers: an unsupported link is NOT deleted. It stays visible as plain, unclickable text
+   with a small "This link might be dangerous" note (see link-guard.js, flagParts / renderInto). */
+function serviceHubFlagInto(el, value, policy) {
+    if (!el) return false;
+    const LG = window.ServiceHubLinkGuard;
+    const v = value == null ? "" : String(value);
+    if (LG && LG.renderInto) return LG.renderInto(el, v, policy || "none");
+    el.textContent = v;
+    return false;
+}
+
+function serviceHubFlagHtml(value, policy, opts) {
+    const LG = window.ServiceHubLinkGuard;
+    const v = value == null ? "" : String(value);
+    if (LG && LG.flaggedHtml) return LG.flaggedHtml(v, policy || "none", opts);
+    const cut = opts && opts.max > 0 && v.length > opts.max;
+    return escapeServiceHubText(cut ? v.slice(0, opts.max) : v) + (cut ? "\u2026" : "");
+}
+
 function mapAppsScriptListingToCard(listing) {
     const get = function () {
         for (let i = 0; i < arguments.length; i++) {
@@ -1766,12 +1785,14 @@ function mapAppsScriptListingToCard(listing) {
         id: String(id || ""),
         title: serviceHubClean(service),
         provider: serviceHubClean(provider),
-        company: serviceHubClean(get("company", "Company", "Company Name")),
-        contact: serviceHubClean(get("contact", "Contact", "Contact Information"), "contact"),
+        /* company / contact / about / portfolio keep their original text here; the service page
+           shows any unsupported link as unclickable + flagged instead of deleting it */
+        company: String(get("company", "Company", "Company Name") || ""),
+        contact: String(get("contact", "Contact", "Contact Information") || ""),
         phone: get("phone", "Phone", "Phone Number"),
         whatsapp: get("whatsapp", "WhatsApp", "Whatsapp") || get("phone", "Phone", "Phone Number"),
-        portfolio: serviceHubSafeLink(get("portfolio", "Portfolio"), "social"),
-        about: serviceHubClean(get("about", "About")),
+        portfolio: String(get("portfolio", "Portfolio") || "").trim(),
+        about: String(get("about", "About") || ""),
         category: serviceHubClean(service),
         rating: get("rating", "Rating") || "New",
         reviews: get("reviews", "Reviews") || 0,
@@ -2569,12 +2590,13 @@ document.body.classList.remove("menu-open");
             const LG = window.ServiceHubLinkGuard;
             const clean = function (v, p) { return LG ? LG.clean(v, p || "none") : v; };
             const title = clean(pick("Service Name", "serviceName")) || "Job";
-            const company = clean(pick("Company", "company"));
+            const company = String(pick("Company", "company") || "");
             const type = clean(pick("Job Type", "jobType")) || "Job";
             const req = String(
-                clean(pick("Job Requirements", "jobRequirements", "About", "about"))
+                pick("Job Requirements", "jobRequirements", "About", "about") || ""
             );
-            const form = LG ? LG.safeHref(pick("Google Form Link", "googleFormLink"), "googleform") : "";
+            const formRaw = String(pick("Google Form Link", "googleFormLink") || "").trim();
+            const form = LG ? LG.safeHref(formRaw, "googleform") : "";
             const price = pick("Price", "price");
             const currency = String(pick("Currency", "currency") || "NGN").toUpperCase();
 
@@ -2609,13 +2631,15 @@ document.body.classList.remove("menu-open");
                         '<span class="job-payment">' + payment + '</span>' +
                     '</div>' +
                     '<h2>' + escapeServiceHubText(title) + '</h2>' +
-                    (company ? '<p class="job-company">' + escapeServiceHubText(company) + '</p>' : '') +
-                    '<p class="job-excerpt">' + escapeServiceHubText(req.slice(0, 180)) +
-                        (req.length > 180 ? "…" : "") + '</p>' +
+                    (company ? '<p class="job-company">' + serviceHubFlagHtml(company, "none") + '</p>' : '') +
+                    '<p class="job-excerpt">' + serviceHubFlagHtml(req, "none", { max: 180 }) + '</p>' +
                     (form
                         ? '<a class="apply-job-btn" href="' + escapeServiceHubAttribute(form) +
                             '" target="_blank" rel="noopener noreferrer">Apply via Form <span>↗</span></a>'
-                        : '<p class="job-company">Application link unavailable</p>') +
+                        : (formRaw && LG
+                            /* not a Google Form link: kept, but unclickable and flagged */
+                            ? '<p class="job-company">' + serviceHubFlagHtml(formRaw, "googleform") + '</p>'
+                            : '<p class="job-company">Application link unavailable</p>')) +
                 '</div>';
 
             return article;
@@ -3121,7 +3145,7 @@ categorySearchLinks.forEach(function (card) {
                 ? "chat-message-user"
                 : "chat-message-provider");
 
-        bubble.textContent = serviceHubClean(String(text == null ? "" : text), "all");
+        serviceHubFlagInto(bubble, text, "all");
 
         chatMessages.appendChild(bubble);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -3435,11 +3459,12 @@ function renderServicePage(card) {
     setText("serviceProvider", card.provider || "Provider");
     setText("serviceRating", card.rating || "New");
     setText("serviceReviews", "Reviews");
-    setText(
-        "serviceDescription",
+    serviceHubFlagInto(
+        document.getElementById("serviceDescription"),
         card.description ||
         card.about ||
-        "Contact the provider to learn more about this service."
+        "Contact the provider to learn more about this service.",
+        "none"
     );
     setText("servicePrice", card.price || "Contact provider");
 
@@ -3578,7 +3603,12 @@ function renderServiceProviderDetails(card) {
     let count = 0;
 
     if (card.provider) { addRow("Provider", text(serviceHubClean(String(card.provider)))); count++; }
-    if (card.company) { addRow("Company", text(serviceHubClean(String(card.company)))); count++; }
+    if (card.company) {
+        const companyBox = document.createElement("span");
+        serviceHubFlagInto(companyBox, card.company, "none");
+        addRow("Company", companyBox);
+        count++;
+    }
 
     if (card.phone) {
         addRow("Phone", link("tel:" + String(card.phone).replace(/[^0-9+]/g, ""), card.phone, false));
@@ -3603,11 +3633,23 @@ function renderServiceProviderDetails(card) {
         count++;
     }
 
-    if (card.contact) { addRow("Contact", text(serviceHubClean(String(card.contact), "contact"))); count++; }
+    if (card.contact) {
+        const contactBox = document.createElement("span");
+        serviceHubFlagInto(contactBox, card.contact, "contact");
+        addRow("Contact", contactBox);
+        count++;
+    }
 
-    if (serviceHubSafeLink(card.portfolio, "social")) {
-        const url = /^https?:\/\//i.test(card.portfolio) ? card.portfolio : "https://" + card.portfolio;
-        addRow("Portfolio", link(url, card.portfolio, true));
+    if (card.portfolio) {
+        if (serviceHubSafeLink(card.portfolio, "social")) {
+            const url = /^https?:\/\//i.test(card.portfolio) ? card.portfolio : "https://" + card.portfolio;
+            addRow("Portfolio", link(url, card.portfolio, true));
+        } else {
+            /* not a supported link: kept, but unclickable and flagged */
+            const portfolioBox = document.createElement("span");
+            serviceHubFlagInto(portfolioBox, card.portfolio, "social");
+            addRow("Portfolio", portfolioBox);
+        }
         count++;
     }
 
@@ -5751,7 +5793,7 @@ if (jobListingForm) {
             name.className = "message-name";
             name.textContent = message.sender === "provider" ? PROVIDER_NAME : (conversation.customerName || "Customer");
             const text = document.createElement("div");
-            text.textContent = serviceHubClean(String(message.message || ""), "all");
+            serviceHubFlagInto(text, message.message || "", "all");
             el.appendChild(name);
             el.appendChild(text);
             messages.appendChild(el);

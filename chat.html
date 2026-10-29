@@ -118,8 +118,10 @@ function renderRows(rows){
     if(m.id<=lastId)return;
     lastId=m.id;
     var b=document.createElement("div");b.className="bubble "+(m.sender==="customer"?"user":"provider");
-    var txt=document.createElement("span");txt.className="msg-text";txt.textContent=window.ServiceHubLinkGuard?window.ServiceHubLinkGuard.clean(m.body||"","all"):(m.body||"");
-    if(m.sender!=="customer")txt.setAttribute("data-chat-in","");   /* incoming: i18n.js translates it for the reader */
+    var txt=document.createElement("span");txt.className="msg-text";var LGd=window.ServiceHubLinkGuard,flagged=false;
+    /* unsupported links stay visible but unclickable, with a "might be dangerous" note */
+    if(LGd&&LGd.renderInto){flagged=LGd.renderInto(txt,m.body||"","all");}else{txt.textContent=m.body||"";}
+    if(m.sender!=="customer"&&!flagged)txt.setAttribute("data-chat-in","");   /* incoming: i18n.js translates it for the reader */
     b.appendChild(txt);
     var time=document.createElement("span");time.className="time";time.textContent=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
     b.appendChild(time);messages.appendChild(b);

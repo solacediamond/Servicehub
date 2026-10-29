@@ -450,6 +450,110 @@
     return analyse(v, pol, false) ? v : "";
   }
 
+  /* ---------------- 5b. Showing stored text with unsupported links FLAGGED ----------------
+     Used when text that is already stored (chats, listing info, jobs, portfolio) is DISPLAYED.
+     Nothing is deleted: an unsupported link stays visible as plain, unclickable text, marked and
+     followed by a small "This link might be dangerous" note. It is never an <a>, never gets an
+     href, and cannot be selected, so it cannot be tapped or dragged. Supported links are left
+     as they are. The text boxes (sanitize / apply above) are NOT touched by any of this. */
+
+  var WARN_TEXT = "This link might be dangerous";
+
+  function ensureFlagStyle() {
+    try {
+      if (document.getElementById("sh-lg-flag-style")) return;
+      var st = document.createElement("style");
+      st.id = "sh-lg-flag-style";
+      st.textContent =
+        ".sh-lg-bad{display:inline;background:rgba(255,107,129,.2);border-bottom:1px dashed #ff6b81;border-radius:3px;" +
+        "padding:0 2px;pointer-events:none;cursor:not-allowed;-webkit-user-select:none;user-select:none;" +
+        "-webkit-touch-callout:none;overflow-wrap:anywhere;word-break:break-all}" +
+        ".sh-lg-warn{display:block;width:max-content;max-width:100%;margin:5px 0 2px;padding:2px 8px;border-radius:999px;" +
+        "font:600 10.5px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#ffd0d8;background:rgba(20,22,38,.92);" +
+        "border:1px solid rgba(255,107,129,.7);pointer-events:none;overflow-wrap:anywhere;white-space:normal;text-align:left}";
+      (document.head || document.documentElement).appendChild(st);
+    } catch (e) {}
+  }
+
+  /* text -> [{text, bad}] : "bad" pieces are links that are not allowed under the policy */
+  function flagParts(text, policyName) {
+    policyName = policyName || "none";
+    var pol = getPolicy(policyName);
+    var s = String(text == null ? "" : text).replace(INVISIBLE, "");
+    if (!s) return [];
+    if (pol.strict) {                       /* the whole value is meant to be ONE link */
+      var v = s.replace(/\s+/g, "");
+      return [{ text: s, bad: !!v && !analyse(v, pol, false) }];
+    }
+    var res = sanitize(s, policyName, { replacement: "x" });
+    if (!res.ranges || !res.ranges.length) return [{ text: s, bad: false }];
+    var parts = [], pos = 0;
+    res.ranges.forEach(function (r) {
+      if (r.start > pos) parts.push({ text: s.slice(pos, r.start), bad: false });
+      parts.push({ text: s.slice(r.start, r.end), bad: true });
+      pos = r.end;
+    });
+    if (pos < s.length) parts.push({ text: s.slice(pos), bad: false });
+    return parts;
+  }
+
+  function warnNode() {
+    var w = document.createElement("span");
+    w.className = "sh-lg-warn";
+    w.setAttribute("data-no-translate", "");
+    w.setAttribute("role", "note");
+    w.textContent = "\u26A0\uFE0F " + WARN_TEXT;
+    return w;
+  }
+
+  /* Puts the text into el (replacing what is there). Returns true if a link was flagged. */
+  function renderInto(el, text, policyName, opts) {
+    var parts = flagParts(text, policyName), bad = false, i, p, sp;
+    ensureFlagStyle();
+    el.textContent = "";
+    for (i = 0; i < parts.length; i++) {
+      p = parts[i];
+      if (p.bad) {
+        bad = true;
+        sp = document.createElement("span");
+        sp.className = "sh-lg-bad";
+        sp.setAttribute("data-no-translate", "");
+        sp.setAttribute("translate", "no");
+        sp.title = WARN_TEXT;
+        sp.textContent = p.text;
+        el.appendChild(sp);
+      } else {
+        el.appendChild(document.createTextNode(p.text));
+      }
+    }
+    if (bad && !(opts && opts.noWarn)) el.appendChild(warnNode());
+    return bad;
+  }
+
+  function escHtml(t) {
+    return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  /* Same thing as an HTML string (already escaped) for templates. opts.max cuts the text short. */
+  function flaggedHtml(text, policyName, opts) {
+    opts = opts || {};
+    var parts = flagParts(text, policyName), out = "", bad = false, left = opts.max > 0 ? opts.max : Infinity, cut = false, i, p, t;
+    ensureFlagStyle();
+    for (i = 0; i < parts.length; i++) {
+      p = parts[i];
+      if (left <= 0) { cut = true; break; }
+      t = p.text;
+      if (t.length > left) { t = t.slice(0, left); cut = true; }
+      left -= t.length;
+      if (p.bad) { bad = true; out += '<span class="sh-lg-bad" data-no-translate translate="no" title="' + WARN_TEXT + '">' + escHtml(t) + "</span>"; }
+      else out += escHtml(t);
+      if (cut) break;
+    }
+    if (cut) out += "\u2026";
+    if (bad && !opts.noWarn) out += '<span class="sh-lg-warn" data-no-translate role="note">\u26A0\uFE0F ' + WARN_TEXT + "</span>";
+    return out;
+  }
+
   /* ---------------- 6. Wiring up the text boxes ---------------- */
 
   var BY_ID = {
@@ -583,8 +687,9 @@
   document.addEventListener("keydown", onKey, true);
 
   window.ServiceHubLinkGuard = {
-    version: "1.0",
+    version: "1.1",
     sanitize: sanitize, clean: clean, safeHref: safeHref,
+    flagParts: flagParts, renderInto: renderInto, flaggedHtml: flaggedHtml, warnText: WARN_TEXT,
     isAllowed: function (url, policy) { return !!safeHref(url, policy); },
     checkField: checkField, checkAll: checkAll, policyFor: policyFor,
     policyMessage: function (p) { return getPolicy(p).msg; },
