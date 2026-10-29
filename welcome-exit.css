@@ -350,8 +350,10 @@ html.sh-welcome-on, html.sh-exit-on { overflow: hidden; }
 
 /* Calm version: no drifting, spinning or sweeping; just a gentle fade. */
 @media (prefers-reduced-motion: reduce) {
-  .sh-fx-blobs i, .sh-fx-grid, .sh-fx-scan, .sh-fx-card::after, .sh-fx-ring, .sh-fx-bolt, .sh-fx-chev, .sh-fx-status b, .sh-fx-hint, .sh-fx-mascot-wrap, .sh-fx-halo, .sh-fx-hand { animation: none !important; }
-  .sh-fx.is-on .has-mascot .sh-fx-mascot, .sh-fx.is-on .has-mascot .sh-fx-bubble { animation: shfxIn .5s ease both !important; }
+  .sh-fx-blobs i, .sh-fx-grid, .sh-fx-scan, .sh-fx-card::after, .sh-fx-ring, .sh-fx-bolt, .sh-fx-chev, .sh-fx-status b, .sh-fx-hint { animation: none !important; }
+  /* The mascot (float, hello, wave, bubble) keeps moving: it is small and gentle,
+     and many phones switch "reduce motion" on by themselves (battery saver,
+     "remove animations"), which would make the screens look frozen. */
   .sh-fx.is-on .sh-fx-card, .sh-fx.is-on .sh-fx-orb, .sh-fx.is-on .sh-fx-kicker, .sh-fx.is-on .sh-fx-title, .sh-fx.is-on .sh-fx-sub,
   .sh-fx.is-on .sh-fx-bar, .sh-fx.is-on .sh-fx-status, .sh-fx.is-on .sh-fx-hint, .sh-fx.is-on .sh-fx-stay { animation: shfxIn .4s ease both !important; }
   .sh-fx.is-on .sh-fx-bar i { animation: shfxFill var(--sh-dur) linear both !important; }

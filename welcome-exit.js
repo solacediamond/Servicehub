@@ -123,7 +123,7 @@
     if (welcomeAlreadySeen()) return;
     try { sessionStorage.setItem(WELCOME_KEY, "1"); } catch (_) {}
 
-    var duration = reduceMotion ? 1600 : WELCOME_MS;
+    var duration = WELCOME_MS;
     welcomeEl = build("welcome");
     welcomeEl.style.setProperty("--sh-dur", duration + "ms");
     root.classList.add("sh-welcome-on");
