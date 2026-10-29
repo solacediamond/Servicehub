@@ -857,7 +857,7 @@ function drawThread(){
     var h=$("#msgs");h.innerHTML="";
     ms.forEach(function(m){var d=document.createElement("div");d.className="b"+(m.sender==="provider"?" me":"");
       var t=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
-      d.innerHTML=esc(m.body)+"<small>"+esc(t)+"</small>";h.appendChild(d)});
+      d.innerHTML='<span class="msg-text"'+(m.sender==='provider'?'':' data-chat-in=""')+'>'+esc(m.body)+'</span><small>'+esc(t)+"</small>";h.appendChild(d)});
     window.scrollTo(0,document.body.scrollHeight);
   }).catch(function(e){toast(e.message)});
 }

@@ -17,7 +17,8 @@
     return String(window.SERVICEHUB_APPS_SCRIPT_URL || window.SERVICEHUB_API_URL || FALLBACK_URL).trim();
   }
   // Private content that must never be sent to the translator or saved in the Translations tab
-  // (chat messages, bank details, payment codes). Chat translation is a separate, later stage.
+  // (chat messages, bank details, payment codes). Chat messages are translated by their own
+  // private path further down (translateChat), which saves nothing.
   var NEVER_TRANSLATE = '[data-no-translate],.notranslate,.bubble,#messages,.active-messages,.active-chat-customer,#v-thread .b,.bank-value,.code-box,#paymentCodeNotice';
   var STORE_LANG = 'sh_lang';          // 'auto' or a language code
   var STORE_CACHE = 'sh_tr_';          // + language code
@@ -216,6 +217,7 @@
     applyAll();
     run();
     refreshPicker();
+    chatRefresh();
     try { window.dispatchEvent(new CustomEvent('servicehub-lang', { detail: { lang: lang } })); } catch (e) {}
   }
 
@@ -230,6 +232,142 @@
       if (t) { if (code === lang) { cache[text] = t; saveCache(); } return t; }
       return text;
     }).catch(function () { return text; });
+  }
+
+  /* ---------- chat messages (private) ----------
+     Incoming bubbles are marked data-chat-in by chat.html / manage.html. They are translated into
+     the reader's language as they appear, through the separate "translateChat" action, which never
+     saves anything. They never touch the shared Translations tab. The reader can tap to see the
+     original. */
+  var CHAT_STORE = 'sh_chat_tr_';
+  var CHAT_MAX_SAVED = 300;
+  var CHAT_BATCH = 20;
+  var LABEL_TR = 'See original';          // button label while the translation is showing
+  var LABEL_OR = 'See translation';       // button label while the original is showing
+  var ICON_LANG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>';
+  var chatMem = {};                // language -> { text: translation, or '' when no translation is needed }
+  var chatQueue = [], chatTimer = null, chatObs = null;
+
+  function chatLoad(code) {
+    if (chatMem[code]) return chatMem[code];
+    var m = {};
+    try { m = JSON.parse(sessionStorage.getItem(CHAT_STORE + code) || '{}') || {}; } catch (e) {}
+    chatMem[code] = m;
+    return m;
+  }
+  function chatSave(code) {
+    try {
+      var m = chatMem[code], keys = Object.keys(m);
+      if (keys.length > CHAT_MAX_SAVED) keys.slice(0, keys.length - CHAT_MAX_SAVED).forEach(function (k) { delete m[k]; });
+      sessionStorage.setItem(CHAT_STORE + code, JSON.stringify(m));
+    } catch (e) {}
+  }
+  function chatWorthy(s) { return s.length > 0 && s.length <= 2000 && /\p{L}/u.test(s); }
+  function askChat(code, texts) {
+    return fetch(apiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'translateChat', lang: code, texts: texts })
+    }).then(function (r) { return r.json(); });
+  }
+  function chatSendGroup(code, items) {
+    var uniq = [];
+    items.forEach(function (it) { if (uniq.indexOf(it.key) < 0) uniq.push(it.key); });
+    for (var i = 0; i < uniq.length; i += CHAT_BATCH) (function (part) {
+      var mine = items.filter(function (it) { return part.indexOf(it.key) > -1; });
+      askChat(code, part).then(function (res) {
+        var got = (res && res.ok && res.translations) || {};
+        var mem = chatLoad(code);
+        part.forEach(function (k) {
+          if (got[k] !== undefined) mem[k] = String(got[k]).trim().toLowerCase() === k.toLowerCase() ? '' : got[k];
+        });
+        chatSave(code);
+        mine.forEach(function (it) { it.done(mem[it.key]); });
+      }).catch(function () { mine.forEach(function (it) { it.done(undefined); }); });
+    })(uniq.slice(i, i + CHAT_BATCH));
+  }
+  function chatFlush() {
+    var q = chatQueue, groups = {};
+    chatQueue = [];
+    q.forEach(function (it) { (groups[it.code] = groups[it.code] || []).push(it); });
+    Object.keys(groups).forEach(function (code) { chatSendGroup(code, groups[code]); });
+  }
+  function keepBottom(el, fn) {
+    var box = el.closest ? el.closest('#messages') : null;
+    var doc = document.scrollingElement || document.documentElement;
+    var nearBox = box && (box.scrollHeight - box.scrollTop - box.clientHeight < 90);
+    var nearWin = !box && (doc.scrollHeight - doc.scrollTop - window.innerHeight < 120);
+    fn();
+    if (nearBox) box.scrollTop = box.scrollHeight;
+    else if (nearWin) window.scrollTo(0, doc.scrollHeight);
+  }
+  function chatShow(el, orig, tr) {
+    keepBottom(el, function () {
+      var showing = true;
+      var tag = document.createElement('button');
+      tag.type = 'button';
+      tag.className = 'sh-chat-tag';
+      tag.setAttribute('data-no-translate', '');
+      tag.style.cssText = 'display:flex;align-items:center;gap:5px;width:max-content;max-width:100%;margin-top:6px;padding:3px 9px;border:0;border-radius:999px;background:rgba(255,255,255,.12);color:inherit;font:inherit;font-size:10px;line-height:1.3;opacity:.85;cursor:pointer;-webkit-tap-highlight-color:transparent';
+      tag.innerHTML = ICON_LANG + '<span></span>';
+      var lab = tag.lastChild;
+      function paint() {
+        var key = showing ? LABEL_TR : LABEL_OR;
+        el.textContent = showing ? tr : orig;
+        lab.textContent = key;
+        tag.setAttribute('aria-label', key);
+        tag.title = key;
+        tag.__k = key;
+        translate(key).then(function (t) { if (tag.__k === key) { lab.textContent = t; tag.title = t; } });
+      }
+      tag.onclick = function (e) { e.stopPropagation(); keepBottom(el, function () { showing = !showing; paint(); }); };
+      el.__chatTag = tag;
+      if (el.parentNode) el.parentNode.insertBefore(tag, el.nextSibling);
+      paint();
+    });
+  }
+  function chatReset(el) {
+    if (el.__chatOrig !== undefined) el.textContent = el.__chatOrig;
+    if (el.__chatTag && el.__chatTag.parentNode) el.__chatTag.parentNode.removeChild(el.__chatTag);
+    el.__chatTag = null;
+    el.removeAttribute('data-chat-done');
+  }
+  function chatHandle(el) {
+    var orig = el.textContent, key = orig.trim(), code = lang;
+    el.setAttribute('data-chat-done', '1');
+    el.__chatOrig = orig;
+    if (!chatWorthy(key)) return;
+    var mem = chatLoad(code);
+    if (mem[key] !== undefined) { if (mem[key]) chatShow(el, orig, mem[key]); return; }
+    if (!navigator.onLine) { el.removeAttribute('data-chat-done'); return; }
+    chatQueue.push({
+      code: code, key: key,
+      done: function (v) {
+        if (code !== lang) return;
+        if (v) { if (el.isConnected) chatShow(el, orig, v); return; }
+        if (v === undefined && (el.__chatTries = (el.__chatTries || 0) + 1) <= 2) {   // network hiccup: try again shortly
+          setTimeout(function () { if (el.isConnected) { el.removeAttribute('data-chat-done'); chatScan(); } }, 3000);
+        }
+      }
+    });
+    clearTimeout(chatTimer);
+    chatTimer = setTimeout(chatFlush, 40);
+  }
+  function chatScan() {
+    if (!document.body) return;
+    var els = document.querySelectorAll('[data-chat-in]:not([data-chat-done])');
+    for (var i = 0; i < els.length; i++) chatHandle(els[i]);
+  }
+  function chatRefresh() {
+    var els = document.querySelectorAll('[data-chat-in][data-chat-done]');
+    for (var i = 0; i < els.length; i++) chatReset(els[i]);
+    chatScan();
+  }
+  function initChat() {
+    chatObs = new MutationObserver(chatScan);
+    if (document.body) chatObs.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('online', chatScan);
+    chatScan();
   }
 
   /* ---------- picker ---------- */
@@ -323,6 +461,7 @@
     buildPicker();
     initObserver();
     lang = chosen();
+    initChat();
     cache = lang === 'en' ? {} : loadCache(lang);
     var h = document.documentElement;
     h.setAttribute('lang', lang);

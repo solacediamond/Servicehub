@@ -116,7 +116,10 @@ function renderRows(rows){
   rows.forEach(function(m){
     if(m.id<=lastId)return;
     lastId=m.id;
-    var b=document.createElement("div");b.className="bubble "+(m.sender==="customer"?"user":"provider");b.textContent=m.body||"";
+    var b=document.createElement("div");b.className="bubble "+(m.sender==="customer"?"user":"provider");
+    var txt=document.createElement("span");txt.className="msg-text";txt.textContent=m.body||"";
+    if(m.sender!=="customer")txt.setAttribute("data-chat-in","");   /* incoming: i18n.js translates it for the reader */
+    b.appendChild(txt);
     var time=document.createElement("span");time.className="time";time.textContent=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
     b.appendChild(time);messages.appendChild(b);
   });
