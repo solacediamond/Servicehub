@@ -146,10 +146,20 @@
 
       /* A history marker lets the Android back gesture reach this confirmation
          while keeping ordinary in-app link navigation intact. */
+      var homeBackCount = 0;
       try { history.pushState({ serviceHubExitGuard: true }, "", location.href); } catch (_) {}
       window.addEventListener("popstate", function () {
         if (exitAllowed) return;
         try { history.pushState({ serviceHubExitGuard: true }, "", location.href); } catch (_) {}
+        homeBackCount += 1;
+        if (homeBackCount === 1) {
+          /* First Android/browser back on the homepage: show a persistent hint.
+             Do not auto-hide it and do not exit the app on this first back. */
+          show("thanks", 0);
+          heading.textContent = "Thanks for visiting";
+          message.textContent = "Back again to exit.";
+          return;
+        }
         showExitDialog();
       });
 
