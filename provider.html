@@ -6,6 +6,7 @@
 
     <title>ServiceHub — Provider</title>
 
+    <script src="/link-guard.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -374,6 +375,8 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbnZuY2V
 
         input.type = "text";
 
+        input.setAttribute("data-link-policy", "all");
+
         input.placeholder =
             "Reply to customer...";
 
@@ -494,7 +497,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbnZuY2V
             </div>
 
             <div>
-                ${escapeHTML(message.message)}
+                ${escapeHTML(window.ServiceHubLinkGuard ? window.ServiceHubLinkGuard.clean(message.message, 'all') : message.message)}
             </div>
 
         `;
@@ -514,6 +517,11 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxbnZuY2V
         conversation,
         input
     ) {
+
+        /* Link safety: only links from platforms supported on ServiceHub may be sent */
+        if (window.ServiceHubLinkGuard && !window.ServiceHubLinkGuard.checkField(input)) {
+            return;
+        }
 
         const message =
             input.value.trim();

@@ -1677,6 +1677,21 @@ function buildServiceHubContactMessage(card) {
    Maps the Apps Script listing object into the existing card renderer.
    Supports both the Apps Script header names and the older frontend names.
 */
+/* ---- Link safety: anything shown from the sheet is checked again, so a link that
+   slipped in earlier (or was sent straight to the backend) is never displayed ---- */
+function serviceHubClean(value, policy) {
+    const LG = window.ServiceHubLinkGuard;
+    if (typeof value !== "string" || !LG) return value;
+    return LG.clean(value, policy || "none");
+}
+
+function serviceHubSafeLink(value, policy) {
+    const LG = window.ServiceHubLinkGuard;
+    const v = String(value == null ? "" : value).trim();
+    if (!v || !LG) return "";
+    return LG.safeHref(v, policy) ? v : "";
+}
+
 function mapAppsScriptListingToCard(listing) {
     const get = function () {
         for (let i = 0; i < arguments.length; i++) {
@@ -1749,15 +1764,15 @@ function mapAppsScriptListingToCard(listing) {
 
     return {
         id: String(id || ""),
-        title: service,
-        provider: provider,
-        company: get("company", "Company", "Company Name"),
-        contact: get("contact", "Contact", "Contact Information"),
+        title: serviceHubClean(service),
+        provider: serviceHubClean(provider),
+        company: serviceHubClean(get("company", "Company", "Company Name")),
+        contact: serviceHubClean(get("contact", "Contact", "Contact Information"), "contact"),
         phone: get("phone", "Phone", "Phone Number"),
         whatsapp: get("whatsapp", "WhatsApp", "Whatsapp") || get("phone", "Phone", "Phone Number"),
-        portfolio: get("portfolio", "Portfolio"),
-        about: get("about", "About"),
-        category: service,
+        portfolio: serviceHubSafeLink(get("portfolio", "Portfolio"), "social"),
+        about: serviceHubClean(get("about", "About")),
+        category: serviceHubClean(service),
         rating: get("rating", "Rating") || "New",
         reviews: get("reviews", "Reviews") || 0,
         currency: currency,
@@ -2551,13 +2566,15 @@ document.body.classList.remove("menu-open");
                 return "";
             };
 
-            const title = pick("Service Name", "serviceName") || "Job";
-            const company = pick("Company", "company");
-            const type = pick("Job Type", "jobType") || "Job";
+            const LG = window.ServiceHubLinkGuard;
+            const clean = function (v, p) { return LG ? LG.clean(v, p || "none") : v; };
+            const title = clean(pick("Service Name", "serviceName")) || "Job";
+            const company = clean(pick("Company", "company"));
+            const type = clean(pick("Job Type", "jobType")) || "Job";
             const req = String(
-                pick("Job Requirements", "jobRequirements", "About", "about")
+                clean(pick("Job Requirements", "jobRequirements", "About", "about"))
             );
-            const form = pick("Google Form Link", "googleFormLink");
+            const form = LG ? LG.safeHref(pick("Google Form Link", "googleFormLink"), "googleform") : "";
             const price = pick("Price", "price");
             const currency = String(pick("Currency", "currency") || "NGN").toUpperCase();
 
@@ -2595,8 +2612,10 @@ document.body.classList.remove("menu-open");
                     (company ? '<p class="job-company">' + escapeServiceHubText(company) + '</p>' : '') +
                     '<p class="job-excerpt">' + escapeServiceHubText(req.slice(0, 180)) +
                         (req.length > 180 ? "…" : "") + '</p>' +
-                    '<a class="apply-job-btn" href="' + escapeServiceHubAttribute(form) +
-                        '" target="_blank" rel="noopener">Apply via Form <span>↗</span></a>' +
+                    (form
+                        ? '<a class="apply-job-btn" href="' + escapeServiceHubAttribute(form) +
+                            '" target="_blank" rel="noopener noreferrer">Apply via Form <span>↗</span></a>'
+                        : '<p class="job-company">Application link unavailable</p>') +
                 '</div>';
 
             return article;
@@ -3102,7 +3121,7 @@ categorySearchLinks.forEach(function (card) {
                 ? "chat-message-user"
                 : "chat-message-provider");
 
-        bubble.textContent = text;
+        bubble.textContent = serviceHubClean(String(text == null ? "" : text), "all");
 
         chatMessages.appendChild(bubble);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -3112,6 +3131,9 @@ categorySearchLinks.forEach(function (card) {
     async function handleChatSend() {
 
         if (!chatInput) return;
+
+        /* Link safety: only links from platforms supported on ServiceHub may be sent */
+        if (window.ServiceHubLinkGuard && !window.ServiceHubLinkGuard.checkField(chatInput)) return;
 
         const message = chatInput.value.trim();
 
@@ -3555,8 +3577,8 @@ function renderServiceProviderDetails(card) {
 
     let count = 0;
 
-    if (card.provider) { addRow("Provider", text(card.provider)); count++; }
-    if (card.company) { addRow("Company", text(card.company)); count++; }
+    if (card.provider) { addRow("Provider", text(serviceHubClean(String(card.provider)))); count++; }
+    if (card.company) { addRow("Company", text(serviceHubClean(String(card.company)))); count++; }
 
     if (card.phone) {
         addRow("Phone", link("tel:" + String(card.phone).replace(/[^0-9+]/g, ""), card.phone, false));
@@ -3581,9 +3603,9 @@ function renderServiceProviderDetails(card) {
         count++;
     }
 
-    if (card.contact) { addRow("Contact", text(card.contact)); count++; }
+    if (card.contact) { addRow("Contact", text(serviceHubClean(String(card.contact), "contact"))); count++; }
 
-    if (card.portfolio) {
+    if (serviceHubSafeLink(card.portfolio, "social")) {
         const url = /^https?:\/\//i.test(card.portfolio) ? card.portfolio : "https://" + card.portfolio;
         addRow("Portfolio", link(url, card.portfolio, true));
         count++;
@@ -3760,6 +3782,11 @@ if (listingForm) {
             event.preventDefault();
 
             if (listingSubmitInFlight) {
+                return;
+            }
+
+            /* Link safety: re-check every box; nothing is sent while a disallowed link was just removed */
+            if (window.ServiceHubLinkGuard && !window.ServiceHubLinkGuard.checkAll(listingForm)) {
                 return;
             }
 
@@ -5422,6 +5449,11 @@ if (jobListingForm) {
     jobListingForm.addEventListener("submit", async function (event) {
     event.preventDefault();
 
+    /* Link safety: re-check every box; nothing is sent while a disallowed link was just removed */
+    if (window.ServiceHubLinkGuard && !window.ServiceHubLinkGuard.checkAll(jobListingForm)) {
+        return;
+    }
+
     const selectedJobType = jobType?.value || "";
     const resolvedJobType =
         selectedJobType === "others"
@@ -5719,7 +5751,7 @@ if (jobListingForm) {
             name.className = "message-name";
             name.textContent = message.sender === "provider" ? PROVIDER_NAME : (conversation.customerName || "Customer");
             const text = document.createElement("div");
-            text.textContent = message.message || "";
+            text.textContent = serviceHubClean(String(message.message || ""), "all");
             el.appendChild(name);
             el.appendChild(text);
             messages.appendChild(el);
@@ -5729,10 +5761,12 @@ if (jobListingForm) {
         reply.className = "active-reply-box";
         const input = document.createElement("input");
         input.type = "text";
+        input.setAttribute("data-link-policy", "all");
         input.placeholder = "Reply to customer...";
         const button = document.createElement("button");
         button.textContent = "Send";
         function send() {
+            if (window.ServiceHubLinkGuard && !window.ServiceHubLinkGuard.checkField(input)) return;
             const value = input.value.trim();
             if (!value) return;
             const stored = JSON.parse(localStorage.getItem(conversation.storageKey) || "null");

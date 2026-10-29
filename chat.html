@@ -13,6 +13,7 @@
 @media(min-width:900px){.chat-page{border-left:1px solid var(--border);border-right:1px solid var(--border);background:rgba(8,11,18,.35)}.bubble{font-size:14px}.composer input{font-size:14px;height:46px}.send{width:42px;height:42px}}
 @media(min-width:1400px){.chat-page{max-width:980px}}
 </style>
+<script src="/link-guard.js"></script>
 <script src="backend-config.js"></script>
     <!-- ServiceHub app (PWA) -->
     <link rel="manifest" href="/manifest.webmanifest">
@@ -46,7 +47,7 @@
 <main class="chat-page">
 <header class="chat-header"><div class="avatar">S</div><div class="provider-info"><h1 id="providerName">Service Provider</h1><p id="serviceName">ServiceHub provider</p></div><button class="edit-name" id="editName" type="button" aria-label="Edit name">✎</button></header>
 <section class="messages" id="messages"><div class="empty" id="empty"><strong>Start a conversation</strong>Send a message to the provider about this service.</div></section>
-<div class="composer-area"><div class="composer"><input id="messageInput" maxlength="2000" autocomplete="off" placeholder="Type a message..."><button class="send" id="sendMessage" type="button" aria-label="Send">➤</button></div><div class="as" id="chattingAs"></div></div>
+<div class="composer-area"><div class="composer"><input id="messageInput" data-link-policy="all" maxlength="2000" autocomplete="off" placeholder="Type a message..."><button class="send" id="sendMessage" type="button" aria-label="Send">➤</button></div><div class="as" id="chattingAs"></div></div>
 </main>
 <div class="modal" id="nameModal"><div class="modal-box"><h2>Your name</h2><p>Enter the name you want the provider to see when you chat.</p><form id="nameForm"><input id="nameInput" maxlength="80" autocomplete="name" placeholder="Enter your name" required><div class="actions"><button type="button" id="cancelName">Cancel</button><button class="primary" type="submit">Continue</button></div></form></div></div>
 <script>
@@ -117,7 +118,7 @@ function renderRows(rows){
     if(m.id<=lastId)return;
     lastId=m.id;
     var b=document.createElement("div");b.className="bubble "+(m.sender==="customer"?"user":"provider");
-    var txt=document.createElement("span");txt.className="msg-text";txt.textContent=m.body||"";
+    var txt=document.createElement("span");txt.className="msg-text";txt.textContent=window.ServiceHubLinkGuard?window.ServiceHubLinkGuard.clean(m.body||"","all"):(m.body||"");
     if(m.sender!=="customer")txt.setAttribute("data-chat-in","");   /* incoming: i18n.js translates it for the reader */
     b.appendChild(txt);
     var time=document.createElement("span");time.className="time";time.textContent=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
@@ -127,6 +128,7 @@ function renderRows(rows){
 }
 function pull(){if(!listingId)return;sb("customer_messages",{p_listing:listingId,p_client:token,p_after:lastId}).then(renderRows).catch(function(){});}
 function submit(){
+  if(window.ServiceHubLinkGuard&&!window.ServiceHubLinkGuard.checkField(input))return;
   var value=input.value.trim();if(!value||sending||!listingId)return;
   sending=true;send.disabled=true;
   sb("customer_send",{p_listing:listingId,p_client:token,p_name:getName()||"Customer",p_body:value})

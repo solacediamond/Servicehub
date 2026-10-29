@@ -8,7 +8,7 @@
  *
  * Bump VERSION whenever you want every phone to drop its old saved files.
  */
-const VERSION = "v11";
+const VERSION = "v12";
 const SHELL = "sh-shell-" + VERSION;
 const RUNTIME = "sh-runtime-" + VERSION;
 const STATE = "sh-state";
@@ -22,7 +22,7 @@ const PRECACHE = [
   "/provider.html", "/chat.html", "/conversation.html",
   "/payment.html", "/payment-naira.html", "/payment-usd.html",
   "/payment-crypto.html", "/payment-crypto-return.html", "/payment-crypto-status.html",
-  "/style.css", "/script.js", "/nav-guard.js", "/backend-config.js", "/manage-link-modal.js",
+  "/style.css", "/script.js", "/link-guard.js", "/nav-guard.js", "/backend-config.js", "/manage-link-modal.js",
   "/offline.html", "/manifest.webmanifest", "/pwa.js", "/i18n.js", "/social-fab.js", "/solaceproeditz-logo.png",
   "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png",
   "/icons/favicon-32.png"

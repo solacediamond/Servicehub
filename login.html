@@ -19,6 +19,7 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
     <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png">
+    <script src="/link-guard.js"></script>
     <script src="nav-guard.js"></script>
     <script src="/i18n.js" defer></script>
     <script src="/pwa.js" defer></script>
@@ -108,6 +109,7 @@
                             type="text"
                             id="jobTitle"
                             name="jobTitle"
+                            data-link-policy="none"
                             placeholder="e.g. Need a video editor for a promo"
                             maxlength="140"
                             required
@@ -121,6 +123,7 @@
                             type="text"
                             id="jobName"
                             name="name"
+                            data-link-policy="none"
                             placeholder="Enter your name"
                             maxlength="80"
                             autocomplete="name"
@@ -138,6 +141,7 @@
                             type="text"
                             id="jobCompany"
                             name="company"
+                            data-link-policy="none"
                             placeholder="Enter your company name"
                             maxlength="100"
                             autocomplete="organization"
@@ -175,6 +179,7 @@
                         <textarea
                             id="jobRequirements"
                             name="requirements"
+                            data-link-policy="none"
                             rows="6"
                             maxlength="3000"
                             placeholder="Describe the qualifications, experience, skills, or requirements you expect..."
@@ -214,6 +219,7 @@
                             type="text"
                             id="jobContact"
                             name="contact"
+                            data-link-policy="contact"
                             placeholder="Email, phone, or other contact information"
                             maxlength="150"
                             required
@@ -261,6 +267,7 @@
                             type="text"
                             id="jobTelegram"
                             name="telegram"
+                            data-link-policy="contact"
                             placeholder="@username or Telegram contact"
                             maxlength="100"
                         >
@@ -273,12 +280,15 @@
                             type="url"
                             id="jobGoogleForm"
                             name="googleForm"
+                            data-link-policy="googleform"
                             placeholder="Paste the link to your Google form here"
                             maxlength="500"
                             inputmode="url"
                             autocomplete="off"
                             required
                         >
+
+                        <small>Google Form links only (docs.google.com/forms or forms.gle). Anything else is removed automatically.</small>
 
                         <div class="google-form-help">
                             <span>Don't have one yet? Create one now</span>

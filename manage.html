@@ -6,6 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
 <title>Manage your listing</title>
+<script src="/link-guard.js"></script>
 <script src="backend-config.js"></script>
 <style>
 :root{--bg:#060b16;--card:#0b1220;--line:rgba(148,163,184,.22);--tx:#e8eefc;--mut:#94a3c4;--ac:#2563eb;--ac2:#93c5fd;--ok:#86efac;--bad:#fca5a5}
@@ -166,16 +167,16 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
   <label for="f-providerName">Your name</label><input id="f-providerName" autocomplete="name">
   <label for="f-company">Company / brand</label><input id="f-company">
   <label for="f-about">About your service</label><textarea id="f-about"></textarea>
-  <label for="f-portfolio" id="portfolioFieldLabel">Portfolio link</label><input id="f-portfolio" inputmode="url" placeholder="https://">
+  <label for="f-portfolio" id="portfolioFieldLabel">Portfolio link</label><input id="f-portfolio" data-link-policy="social" inputmode="url" placeholder="https://instagram.com/yourname">
   <div id="jobManageFields" hidden>
     <label for="f-jobType">Job type</label><input id="f-jobType">
     <label for="f-jobRequirements">Requirements</label><textarea id="f-jobRequirements"></textarea>
-    <label for="f-googleForm">Google Form link</label><input id="f-googleForm" inputmode="url" placeholder="https://docs.google.com/forms/...">
-    <label for="f-telegram">Telegram</label><input id="f-telegram" placeholder="@username">
+    <label for="f-googleForm">Google Form link</label><input id="f-googleForm" data-link-policy="googleform" inputmode="url" placeholder="https://docs.google.com/forms/...">
+    <label for="f-telegram">Telegram</label><input id="f-telegram" data-link-policy="contact" placeholder="@username">
   </div>
   <h3>Contact info</h3>
-  <label for="f-contact">Contact (email, Telegram, etc.)</label><input id="f-contact">
-  <label for="f-phone">Phone / WhatsApp</label><input id="f-phone" inputmode="tel">
+  <label for="f-contact">Contact (email, Telegram, etc.)</label><input id="f-contact" data-link-policy="contact">
+  <label for="f-phone">Phone / WhatsApp</label><input id="f-phone" data-link-policy="contact" inputmode="tel">
   <h3>Media</h3>
   <div class="grid" id="media"></div>
   <input type="file" id="pick" accept="image/*,video/*" multiple hidden>
@@ -204,7 +205,7 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
 <section class="view" id="v-secondary">
   <div class="hello"><h2>Link a second service</h2><p>Paste that listing's manage link to switch between both from here.</p></div>
   <label for="f-seclink">Manage link</label>
-  <input id="f-seclink" placeholder="Paste the other listing's manage link" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <input id="f-seclink" data-link-policy="site" placeholder="Paste the other listing's manage link" autocomplete="off" autocapitalize="off" spellcheck="false">
   <button class="btn" id="linkSecondary">Link this service</button>
 </section>
 
@@ -256,7 +257,7 @@ select:focus{outline:2px solid var(--ac);outline-offset:0}
     <button class="btn sound-save" id="saveSoundSettings">Save notification settings</button>
   </div>
 </div>
-<div id="composer" hidden><div class="in"><input id="say" placeholder="Type a reply" autocomplete="off"><button class="ib" id="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+<div id="composer" hidden><div class="in"><input id="say" data-link-policy="all" placeholder="Type a reply" autocomplete="off"><button class="ib" id="send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
 <div id="toast"></div>
 
 <script>
@@ -266,6 +267,8 @@ var $=function(s){return document.querySelector(s)};
 var token=location.hash.slice(1), API=window.SERVICEHUB_APPS_SCRIPT_URL||"";
 var activeToken=token, secondary=null, primaryListing=null;
 var L=null, media=[], openConv=null, fields=["providerName","company","about","portfolio","contact","phone"];
+/* Link safety: stored text is checked again whenever it is shown */
+function LGc(t,p){var g=window.ServiceHubLinkGuard;return g?g.clean(t,p):String(t==null?"":t)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function toast(t){var e=$("#toast");e.textContent=t;e.classList.add("on");setTimeout(function(){e.classList.remove("on")},2400)}
 
@@ -845,8 +848,8 @@ function drawMedia(){
 function renderConvs(){
   chat.list().then(function(cs){
     var h=$("#convs"),n=0;h.innerHTML=cs.length?"":'<div class="empty">No messages yet. When someone messages you, it shows up here.</div>';
-    cs.forEach(function(c){n+=c.unread||0;var name=c.customer_name||"Customer",b=document.createElement("button");b.className="conv";
-      b.innerHTML='<span class="av">'+esc(name.charAt(0))+'</span><span class="t"><b>'+esc(name)+'</b><span>'+esc(c.last_message||"")+'</span></span>'+(c.unread?'<span class="dot"></span>':"");
+    cs.forEach(function(c){n+=c.unread||0;var name=LGc(c.customer_name||"Customer","none"),b=document.createElement("button");b.className="conv";
+      b.innerHTML='<span class="av">'+esc(name.charAt(0))+'</span><span class="t"><b>'+esc(name)+'</b><span>'+esc(LGc(c.last_message||"","all"))+'</span></span>'+(c.unread?'<span class="dot"></span>':"");
       b.onclick=function(){openConv=c;lastThreadMessageId=null;chat.open(c);drawThread();show("thread")};h.appendChild(b)});
     var u=$("#unread");u.hidden=!n;u.textContent=n;
   }).catch(function(e){$("#convs").innerHTML='<div class="empty">'+esc(e.message)+'</div>'});
@@ -857,16 +860,17 @@ function drawThread(){
     var h=$("#msgs");h.innerHTML="";
     ms.forEach(function(m){var d=document.createElement("div");d.className="b"+(m.sender==="provider"?" me":"");
       var t=m.created_at?new Date(m.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
-      d.innerHTML='<span class="msg-text"'+(m.sender==='provider'?'':' data-chat-in=""')+'>'+esc(m.body)+'</span><small>'+esc(t)+"</small>";h.appendChild(d)});
+      d.innerHTML='<span class="msg-text"'+(m.sender==='provider'?'':' data-chat-in=""')+'>'+esc(window.ServiceHubLinkGuard?window.ServiceHubLinkGuard.clean(m.body,'all'):m.body)+'</span><small>'+esc(t)+"</small>";h.appendChild(d)});
     window.scrollTo(0,document.body.scrollHeight);
   }).catch(function(e){toast(e.message)});
 }
-function sendMsg(){var i=$("#say"),t=i.value.trim();if(!t||!openConv)return;i.value="";chat.send(openConv,t).then(drawThread)}
+function sendMsg(){var i=$("#say");if(window.ServiceHubLinkGuard&&!window.ServiceHubLinkGuard.checkField(i))return;var t=i.value.trim();if(!t||!openConv)return;i.value="";chat.send(openConv,t).then(drawThread)}
 $("#send").onclick=sendMsg;$("#say").onkeydown=function(e){if(e.key==="Enter")sendMsg()};
 
 /* ---- save actions ---- */
 function busy(b,on,txt){b.disabled=on;if(txt)b.textContent=txt}
 $("#saveCard").onclick=function(){
+  if(window.ServiceHubLinkGuard&&!window.ServiceHubLinkGuard.checkAll(document.getElementById("v-portfolio")||document)){toast("Some links aren't allowed here and were removed. Check and save again.");return}
   var b=this,o=b.textContent,p={media:JSON.stringify(media)};fields.forEach(function(f){p[f]=$("#f-"+f).value.trim()});
   if(String(L&&L.listingType||L&&L["Listing Type"]||L&&L.type||"").toLowerCase()==="job"){p.jobType=$("#f-jobType").value.trim();p.jobRequirements=$("#f-jobRequirements").value.trim();p.googleFormLink=$("#f-googleForm").value.trim();p.telegram=$("#f-telegram").value.trim();}
   busy(b,true,"Saving...");
@@ -958,7 +962,7 @@ function loadSavedSecondary(){
 /* ---- start ---- */
 function msg(t,retry){document.body.innerHTML='<div class="wrap"><div class="empty">'+esc(t)+(retry?'<br><br><button class="btn" onclick="location.reload()">Try again</button>':'')+'</div></div>'}
 function gate(note){
-  document.body.innerHTML='<div class="wrap"><div class="hello"><h2>Access your listing</h2><p>Paste the manage link you saved to open your dashboard.</p></div>'+(note?'<p style="color:var(--bad);margin:8px 0 0">'+esc(note)+'</p>':'')+'<label for="pl">Your manage link</label><input id="pl" placeholder="Paste your link here" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="go">Open my listing</button><p class="empty" style="padding:24px 0 0;font-size:.85rem">Lost your link? <a href="https://wa.me/2348073410722?text=hi%20I%27m%20a%20service%20hub%20provider%20I%20lost%20my%20link%20can%20I%20get%20help%20%3F" target="_blank" rel="noopener" style="color:var(--ac2);font-weight:600">Contact support</a> and we will help you get it back.</p></div>';
+  document.body.innerHTML='<div class="wrap"><div class="hello"><h2>Access your listing</h2><p>Paste the manage link you saved to open your dashboard.</p></div>'+(note?'<p style="color:var(--bad);margin:8px 0 0">'+esc(note)+'</p>':'')+'<label for="pl">Your manage link</label><input id="pl" data-link-policy="site" placeholder="Paste your link here" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" id="go">Open my listing</button><p class="empty" style="padding:24px 0 0;font-size:.85rem">Lost your link? <a href="https://wa.me/2348073410722?text=hi%20I%27m%20a%20service%20hub%20provider%20I%20lost%20my%20link%20can%20I%20get%20help%20%3F" target="_blank" rel="noopener" style="color:var(--ac2);font-weight:600">Contact support</a> and we will help you get it back.</p></div>';
   function go(){var v=$("#pl").value.trim(),t=(v.indexOf("#")>-1?v.slice(v.lastIndexOf("#")+1):v).trim().toLowerCase();
     if(!/^[a-f0-9]{64}$/.test(t)){gate("That doesn't look like a valid manage link.");return}
     location.hash=t;location.reload()}
