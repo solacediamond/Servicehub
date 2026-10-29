@@ -6092,9 +6092,19 @@ if (document.readyState === "loading") {
         }
     }
 
+    /* The welcome screen (welcome-exit.js) covers the page first; the typing
+       starts as it fades out. */
+    function start() {
+        if (root.classList.contains("sh-welcome-on")) {
+            window.addEventListener("sh:welcome-done", run, { once: true });
+        } else {
+            run();
+        }
+    }
+
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", run, { once: true });
+        document.addEventListener("DOMContentLoaded", start, { once: true });
     } else {
-        run();
+        start();
     }
 })();

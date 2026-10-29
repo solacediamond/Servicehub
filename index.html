@@ -7,6 +7,7 @@
     <title>ServiceHub</title>
 
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="welcome-exit.css">
     <!-- ServiceHub app (PWA) -->
     <link rel="manifest" href="/manifest.webmanifest">
     <meta name="theme-color" content="#080b12">
@@ -20,6 +21,8 @@
     <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png">
     <!-- Hero typing: decide before first paint so the text never flashes (plays once per visit) -->
     <script src="/link-guard.js"></script>
+    <!-- Welcome + "Thanks for visiting" screens. Must come before nav-guard.js. -->
+    <script src="welcome-exit.js"></script>
     <script>
     (function () {
         try {
@@ -27,13 +30,16 @@
             if (sessionStorage.getItem("serviceHubHeroTyped")) return;
             if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
             d.classList.add("hero-typing-pending");
-            /* safety net: if the main script is very slow, just show the text */
-            setTimeout(function () {
-                if (d.classList.contains("hero-typing-pending")) {
+            /* safety net: if the main script is very slow, just show the text.
+               (Not while the welcome screen is up: the typing waits for it.) */
+            (function guard() {
+                setTimeout(function () {
+                    if (!d.classList.contains("hero-typing-pending")) return;
+                    if (d.classList.contains("sh-welcome-on")) { guard(); return; }
                     window.__heroTypingSkip = true;
                     d.classList.remove("hero-typing-pending");
-                }
-            }, 3000);
+                }, 3000);
+            })();
         } catch (e) {}
     })();
     </script>

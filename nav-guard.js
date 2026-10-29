@@ -216,9 +216,14 @@
   function atFloor() { var s = st(); return !!(s && s.shHomeFloor); }
 
   /* Adds the hidden entry. Needs a real tap/click/key press, because browsers
-     skip history entries a page adds without any user action. */
+     skip history entries a page adds without any user action.
+
+     It is also what lets the "Thanks for visiting" screen (welcome-exit.js)
+     appear: pressing back on the home page lands on the entry behind the
+     hidden one, and that is the moment the thanks screen is shown. So the
+     entry is now added on every home page visit, not only after the logo tap. */
   function armHomeFloor() {
-    if (!isHome() || !floorOn() || atFloor() || atBase()) return;
+    if (!isHome() || atFloor() || atBase()) return;
     try {
       var keep = st() || {};
       var base = {}; for (var k in keep) base[k] = keep[k];
@@ -228,15 +233,47 @@
     } catch (_) {}
   }
 
-  /* Landed on the entry behind the hidden one: step forward again. */
+  function exitScreen() { return window.serviceHubExitScreen || null; }
+
+  /* Landed on the entry behind the hidden one = pressed back on the home page.
+     Show "Thanks for visiting ... Back again to exit" and stay there: the next
+     back press leaves, because there is nothing behind this entry for us to hold.
+     If the thanks screen is missing for any reason, fall back to the old
+     behaviour (step forward again when the logo was tapped). */
   function holdHomeFloor() {
-    if (!isHome() || !floorOn() || !atBase()) return;
+    if (!isHome()) return;
+
+    if (!atBase()) {
+      /* moved off the exit entry (forward button, "Stay" button): hide the screen */
+      var s = exitScreen();
+      if (s && s.isShowing()) s.hide();
+      return;
+    }
+
+    var screen = exitScreen();
+    if (screen) { screen.show(); return; }
+
+    if (!floorOn()) return;
     history.go(1);
     setTimeout(function () {
       if (atBase()) {
         try { history.pushState({ shHomeFloor: 1 }, "", location.href); } catch (_) {}
       }
     }, 300);
+  }
+
+  /* "Stay on ServiceHub" on the thanks screen: step forward onto the hidden
+     entry again, so the next back press shows the thanks screen once more. */
+  function stayOnHome() {
+    var s = exitScreen();
+    if (s) s.hide();
+    if (!isHome() || !atBase()) return;
+    history.go(1);
+    setTimeout(function () {
+      if (atBase()) {
+        try { history.pushState({ shHomeFloor: 1 }, "", location.href); } catch (_) {}
+      }
+    }, 350);
   }
 
   document.addEventListener("click", function (e) {
@@ -266,6 +303,7 @@
 
   window.serviceHubNavGuard = {
     markPaymentConfirmed: markConfirmed,
-    resetStuckUi: resetStuckUi
+    resetStuckUi: resetStuckUi,
+    stayOnHome: stayOnHome
   };
 })();

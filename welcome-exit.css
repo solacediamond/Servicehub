@@ -1,0 +1,286 @@
+/* ServiceHub welcome + "thanks for visiting" screens (home page only).
+ * Techy HUD details on top of the same liquid-glass look used by the social
+ * button and the feedback window. Built by welcome-exit.js. */
+
+.sh-fx {
+  --sh-dur: 3000ms;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  overflow: hidden;
+  color: #f4f7ff;
+  font-family: Arial, sans-serif;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(35, 136, 255, .16), transparent 60%),
+    rgba(4, 8, 18, .56);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-tap-highlight-color: transparent;
+}
+.sh-fx.is-on { display: flex; animation: shfxIn .55s cubic-bezier(.2, .8, .2, 1) both; }
+.sh-fx.is-leaving { animation: shfxOut .65s cubic-bezier(.4, 0, .2, 1) both; pointer-events: none; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sh-fx { background: rgba(6, 10, 20, .94); }
+}
+
+html.sh-welcome-on, html.sh-exit-on { overflow: hidden; }
+
+/* ---------- liquid blobs (seen through the glass card) ---------- */
+.sh-fx-blobs { position: absolute; inset: 0; pointer-events: none; }
+.sh-fx-blobs i {
+  position: absolute;
+  width: 62vmin; height: 62vmin;
+  border-radius: 50%;
+  filter: blur(34px);
+  opacity: .75;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.sh-fx-blobs i:nth-child(1) { left: 6%;  top: 12%; background: radial-gradient(circle at 35% 35%, #2388ff, rgba(35,136,255,0) 68%); animation: shfxDriftA 9s ease-in-out infinite; }
+.sh-fx-blobs i:nth-child(2) { right: 4%; top: 30%; background: radial-gradient(circle at 60% 40%, #a855f7, rgba(168,85,247,0) 68%); animation: shfxDriftB 11s ease-in-out infinite; }
+.sh-fx-blobs i:nth-child(3) { left: 28%; bottom: 2%; width: 50vmin; height: 50vmin; background: radial-gradient(circle at 50% 50%, #ff4fd8, rgba(255,79,216,0) 68%); opacity: .55; animation: shfxDriftC 10s ease-in-out infinite; }
+
+/* ---------- HUD grid + scan line ---------- */
+.sh-fx-grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(140, 185, 255, .09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140, 185, 255, .09) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 50%, #000 20%, transparent 78%);
+  mask-image: radial-gradient(70% 60% at 50% 50%, #000 20%, transparent 78%);
+  animation: shfxGrid 14s linear infinite;
+}
+.sh-fx-scan {
+  position: absolute; left: 0; right: 0; top: 0; height: 160px; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(101, 181, 255, .13) 55%, rgba(182, 108, 255, .22) 92%, transparent);
+  transform: translateY(-160px);
+  animation: shfxScan 3.4s cubic-bezier(.5, 0, .5, 1) infinite;
+}
+
+/* ---------- glass card ---------- */
+.sh-fx-card {
+  position: relative;
+  width: min(100%, 430px);
+  padding: 34px 26px 26px;
+  text-align: center;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, .30);
+  border-top-color: rgba(255, 255, 255, .50);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .20), rgba(255, 255, 255, .05) 48%, rgba(255, 255, 255, .12)),
+    rgba(15, 22, 40, .46);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
+  backdrop-filter: blur(26px) saturate(190%);
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, .55),
+    0 10px 34px rgba(35, 136, 255, .16),
+    inset 0 1.5px 1px rgba(255, 255, 255, .60),
+    inset 0 -2px 6px rgba(255, 255, 255, .10),
+    inset 0 0 22px rgba(255, 255, 255, .06);
+  overflow: hidden;
+  transform-origin: 50% 55%;
+}
+.sh-fx.is-on .sh-fx-card { animation: shfxCardIn .8s cubic-bezier(.2, .85, .2, 1) both; }
+.sh-fx.is-leaving .sh-fx-card { animation: shfxCardOut .65s cubic-bezier(.4, 0, .2, 1) both; }
+/* curved specular highlight */
+.sh-fx-card::before {
+  content: ""; position: absolute; left: 5%; right: 5%; top: 0; height: 20%;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .30), rgba(255, 255, 255, 0));
+  opacity: .5; pointer-events: none;
+}
+/* slow liquid sheen sweeping across */
+.sh-fx-card::after {
+  content: ""; position: absolute; top: -20%; bottom: -20%; left: 0; width: 46%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .20) 45%, rgba(255, 255, 255, .06) 60%, transparent);
+  transform: translateX(-130%) skewX(-18deg);
+  animation: shfxSheen 3.6s ease-in-out .5s infinite;
+  pointer-events: none;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sh-fx-card { background: rgba(22, 30, 52, .94); }
+}
+
+/* HUD corner brackets */
+.sh-fx-corner { position: absolute; width: 16px; height: 16px; pointer-events: none; border: 0 solid rgba(160, 205, 255, .75); opacity: .85; }
+.sh-fx-corner.tl { left: 14px;  top: 14px;    border-left-width: 2px;  border-top-width: 2px;    border-top-left-radius: 7px; }
+.sh-fx-corner.tr { right: 14px; top: 14px;    border-right-width: 2px; border-top-width: 2px;    border-top-right-radius: 7px; }
+.sh-fx-corner.bl { left: 14px;  bottom: 14px; border-left-width: 2px;  border-bottom-width: 2px; border-bottom-left-radius: 7px; }
+.sh-fx-corner.br { right: 14px; bottom: 14px; border-right-width: 2px; border-bottom-width: 2px; border-bottom-right-radius: 7px; }
+
+/* ---------- orb with spinning rings ---------- */
+.sh-fx-orb {
+  position: relative; width: 86px; height: 86px; margin: 0 auto 20px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .38);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .36), rgba(255, 255, 255, .07) 55%, rgba(255, 255, 255, .16)),
+    rgba(22, 28, 46, .34);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, .65),
+    inset 0 -2px 6px rgba(255, 255, 255, .12),
+    0 10px 28px rgba(0, 0, 0, .34),
+    0 0 36px rgba(35, 136, 255, .30);
+}
+.sh-fx-bolt {
+  font-size: 40px; line-height: 1; font-weight: 700;
+  background: linear-gradient(135deg, #8fd0ff, #b66cff 60%, #ff7be0);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 0 10px rgba(101, 181, 255, .55));
+  animation: shfxPulse 2.2s ease-in-out infinite;
+}
+.sh-fx-ring {
+  position: absolute; inset: -11px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0 55%, #65b5ff 80%, #b66cff 94%, transparent);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: shfxSpin 2.4s linear infinite;
+}
+.sh-fx-ring.r2 {
+  inset: -20px; opacity: .55;
+  background: conic-gradient(from 180deg, transparent 0 62%, #ff7be0 88%, transparent);
+  animation: shfxSpin 4.2s linear infinite reverse;
+}
+
+/* ---------- text ---------- */
+.sh-fx-kicker {
+  margin: 0 0 10px;
+  color: #9fd0ff;
+  font: 700 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .22em;
+  text-shadow: 0 0 12px rgba(101, 181, 255, .45);
+}
+.sh-fx-title {
+  margin: 0 0 10px;
+  font-size: clamp(26px, 7.4vw, 36px);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .35);
+}
+.sh-fx-title em {
+  display: inline-block; font-style: normal;
+  background: linear-gradient(100deg, #65b5ff, #b66cff 55%, #ff7be0);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  text-shadow: none;
+}
+.sh-fx-sub { margin: 0; color: #d4deef; font-size: 15px; line-height: 1.55; }
+
+/* welcome: progress readout */
+.sh-fx-bar {
+  position: relative; height: 5px; margin: 24px 4px 12px; overflow: hidden;
+  border-radius: 99px; background: rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+}
+.sh-fx-bar i {
+  position: absolute; inset: 0; width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2388ff, #a855f7 60%, #ff4fd8);
+  box-shadow: 0 0 14px rgba(101, 181, 255, .7);
+  transform: scaleX(0); transform-origin: 0 50%;
+}
+.sh-fx.is-on .sh-fx-bar i { animation: shfxFill var(--sh-dur) cubic-bezier(.4, .1, .2, 1) both; }
+.sh-fx-status {
+  display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0;
+  color: #b8c7de;
+  font: 600 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .14em;
+}
+.sh-fx-status b { width: 7px; height: 7px; border-radius: 50%; background: #5dffc0; box-shadow: 0 0 10px #5dffc0; animation: shfxBlink 1s steps(1) infinite; }
+.sh-fx-skip {
+  position: absolute; left: 0; right: 0; bottom: max(18px, env(safe-area-inset-bottom));
+  margin: 0 auto; width: fit-content; padding: 6px 14px;
+  border: 0; background: none; cursor: pointer;
+  color: rgba(214, 226, 245, .62);
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .18em; text-transform: uppercase;
+}
+.sh-fx-skip:hover, .sh-fx-skip:focus-visible { color: #fff; outline: none; }
+
+/* exit: "back again to exit" hint + stay button */
+.sh-fx-hint {
+  display: inline-flex; align-items: center; gap: 12px; margin-top: 24px; padding: 11px 20px 11px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .32);
+  background: linear-gradient(150deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .04) 55%, rgba(255, 255, 255, .10)), rgba(168, 85, 247, .26);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, .5), 0 8px 22px rgba(0, 0, 0, .3), 0 0 0 3px rgba(168, 85, 247, .12);
+  color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .01em;
+  animation: shfxHintGlow 2.4s ease-in-out infinite;
+}
+.sh-fx-chev { display: inline-flex; width: 16px; justify-content: center; font-size: 22px; line-height: 1; animation: shfxNudge 1.3s ease-in-out infinite; }
+.sh-fx-stay {
+  display: block; margin: 16px auto 0; padding: 8px 16px;
+  border: 0; border-radius: 99px; background: none; cursor: pointer;
+  color: #c7d6ee; font: inherit; font-size: 13px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(199, 214, 238, .4);
+}
+.sh-fx-stay:hover, .sh-fx-stay:focus-visible { color: #fff; text-decoration-color: currentColor; outline: none; }
+.sh-fx--exit .sh-fx-ring { background: conic-gradient(from 0deg, transparent 0 55%, #ff7be0 82%, #b66cff 94%, transparent); }
+.sh-fx--exit .sh-fx-ring.r2 { background: conic-gradient(from 180deg, transparent 0 62%, #65b5ff 88%, transparent); }
+.sh-fx--exit .sh-fx-kicker { color: #e1b8ff; text-shadow: 0 0 12px rgba(182, 108, 255, .5); }
+
+/* ---------- staggered entrance ---------- */
+.sh-fx.is-on .sh-fx-orb,
+.sh-fx.is-on .sh-fx-kicker,
+.sh-fx.is-on .sh-fx-title,
+.sh-fx.is-on .sh-fx-sub,
+.sh-fx.is-on .sh-fx-bar,
+.sh-fx.is-on .sh-fx-status,
+.sh-fx.is-on .sh-fx-hint,
+.sh-fx.is-on .sh-fx-stay { animation-name: shfxRise; animation-duration: .8s; animation-timing-function: cubic-bezier(.2, .85, .2, 1); animation-fill-mode: both; }
+.sh-fx.is-on .sh-fx-orb    { animation-delay: .10s; }
+.sh-fx.is-on .sh-fx-kicker { animation-delay: .28s; }
+.sh-fx.is-on .sh-fx-title  { animation-delay: .38s; }
+.sh-fx.is-on .sh-fx-sub    { animation-delay: .52s; }
+.sh-fx.is-on .sh-fx-bar    { animation-delay: .62s; }
+.sh-fx.is-on .sh-fx-status { animation-delay: .72s; }
+.sh-fx.is-on .sh-fx-hint   { animation-name: shfxRise, shfxHintGlow; animation-duration: .8s, 2.4s; animation-delay: .70s, 1.5s; animation-iteration-count: 1, infinite; animation-timing-function: cubic-bezier(.2, .85, .2, 1), ease-in-out; }
+.sh-fx.is-on .sh-fx-stay   { animation-delay: .95s; }
+.sh-fx.is-on .sh-fx-bar i { animation-name: shfxFill; animation-duration: var(--sh-dur); animation-delay: 0s; animation-timing-function: cubic-bezier(.4, .1, .2, 1); }
+
+/* ---------- keyframes ---------- */
+@keyframes shfxIn  { from { opacity: 0; -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%); } to { opacity: 1; } }
+@keyframes shfxOut { from { opacity: 1; } to { opacity: 0; -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%); } }
+@keyframes shfxCardIn  { from { opacity: 0; transform: perspective(1000px) translateY(26px) rotateX(10deg) scale(.9); filter: blur(10px); } to { opacity: 1; transform: perspective(1000px) translateY(0) rotateX(0) scale(1); filter: blur(0); } }
+@keyframes shfxCardOut { from { opacity: 1; transform: scale(1); filter: blur(0); } to { opacity: 0; transform: scale(1.06) translateY(-10px); filter: blur(12px); } }
+@keyframes shfxRise { from { opacity: 0; transform: translateY(14px); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes shfxFill { to { transform: scaleX(1); } }
+@keyframes shfxSpin { to { transform: rotate(360deg); } }
+@keyframes shfxPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes shfxBlink { 50% { opacity: .25; } }
+@keyframes shfxSheen { 0% { transform: translateX(-130%) skewX(-18deg); } 55%, 100% { transform: translateX(330%) skewX(-18deg); } }
+@keyframes shfxScan { 0% { transform: translateY(-160px); } 100% { transform: translateY(100vh); } }
+@keyframes shfxGrid { to { background-position: 46px 46px, 46px 46px; } }
+@keyframes shfxNudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-6px); } }
+@keyframes shfxHintGlow { 0%, 100% { box-shadow: inset 0 1.5px 1px rgba(255,255,255,.5), 0 8px 22px rgba(0,0,0,.3), 0 0 0 3px rgba(168,85,247,.12); } 50% { box-shadow: inset 0 1.5px 1px rgba(255,255,255,.5), 0 8px 22px rgba(0,0,0,.3), 0 0 0 7px rgba(168,85,247,.20), 0 0 28px rgba(182,108,255,.35); } }
+@keyframes shfxDriftA { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(14vmin, 10vmin) scale(1.18); } }
+@keyframes shfxDriftB { 0%, 100% { transform: translate(0, 0) scale(1.1); } 50% { transform: translate(-16vmin, -8vmin) scale(.92); } }
+@keyframes shfxDriftC { 0%, 100% { transform: translate(0, 0) scale(.95); } 50% { transform: translate(10vmin, -14vmin) scale(1.2); } }
+
+@media (max-width: 480px) {
+  .sh-fx-card { padding: 30px 20px 22px; border-radius: 26px; }
+  .sh-fx-orb { width: 76px; height: 76px; margin-bottom: 18px; }
+  .sh-fx-bolt { font-size: 34px; }
+  .sh-fx-sub { font-size: 14px; }
+  .sh-fx-hint { font-size: 14px; padding: 10px 18px 10px 12px; }
+}
+
+/* Calm version: no drifting, spinning or sweeping; just a gentle fade. */
+@media (prefers-reduced-motion: reduce) {
+  .sh-fx-blobs i, .sh-fx-grid, .sh-fx-scan, .sh-fx-card::after, .sh-fx-ring, .sh-fx-bolt, .sh-fx-chev, .sh-fx-status b, .sh-fx-hint { animation: none !important; }
+  .sh-fx.is-on .sh-fx-card, .sh-fx.is-on .sh-fx-orb, .sh-fx.is-on .sh-fx-kicker, .sh-fx.is-on .sh-fx-title, .sh-fx.is-on .sh-fx-sub,
+  .sh-fx.is-on .sh-fx-bar, .sh-fx.is-on .sh-fx-status, .sh-fx.is-on .sh-fx-hint, .sh-fx.is-on .sh-fx-stay { animation: shfxIn .4s ease both !important; }
+  .sh-fx.is-on .sh-fx-bar i { animation: shfxFill var(--sh-dur) linear both !important; }
+  .sh-fx.is-leaving, .sh-fx.is-leaving .sh-fx-card { animation: shfxOut .3s ease both !important; }
+}
