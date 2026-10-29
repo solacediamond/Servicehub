@@ -61,8 +61,8 @@
       }, duration);
     }
 
-    if (!reduce) show("welcome", 1850);
-    else show("welcome", 900);
+    if (!reduce) show("welcome", 3500);
+    else show("welcome", 3000);
 
     /* A short farewell before normal same-tab navigation. Avoid hijacking modified,
        download, external, or new-tab links. */
@@ -79,8 +79,81 @@
       window.setTimeout(function () { location.href = dest.href; }, reduce ? 180 : 480);
     }, true);
 
-    /* Best effort for tab/app closure. Browsers may stop painting during unload,
-       so the reliable farewell animation is the same-tab navigation above. */
+    /* Installed PWA exit flow. Web apps cannot force-close their own window;
+       on Android, backing out of the root screen can usually return to the launcher. */
+    var isStandalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      window.navigator.standalone === true;
+
+    if (isStandalone) {
+      var exitDialog = document.createElement("div");
+      exitDialog.id = "sh-exit-confirm";
+      exitDialog.setAttribute("role", "dialog");
+      exitDialog.setAttribute("aria-modal", "true");
+      exitDialog.setAttribute("aria-labelledby", "sh-exit-title");
+      exitDialog.hidden = true;
+      exitDialog.innerHTML = '<div class="sh-exit-card"><div class="sh-vg-kicker">SERVICEHUB · EXIT</div>' +
+        '<h2 id="sh-exit-title">Are you sure you want to exit this app?</h2>' +
+        '<p>Your visit will end and you can come back anytime.</p>' +
+        '<div class="sh-exit-actions"><button type="button" data-sh-exit="stay">No, stay</button>' +
+        '<button type="button" data-sh-exit="yes">Yes, exit</button></div></div>';
+      style.textContent +=
+        '#sh-exit-confirm{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:22px;' +
+        'background:rgba(3,7,16,.68);backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%)}' +
+        '#sh-exit-confirm[hidden]{display:none}' +
+        '#sh-exit-confirm .sh-exit-card{width:min(420px,100%);padding:25px;border-radius:25px;color:#f5f8ff;' +
+        'border:1px solid rgba(255,255,255,.27);background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.07));' +
+        'box-shadow:0 24px 80px rgba(0,0,0,.45);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px)}' +
+        '#sh-exit-confirm h2{margin:12px 0 8px;font:750 23px/1.2 system-ui;letter-spacing:-.035em}' +
+        '#sh-exit-confirm p{margin:0;color:rgba(242,247,255,.76);font:14px/1.55 system-ui}' +
+        '#sh-exit-confirm .sh-exit-actions{display:flex;gap:10px;margin-top:22px}' +
+        '#sh-exit-confirm button{flex:1;border:1px solid rgba(255,255,255,.22);border-radius:13px;padding:12px 10px;' +
+        'font:650 14px system-ui;color:#fff;background:rgba(255,255,255,.1)}' +
+        '#sh-exit-confirm button[data-sh-exit="yes"]{background:linear-gradient(110deg,#2388ff,#7657f5);border-color:rgba(255,255,255,.3)}' +
+        '#sh-exit-confirm button:disabled{opacity:.55}';
+      document.body.appendChild(exitDialog);
+
+      var exitPending = false;
+      var exitAllowed = false;
+      function showExitDialog() {
+        if (exitPending || exitAllowed) return;
+        exitDialog.hidden = false;
+        var stay = exitDialog.querySelector('[data-sh-exit="stay"]');
+        if (stay) stay.focus();
+      }
+
+      /* A history marker lets the Android back gesture reach this confirmation
+         while keeping ordinary in-app link navigation intact. */
+      try { history.pushState({ serviceHubExitGuard: true }, "", location.href); } catch (_) {}
+      window.addEventListener("popstate", function () {
+        if (exitAllowed) return;
+        try { history.pushState({ serviceHubExitGuard: true }, "", location.href); } catch (_) {}
+        showExitDialog();
+      });
+
+      exitDialog.addEventListener("click", function (event) {
+        var button = event.target && event.target.closest ? event.target.closest("button[data-sh-exit]") : null;
+        if (!button || exitPending) return;
+        if (button.getAttribute("data-sh-exit") === "stay") {
+          exitDialog.hidden = true;
+          return;
+        }
+        exitPending = true;
+        exitDialog.querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+        show("thanks", 0);
+        heading.textContent = "Thanks for visiting";
+        message.textContent = "Your next great connection starts here. See you again soon.";
+        window.setTimeout(function () {
+          exitAllowed = true;
+          /* Browsers may ignore window.close() for installed web apps. Going back
+             after the animation lets Android close/leave the standalone window when supported. */
+          try { window.close(); } catch (_) {}
+          try { history.back(); } catch (_) {}
+        }, reduce ? 2200 : 3500);
+      });
+    }
+
+    /* Browsers may stop painting during tab/app shutdown, so pagehide is only a
+       best-effort fallback. The installed-app confirmation above is the reliable path. */
     window.addEventListener("pagehide", function () {
       heading.textContent = "Thanks for visiting";
       message.textContent = "See you again soon.";
