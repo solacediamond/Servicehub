@@ -61,8 +61,26 @@
       }, duration);
     }
 
-    if (!reduce) show("welcome", 3500);
-    else show("welcome", 3000);
+    /* The welcome greeting is a one-time first-open experience on index.html only.
+       Other pages never show it, and returning to the homepage does not replay it. */
+    var currentPageForGreeting = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+    var isHomeForGreeting = currentPageForGreeting === "index.html" || currentPageForGreeting === "";
+    var showFirstWelcome = false;
+    if (isHomeForGreeting) {
+      try {
+        if (localStorage.getItem("serviceHubWelcomeShown") !== "1") {
+          localStorage.setItem("serviceHubWelcomeShown", "1");
+          showFirstWelcome = true;
+        }
+      } catch (_) {
+        /* If storage is blocked, show once for this page load only. */
+        showFirstWelcome = true;
+      }
+    }
+    if (showFirstWelcome) {
+      if (!reduce) show("welcome", 3500);
+      else show("welcome", 3000);
+    }
 
     /* A short farewell before normal same-tab navigation. Avoid hijacking modified,
        download, external, or new-tab links. */
@@ -168,13 +186,9 @@
       });
     }
 
-    /* Browsers may stop painting during tab/app shutdown, so pagehide is only a
-       best-effort fallback. The installed-app confirmation above is the reliable path. */
-    window.addEventListener("pagehide", function () {
-      heading.textContent = "Thanks for visiting";
-      message.textContent = "See you again soon.";
-      overlay.classList.add("sh-vg-show");
-    });
+    /* Do not trigger the farewell overlay on pagehide: browsers fire pagehide
+       during ordinary back/forward navigation too. The explicit exit button and
+       deliberate in-app link navigation handle their own animations. */
   }
 
   function readyGreeting() {
