@@ -23,7 +23,8 @@
 
   var root = document.documentElement;
   var WELCOME_KEY = "serviceHubWelcomed";
-  var WELCOME_MS = 3000;
+  var WELCOME_MS = 3400;
+  var MASCOT_SRC = "servicehub-mascot.webp";
   var FADE_MS = 650;
 
   var reduceMotion = false;
@@ -31,6 +32,23 @@
 
   function historyState() {
     return history.state && typeof history.state === "object" ? history.state : null;
+  }
+
+  /* ---------- mascot ---------- */
+
+  /* Start loading the picture right away so it is ready when the screen opens. */
+  try { var preload = new Image(); preload.src = MASCOT_SRC; } catch (_) {}
+
+  /* The mascot animates in once its picture is ready; if it cannot load, the
+     round bolt badge is shown instead. */
+  function wireMascot(el) {
+    var img = el.querySelector(".sh-fx-mascot");
+    var stage = el.querySelector(".sh-fx-stage");
+    if (!img || !stage) return;
+    function ready() { stage.classList.add("has-mascot"); }
+    img.addEventListener("load", ready);
+    img.addEventListener("error", function () { stage.classList.add("no-mascot"); });
+    if (img.complete && img.naturalWidth) ready();
   }
 
   /* ---------- markup ---------- */
@@ -58,26 +76,35 @@
     var orb =
       '<div class="sh-fx-orb" aria-hidden="true"><span class="sh-fx-ring r2"></span><span class="sh-fx-ring"></span><span class="sh-fx-bolt">ϟ</span></div>';
 
+    var bubble = kind === "welcome"
+      ? 'Hey, welcome!'
+      : 'Bye for now! <span class="sh-fx-hand" aria-hidden="true">\uD83D\uDC4B</span>';
+    var mascot =
+      '<div class="sh-fx-mascot-wrap" aria-hidden="true"><span class="sh-fx-halo"></span>' +
+      '<img class="sh-fx-mascot" src="' + MASCOT_SRC + '" alt="" width="160" height="160" decoding="async" draggable="false">' +
+      '<span class="sh-fx-bubble">' + bubble + '</span></div>';
+
     if (kind === "welcome") {
-      el.innerHTML = chrome +
+      el.innerHTML = chrome + '<div class="sh-fx-stage">' + mascot +
         '<div class="sh-fx-card">' + corners + orb +
         '<p class="sh-fx-kicker">SERVICEHUB // SYSTEM ONLINE</p>' +
         '<h2 class="sh-fx-title">Welcome to <em>ServiceHub</em></h2>' +
         '<p class="sh-fx-sub">Find the right person for the job.</p>' +
         '<div class="sh-fx-bar" aria-hidden="true"><i></i></div>' +
         '<p class="sh-fx-status" aria-hidden="true"><b></b><span class="sh-fx-status-text">INITIALIZING</span></p>' +
-        '</div>' +
+        '</div></div>' +
         '<button type="button" class="sh-fx-skip">Tap to skip</button>';
     } else {
-      el.innerHTML = chrome +
+      el.innerHTML = chrome + '<div class="sh-fx-stage">' + mascot +
         '<div class="sh-fx-card">' + corners + orb +
         '<p class="sh-fx-kicker">SERVICEHUB // SESSION COMPLETE</p>' +
         '<h2 class="sh-fx-title" id="sh-fx-exit-title">Thanks for <em>visiting</em></h2>' +
         '<p class="sh-fx-sub">Hope to see you again soon.</p>' +
         '<div class="sh-fx-hint"><span class="sh-fx-chev" aria-hidden="true">‹</span><span>Back again to exit</span></div>' +
         '<button type="button" class="sh-fx-stay">Stay on ServiceHub</button>' +
-        '</div>';
+        '</div></div>';
     }
+    wireMascot(el);
     return el;
   }
 

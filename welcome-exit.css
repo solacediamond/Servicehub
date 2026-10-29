@@ -113,7 +113,58 @@ html.sh-welcome-on, html.sh-exit-on { overflow: hidden; }
 .sh-fx-corner.bl { left: 14px;  bottom: 14px; border-left-width: 2px;  border-bottom-width: 2px; border-bottom-left-radius: 7px; }
 .sh-fx-corner.br { right: 14px; bottom: 14px; border-right-width: 2px; border-bottom-width: 2px; border-bottom-right-radius: 7px; }
 
-/* ---------- orb with spinning rings ---------- */
+/* ---------- mascot ---------- */
+.sh-fx-stage { position: relative; width: min(100%, 430px); display: flex; flex-direction: column; align-items: center; }
+.sh-fx-stage .sh-fx-card { width: 100%; padding-top: 70px; }
+.sh-fx-stage:not(.no-mascot) .sh-fx-orb { display: none; }
+.sh-fx-stage.no-mascot .sh-fx-mascot-wrap { display: none; }
+.sh-fx-stage.no-mascot .sh-fx-card { padding-top: 34px; }
+.sh-fx-mascot-wrap {
+  position: relative; z-index: 3; width: 190px; height: 190px; margin-bottom: -60px;
+  pointer-events: none;
+  animation: shfxFloat 3.4s ease-in-out infinite;
+}
+.sh-fx-halo {
+  position: absolute; left: 50%; top: 52%; width: 150%; height: 150%; margin: -75% 0 0 -75%;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(101, 181, 255, .55), rgba(168, 85, 247, .32) 40%, rgba(255, 79, 216, 0) 68%);
+  filter: blur(14px); opacity: 0;
+}
+.sh-fx-mascot {
+  position: relative; display: block; width: 100%; height: 100%; object-fit: contain;
+  opacity: 0; transform-origin: 50% 92%;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .45));
+  -webkit-user-drag: none; user-select: none;
+}
+.sh-fx-bubble {
+  position: absolute; left: calc(50% + 60px); top: 10px; z-index: 2; white-space: nowrap;
+  padding: 8px 14px; border-radius: 16px 16px 16px 4px;
+  border: 1px solid rgba(255, 255, 255, .38);
+  background: linear-gradient(150deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .08) 55%, rgba(255, 255, 255, .18)), rgba(30, 40, 72, .42);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, .55), 0 8px 22px rgba(0, 0, 0, .32), 0 0 18px rgba(101, 181, 255, .25);
+  color: #fff; font-size: 14px; font-weight: 800; letter-spacing: .01em;
+  opacity: 0; transform-origin: 0 100%;
+}
+.sh-fx-hand { display: inline-block; transform-origin: 70% 75%; }
+
+/* only play once the picture is ready */
+.sh-fx.is-on .has-mascot .sh-fx-halo { animation: shfxHalo 3s ease-in-out .3s infinite; }
+.sh-fx.is-on .has-mascot .sh-fx-mascot {
+  animation: shfxMascotIn 1s cubic-bezier(.2, .9, .25, 1) .12s both, shfxHello 2.6s ease-in-out 1.15s infinite;
+  animation-fill-mode: both, none;
+}
+.sh-fx.is-on .has-mascot .sh-fx-bubble { animation: shfxBubbleIn .55s cubic-bezier(.2, 1.4, .3, 1) 1s both; }
+/* goodbye: sways and waves */
+.sh-fx--exit.is-on .has-mascot .sh-fx-mascot {
+  animation: shfxMascotIn 1s cubic-bezier(.2, .9, .25, 1) .12s both, shfxBye 1.9s ease-in-out 1.15s infinite;
+  animation-fill-mode: both, none;
+}
+.sh-fx--exit.is-on .has-mascot .sh-fx-hand { animation: shfxHandWave 1s ease-in-out 1.4s infinite; }
+.sh-fx.is-leaving .sh-fx-mascot-wrap { animation: none; }
+
+/* ---------- orb with spinning rings (fallback if the picture fails) ---------- */
 .sh-fx-orb {
   position: relative; width: 86px; height: 86px; margin: 0 auto 20px;
   display: grid; place-items: center;
@@ -250,6 +301,18 @@ html.sh-welcome-on, html.sh-exit-on { overflow: hidden; }
 .sh-fx.is-on .sh-fx-bar i { animation-name: shfxFill; animation-duration: var(--sh-dur); animation-delay: 0s; animation-timing-function: cubic-bezier(.4, .1, .2, 1); }
 
 /* ---------- keyframes ---------- */
+@keyframes shfxFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes shfxHalo { 0%, 100% { opacity: .55; transform: scale(.94); } 50% { opacity: .95; transform: scale(1.08); } }
+@keyframes shfxMascotIn {
+  0%   { opacity: 0; transform: translateY(80px) scale(.3) rotate(-16deg); filter: blur(10px) drop-shadow(0 12px 18px rgba(0,0,0,.45)); }
+  55%  { opacity: 1; transform: translateY(-16px) scale(1.1) rotate(5deg); filter: blur(0) drop-shadow(0 12px 18px rgba(0,0,0,.45)); }
+  78%  { transform: translateY(4px) scale(.97) rotate(-2deg); }
+  100% { opacity: 1; transform: none; filter: blur(0) drop-shadow(0 12px 18px rgba(0,0,0,.45)); }
+}
+@keyframes shfxHello { 0%, 62%, 100% { transform: rotate(0) scale(1); } 12% { transform: rotate(-6deg) scale(1.04); } 26% { transform: rotate(5deg) scale(1.04); } 40% { transform: rotate(-3deg) scale(1.02); } 52% { transform: rotate(0) scale(1); } }
+@keyframes shfxBye { 0%, 70%, 100% { transform: rotate(0); } 10% { transform: rotate(9deg); } 22% { transform: rotate(-3deg); } 34% { transform: rotate(9deg); } 46% { transform: rotate(-3deg); } 58% { transform: rotate(8deg); } }
+@keyframes shfxHandWave { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(24deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(24deg); } 80% { transform: rotate(-6deg); } }
+@keyframes shfxBubbleIn { from { opacity: 0; transform: scale(.3) translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes shfxIn  { from { opacity: 0; -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%); } to { opacity: 1; } }
 @keyframes shfxOut { from { opacity: 1; } to { opacity: 0; -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%); } }
 @keyframes shfxCardIn  { from { opacity: 0; transform: perspective(1000px) translateY(26px) rotateX(10deg) scale(.9); filter: blur(10px); } to { opacity: 1; transform: perspective(1000px) translateY(0) rotateX(0) scale(1); filter: blur(0); } }
@@ -269,6 +332,9 @@ html.sh-welcome-on, html.sh-exit-on { overflow: hidden; }
 @keyframes shfxDriftC { 0%, 100% { transform: translate(0, 0) scale(.95); } 50% { transform: translate(10vmin, -14vmin) scale(1.2); } }
 
 @media (max-width: 480px) {
+  .sh-fx-mascot-wrap { width: 170px; height: 170px; margin-bottom: -54px; }
+  .sh-fx-stage .sh-fx-card { padding-top: 62px; }
+  .sh-fx-bubble { left: calc(50% + 46px); padding: 7px 12px; font-size: 13px; }
   .sh-fx-card { padding: 30px 20px 22px; border-radius: 26px; }
   .sh-fx-orb { width: 76px; height: 76px; margin-bottom: 18px; }
   .sh-fx-bolt { font-size: 34px; }
@@ -276,9 +342,16 @@ html.sh-welcome-on, html.sh-exit-on { overflow: hidden; }
   .sh-fx-hint { font-size: 14px; padding: 10px 18px 10px 12px; }
 }
 
+@media (max-height: 600px) {
+  .sh-fx-mascot-wrap { width: 96px; height: 96px; margin-bottom: -30px; }
+  .sh-fx-stage .sh-fx-card { padding: 40px 20px 16px; }
+  .sh-fx-sub { display: none; }
+}
+
 /* Calm version: no drifting, spinning or sweeping; just a gentle fade. */
 @media (prefers-reduced-motion: reduce) {
-  .sh-fx-blobs i, .sh-fx-grid, .sh-fx-scan, .sh-fx-card::after, .sh-fx-ring, .sh-fx-bolt, .sh-fx-chev, .sh-fx-status b, .sh-fx-hint { animation: none !important; }
+  .sh-fx-blobs i, .sh-fx-grid, .sh-fx-scan, .sh-fx-card::after, .sh-fx-ring, .sh-fx-bolt, .sh-fx-chev, .sh-fx-status b, .sh-fx-hint, .sh-fx-mascot-wrap, .sh-fx-halo, .sh-fx-hand { animation: none !important; }
+  .sh-fx.is-on .has-mascot .sh-fx-mascot, .sh-fx.is-on .has-mascot .sh-fx-bubble { animation: shfxIn .5s ease both !important; }
   .sh-fx.is-on .sh-fx-card, .sh-fx.is-on .sh-fx-orb, .sh-fx.is-on .sh-fx-kicker, .sh-fx.is-on .sh-fx-title, .sh-fx.is-on .sh-fx-sub,
   .sh-fx.is-on .sh-fx-bar, .sh-fx.is-on .sh-fx-status, .sh-fx.is-on .sh-fx-hint, .sh-fx.is-on .sh-fx-stay { animation: shfxIn .4s ease both !important; }
   .sh-fx.is-on .sh-fx-bar i { animation: shfxFill var(--sh-dur) linear both !important; }
