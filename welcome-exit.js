@@ -23,7 +23,7 @@
 
   var root = document.documentElement;
   var WELCOME_KEY = "serviceHubWelcomed";
-  var WELCOME_MS = 3400;
+  var WELCOME_MS = 5000;
   var MASCOT_SRC = "servicehub-mascot.webp";
   var FADE_MS = 650;
 
