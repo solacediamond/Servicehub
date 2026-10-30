@@ -157,10 +157,8 @@ html.sh-welcome-on, html.sh-exit-on { overflow: hidden; }
 }
 .sh-fx.is-on .has-mascot .sh-fx-bubble { animation: shfxBubbleIn .55s cubic-bezier(.2, 1.4, .3, 1) 1s both; }
 /* goodbye: sways and waves */
-.sh-fx--exit.is-on .has-mascot .sh-fx-mascot {
-  animation: shfxMascotIn 1s cubic-bezier(.2, .9, .25, 1) .12s both, shfxBye 1.9s ease-in-out 1.15s infinite;
-  animation-fill-mode: both, none;
-}
+.sh-fx--exit.is-on .has-mascot .sh-fx-mascot { animation: shfxMascotIn 1s cubic-bezier(.2, .9, .25, 1) .12s both; }
+.sh-fx--exit .sh-fx-mascot-wrap { animation: none; }
 .sh-fx--exit.is-on .has-mascot .sh-fx-hand { animation: shfxHandWave 1s ease-in-out 1.4s infinite; }
 .sh-fx.is-leaving .sh-fx-mascot-wrap { animation: none; }
 
