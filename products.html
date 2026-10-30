@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Products | ServiceHub</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="coming-soon.css">
+    <!-- ServiceHub app (PWA) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#080b12">
+    <meta name="application-name" content="ServiceHub">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ServiceHub">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png">
+    <script src="nav-guard.js"></script>
+    <script src="bottom-nav.js"></script>
+    <script src="/i18n.js" defer></script>
+    <script src="/pwa.js" defer></script>
+    <script src="/social-fab.js" defer></script>
+    <meta property="og:site_name" content="ServiceHub">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Products | ServiceHub">
+    <meta property="og:description" content="Products is coming soon to ServiceHub.">
+    <meta property="og:image" content="https://servicehub-amber.vercel.app/og-default.jpg">
+    <link rel="stylesheet" href="development-notice.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR (with the menu drop-down) -->
+    <header class="navbar">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">ϟ</span>
+            <span>ServiceHub</span>
+        </a>
+
+        <div id="mobile-nav-panel" class="nav-panel">
+            <nav class="nav-links">
+                <a href="explore.html">Explore</a>
+                <a href="manage.html">Manage Your Service</a>
+                <a href="how-it-works.html">How It Works</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a class="login-btn" href="login.html">List a Job</a>
+                <a class="list-btn" href="list-service.html">List Your Service</a>
+            </div>
+        </div>
+
+        <button class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel">☰</button>
+    </header>
+
+    <main class="cs-page">
+
+        <button type="button" class="how-back-btn" onclick="history.back()">← Back</button>
+
+        <section class="cs-head">
+            <span class="cs-chip"><i></i>UNDER CONSTRUCTION</span>
+            <h1 class="cs-title">Products<span class="cs-soon">Coming soon</span></h1>
+        </section>
+
+        <section class="cs-stage" aria-hidden="false">
+            <svg class="cs-scene" viewBox="0 0 420 250" role="img" aria-label="A cartoon builder drilling a vault door">
+  <defs>
+    <linearGradient id="csSteel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#27324d"/><stop offset="1" stop-color="#121a2e"/>
+    </linearGradient>
+    <filter id="csGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+
+  <!-- floor -->
+  <rect x="0" y="212" width="420" height="38" fill="#0a0f1b"/>
+  <line x1="0" y1="212" x2="420" y2="212" stroke="rgba(255,255,255,.08)"/>
+  <ellipse cx="255" cy="214" rx="82" ry="6" fill="rgba(0,0,0,.45)"/>
+  <ellipse cx="108" cy="214" rx="52" ry="5" fill="rgba(0,0,0,.4)"/>
+
+  <!-- traffic cone -->
+  <polygon points="22,212 44,212 38,176 28,176" fill="#ff7a2f"/>
+  <rect x="28.6" y="188" width="9.4" height="6" fill="#fff"/>
+  <rect x="18" y="210" width="30" height="5" rx="2" fill="#d8591a"/>
+
+  <!-- vault -->
+  <g class="cs-vault-door">
+    <rect x="186" y="28" width="140" height="172" rx="16" fill="url(#csSteel)" stroke="#2388ff" stroke-width="2"/>
+    <rect x="186" y="28" width="140" height="172" rx="16" fill="none" stroke="#2388ff" stroke-width="5" opacity=".25" filter="url(#csGlow)"/>
+    <rect x="198" y="198" width="22" height="12" rx="3" fill="#0f1628"/>
+    <rect x="292" y="198" width="22" height="12" rx="3" fill="#0f1628"/>
+    <circle cx="255" cy="115" r="56" fill="#10172a" stroke="#3a4766" stroke-width="6"/>
+    <circle cx="255" cy="115" r="42" fill="none" stroke="#a855f7" stroke-width="2" opacity=".7"/>
+    <circle cx="304.0" cy="115.0" r="3.2" fill="#5b6a8c"/><circle cx="289.6" cy="149.6" r="3.2" fill="#5b6a8c"/><circle cx="255.0" cy="164.0" r="3.2" fill="#5b6a8c"/><circle cx="220.4" cy="149.6" r="3.2" fill="#5b6a8c"/><circle cx="206.0" cy="115.0" r="3.2" fill="#5b6a8c"/><circle cx="220.4" cy="80.4" r="3.2" fill="#5b6a8c"/><circle cx="255.0" cy="66.0" r="3.2" fill="#5b6a8c"/><circle cx="289.6" cy="80.4" r="3.2" fill="#5b6a8c"/>
+    <rect x="296" y="76" width="14" height="78" rx="5" fill="#0d1424" stroke="#2c3957"/>
+    <circle cx="303" cy="92" r="3" fill="#2388ff"/><circle cx="303" cy="115" r="3" fill="#a855f7"/><circle cx="303" cy="138" r="3" fill="#ff4fd8"/>
+    <g class="cs-wheel">
+      <circle cx="255" cy="115" r="14" fill="#0d1424" stroke="#2388ff" stroke-width="3"/>
+      <line x1="255" y1="115" x2="282.0" y2="115.0" stroke="#2388ff" stroke-width="4" stroke-linecap="round"/><circle cx="282.0" cy="115.0" r="4.2" fill="#a855f7"/><line x1="255" y1="115" x2="255.0" y2="142.0" stroke="#2388ff" stroke-width="4" stroke-linecap="round"/><circle cx="255.0" cy="142.0" r="4.2" fill="#a855f7"/><line x1="255" y1="115" x2="228.0" y2="115.0" stroke="#2388ff" stroke-width="4" stroke-linecap="round"/><circle cx="228.0" cy="115.0" r="4.2" fill="#a855f7"/><line x1="255" y1="115" x2="255.0" y2="88.0" stroke="#2388ff" stroke-width="4" stroke-linecap="round"/><circle cx="255.0" cy="88.0" r="4.2" fill="#a855f7"/>
+    </g>
+    <!-- lock being drilled -->
+    <circle cx="214" cy="136" r="13" fill="#ffb02e" opacity=".5" filter="url(#csGlow)" class="cs-lockglow"/>
+    <circle cx="214" cy="136" r="9" fill="#0a0f1c" stroke="#ffb02e" stroke-width="2"/>
+    <rect x="212.4" y="132" width="3.2" height="9" rx="1.4" fill="#ffb02e"/>
+  </g>
+
+  <!-- builder + drill -->
+  <g class="cs-worker">
+    <g class="cs-body">
+      <rect x="81" y="168" width="17" height="38" rx="8" fill="#1a2a52"/>
+      <rect x="108" y="168" width="17" height="38" rx="8" fill="#1a2a52"/>
+      <ellipse cx="88" cy="207" rx="15" ry="7" fill="#0a0f1c"/>
+      <ellipse cx="121" cy="207" rx="15" ry="7" fill="#0a0f1c"/>
+      <rect x="73" y="116" width="60" height="62" rx="19" fill="#2388ff"/>
+      <rect x="92" y="133" width="22" height="16" rx="4" fill="#1d6fd1"/>
+      <line x1="86" y1="118" x2="90" y2="132" stroke="#1d6fd1" stroke-width="5" stroke-linecap="round"/>
+      <line x1="120" y1="118" x2="116" y2="132" stroke="#1d6fd1" stroke-width="5" stroke-linecap="round"/>
+
+      <!-- head -->
+      <circle cx="103" cy="92" r="27" fill="#ffd2a8"/>
+      <circle cx="87" cy="106" r="4" fill="#ff9aa2" opacity=".55"/>
+      <circle cx="119" cy="106" r="4" fill="#ff9aa2" opacity=".55"/>
+      <circle cx="94" cy="99" r="5.8" fill="#fff"/><circle cx="113" cy="99" r="5.8" fill="#fff"/>
+      <circle cx="96" cy="99.5" r="2.7" fill="#101522"/><circle cx="115" cy="99.5" r="2.7" fill="#101522"/>
+      <line x1="87" y1="92.5" x2="99" y2="95.5" stroke="#5a3a1f" stroke-width="2.4" stroke-linecap="round"/>
+      <line x1="119" y1="92.5" x2="108" y2="95.5" stroke="#5a3a1f" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="95" y="111" width="16" height="7.5" rx="3.4" fill="#fff" stroke="#7a4b2a" stroke-width="1.6"/>
+      <line x1="103" y1="111" x2="103" y2="118.5" stroke="#7a4b2a" stroke-width="1.2"/>
+      <!-- hard hat -->
+      <path d="M73 87a30 30 0 0 1 60 0z" fill="#ffc21a"/>
+      <rect x="69" y="84" width="68" height="7.5" rx="3.7" fill="#f2a900"/>
+      <rect x="98" y="58" width="10" height="16" rx="3" fill="#f2a900"/>
+      <circle cx="103" cy="73" r="4" fill="#fff6c9"/>
+      <path class="cs-sweat" d="M134 90c-3 5-4 7-4 9a4 4 0 0 0 8 0c0-2-1-4-4-9z" fill="#7fd0ff"/>
+    </g>
+
+    <!-- arms -->
+    <line x1="80" y1="128" x2="100" y2="146" stroke="#1d6fd1" stroke-width="12" stroke-linecap="round"/>
+    <line x1="126" y1="128" x2="150" y2="143" stroke="#2388ff" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- drill -->
+    <rect x="146" y="150" width="13" height="24" rx="5" fill="#2a2f3d"/>
+    <rect x="140" y="124" width="38" height="26" rx="8" fill="#ff5a3c"/>
+    <rect x="148" y="124" width="5" height="26" fill="#ffd34d" opacity=".9"/>
+    <rect x="158" y="124" width="5" height="26" fill="#ffd34d" opacity=".9"/>
+    <rect x="178" y="130" width="10" height="14" rx="2" fill="#9aa4b5"/>
+    <line class="cs-bit" x1="188" y1="137" x2="206" y2="136" stroke="#dfe7f3" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="152" cy="143" r="7.5" fill="#ffd2a8"/>
+    <circle cx="101" cy="147" r="7.5" fill="#ffd2a8"/>
+    <line x1="108" y1="143" x2="141" y2="138" stroke="#ffd2a8" stroke-width="5" stroke-linecap="round" opacity="0"/>
+  </g>
+
+  <!-- sparks -->
+  <circle class="cs-spark" cx="207" cy="136" r="2.4" fill="#ffd34d" style="--dx:-12px;--dy:-26px;animation-delay:0.00s"/><circle class="cs-spark" cx="207" cy="136" r="2.4" fill="#ff9a3c" style="--dx:-4px;--dy:-34px;animation-delay:0.12s"/><circle class="cs-spark" cx="207" cy="136" r="2.4" fill="#ffd34d" style="--dx:8px;--dy:-22px;animation-delay:0.25s"/><circle class="cs-spark" cx="207" cy="136" r="2.4" fill="#fff" style="--dx:-16px;--dy:-8px;animation-delay:0.37s"/><circle class="cs-spark" cx="207" cy="136" r="2.4" fill="#ff9a3c" style="--dx:5px;--dy:-30px;animation-delay:0.50s"/><circle class="cs-spark" cx="207" cy="136" r="2.4" fill="#ffd34d" style="--dx:-9px;--dy:12px;animation-delay:0.60s"/>
+</svg>
+            <span class="cs-bubble" aria-hidden="true">Almost there! 👍</span>
+            <img class="cs-mascot" src="servicehub-mascot.webp" alt="ServiceHub mascot giving a thumbs up" width="640" height="640" decoding="async">
+        </section>
+
+        <p class="cs-copy">Our builders are hard at work on <b>Products</b>. This section is still locked, but we're drilling through it as fast as we can.</p>
+
+        <div class="cs-progress" role="img" aria-label="Work in progress">
+            <div class="cs-progress-top"><span>DRILLING THROUGH…</span><span>COMING SOON</span></div>
+            <div class="cs-track"><div class="cs-fill"></div></div>
+        </div>
+
+        <ul class="cs-points">
+            <li><span aria-hidden="true">🧰</span><span><b>Under construction</b><small>We're building this section right now.</small></span></li>
+            <li><span aria-hidden="true">⏳</span><span><b>Check back soon</b><small>You'll see it here as soon as it's ready.</small></span></li>
+        </ul>
+
+    </main>
+
+    <script src="script.js"></script>
+    <script src="development-notice.js" defer></script>
+</body>
+</html>

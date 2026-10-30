@@ -292,7 +292,13 @@
   }
 
   function minY() { return Math.max(EDGE_Y, safeTop + EDGE_Y); }
-  function maxY() { return vh() - B - Math.max(EDGE_Y, safeBottom + EDGE_Y); }
+  /* Height of the fixed bottom bar right now (0 when it is hidden or absent).
+     The button always rests ABOVE it and never slides underneath. */
+  function barInset() {
+    var bar = window.serviceHubBottomBar;
+    try { return (bar && bar.inset && bar.inset()) || 0; } catch (e) { return 0; }
+  }
+  function maxY() { return vh() - B - Math.max(EDGE_Y, safeBottom + EDGE_Y) - barInset(); }
   function clampY(y) { return Math.min(Math.max(y, minY()), Math.max(minY(), maxY())); }
   function homeX() { return side === "left" ? EDGE_X : vw() - EDGE_X - B; }
 
@@ -307,10 +313,12 @@
   }
   function home(animate) {
     var y;
-    if (cyFrac === null) y = vh() - BOTTOM_DEFAULT - Math.max(0, safeBottom) - B;
+    var inset = barInset();
+    if (cyFrac === null) y = vh() - (inset ? inset + 16 : BOTTOM_DEFAULT + Math.max(0, safeBottom)) - B;
     else y = cyFrac * vh() - B / 2;
+    /* The remembered spot (cyFrac) is kept as the person left it, so when the
+       bottom bar hides the button can drift back down to where they put it. */
     y = clampY(y);
-    cyFrac = (y + B / 2) / vh();
     applySide();
     place(homeX(), y, animate);
   }
@@ -712,6 +720,12 @@
   }
   window.addEventListener("resize", onResize);
   window.addEventListener("orientationchange", onResize);
+
+  /* The bottom bar slid away or came back: ride up/down with it. */
+  window.addEventListener("sh-bottombar", function () {
+    if (isOpen || dragging) return;
+    home(true);
+  });
 
   if (document.body) boot();
   else document.addEventListener("DOMContentLoaded", boot);
