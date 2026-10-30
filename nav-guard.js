@@ -301,9 +301,81 @@
     holdHomeFloor();
   }
 
+  /* ---------- 4. BACK BUTTONS WORK LIKE THE PHONE'S BACK BUTTON ----------
+   * The "← Back" buttons on the pages used to either step back properly
+   * (history.back) or open the earlier page as a brand new visit
+   * (location.href = ...), which adds another history entry. Pressing the
+   * phone's back button then had to walk through all of those extra entries.
+   *
+   * Now every in-page back button does exactly what the phone's back button
+   * does: it goes back ONE entry in the history and adds nothing new.
+   * Only when there is nothing of ours to go back to (the page was opened
+   * straight from a link, a bookmark or the installed app) does it swap the
+   * current page for a sensible one (location.replace), which still adds no
+   * history entry.
+   */
+  var BACK_TARGET = {
+    "payment-naira.html": "payment.html",
+    "payment-crypto.html": "payment.html"
+  };
+
+  function referrerPage() {
+    try {
+      if (!document.referrer) return "";
+      var u = new URL(document.referrer);
+      if (u.origin !== location.origin) return "";
+      return (u.pathname.split("/").pop() || "index.html").toLowerCase();
+    } catch (_) { return ""; }
+  }
+
+  function goBack(target) {
+    var want = target ? String(target).toLowerCase() : "";
+    var prev = referrerPage();
+
+    /* There is an earlier page of ours (and, when a specific page is expected,
+       it is that page): step back exactly like the phone's back button. */
+    if (prev && history.length > 1 && (!want || prev === want)) {
+      history.back();
+      return;
+    }
+    /* Otherwise swap this page for the expected one without adding history. */
+    location.replace(target || "index.html");
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var el = t && t.closest
+      ? t.closest(".how-back-btn, .settings-back, a.back-to-services, a.contact-provider-btn")
+      : null;
+    if (!el) return;
+
+    var p = page();
+    var target = BACK_TARGET[p] || "";
+
+    if (el.tagName === "A") {
+      /* only the "Back to Home / Back to Services" links, not other buttons */
+      var href = (el.getAttribute("href") || "").toLowerCase();
+      if (href !== "index.html" && href !== "./index.html") return;
+      if (!el.classList.contains("back-to-services") && p !== "how-it-works.html") return;
+      target = "index.html";
+      /* going "home" from a page we reached from home = just go back */
+      if (referrerPage() !== "index.html" && referrerPage() !== "") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        location.replace("index.html");
+        return;
+      }
+    }
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    goBack(target);
+  }, true);
+
   window.serviceHubNavGuard = {
     markPaymentConfirmed: markConfirmed,
     resetStuckUi: resetStuckUi,
-    stayOnHome: stayOnHome
+    stayOnHome: stayOnHome,
+    goBack: goBack
   };
 })();
