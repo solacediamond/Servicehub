@@ -173,7 +173,72 @@
     location.replace(location.pathname);
   }
 
+  /* ---------- 2b. "BACK AGAIN TO EXIT" REALLY EXITS ----------
+   * A page cannot delete the browser's history, so instead of clearing it the
+   * site skips over it. When the "Thanks for visiting" screen is showing and the
+   * person presses back, the home page is left and this is remembered for a few
+   * seconds. Every ServiceHub page that is then opened by that back press
+   * (including ones restored from the back/forward cache) immediately presses
+   * back again, hidden, until the person is out of the site. Pages opened any
+   * other way, or after the time runs out, are left completely alone.
+   */
+  var LEAVE_KEY = "serviceHubExitLeaving";
+  var LEAVE_WINDOW = 12000;       /* ms between one skipped page and the next */
+  var skipTimer = null;
+  var skipping = false;
+  var skipHidden = false;
+
+  function markLeaving() {
+    try { sessionStorage.setItem(LEAVE_KEY, String(Date.now())); } catch (_) {}
+  }
+  function clearLeaving() {
+    try { sessionStorage.removeItem(LEAVE_KEY); } catch (_) {}
+  }
+  function leavingActive() {
+    try {
+      var t = parseInt(sessionStorage.getItem(LEAVE_KEY) || "0", 10);
+      return !!t && Date.now() - t < LEAVE_WINDOW;
+    } catch (_) { return false; }
+  }
+  function showAgain() {
+    if (!skipHidden) return;
+    skipHidden = false;
+    try { document.documentElement.style.visibility = ""; } catch (_) {}
+  }
+
+  /* Returns true when this page is being skipped. */
+  function skipIfLeaving(persisted) {
+    if (!leavingActive()) return false;
+    if (!(persisted || navType() === "back_forward")) { clearLeaving(); return false; }
+
+    markLeaving();                              /* keep the chain alive for the next page */
+    skipHidden = true;
+    try { document.documentElement.style.visibility = "hidden"; } catch (_) {}
+    history.back();
+    armSkipTimer();
+    return true;
+  }
+
+  /* Nothing further back (this was the first page of the tab): give up and show it. */
+  function armSkipTimer() {
+    if (skipTimer) clearTimeout(skipTimer);
+    skipTimer = setTimeout(function () { skipping = false; clearLeaving(); showAgain(); }, 1500);
+  }
+
+  /* A skipped home page also holds the hidden "base" and "floor" entries, which
+     are stepped through inside the same page (no new page load): keep pressing
+     back for those too. */
+  window.addEventListener("popstate", function () {
+    if (!skipping) return;
+    markLeaving();
+    history.back();
+    armSkipTimer();
+  });
+
   /* ---------- run ---------- */
+
+  /* Pages opened by the back press that follows the thanks screen are skipped. */
+  skipping = skipIfLeaving(false);
 
   /* Runs immediately (before the page paints) for a normal load... */
   guardPaymentPage(false);
@@ -181,6 +246,10 @@
 
   /* ...and again whenever the browser restores a frozen copy. */
   window.addEventListener("pageshow", function (event) {
+    if (event.persisted) {
+      if (skipIfLeaving(true)) return;
+      showAgain();                              /* a skipped page frozen while hidden */
+    } else if (skipping) { return; }
     if (!event.persisted) return;
     resetStuckUi();
     guardPaymentPage(true);
@@ -189,6 +258,10 @@
 
   window.addEventListener("pagehide", function () {
     if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+    if (skipTimer) { clearTimeout(skipTimer); skipTimer = null; }
+    /* Leaving the home page while the thanks screen is up = the exit press. */
+    var s = window.serviceHubExitScreen;
+    if (isHome() && s && s.isShowing()) markLeaving();
   });
 
   /* ---------- 3. LOGO = HOME + FRESH HISTORY ----------
@@ -241,12 +314,13 @@
      If the thanks screen is missing for any reason, fall back to the old
      behaviour (step forward again when the logo was tapped). */
   function holdHomeFloor() {
-    if (!isHome()) return;
+    if (!isHome() || skipping) return;      /* a page being skipped must stay quiet */
 
     if (!atBase()) {
       /* moved off the exit entry (forward button, "Stay" button): hide the screen */
       var s = exitScreen();
       if (s && s.isShowing()) s.hide();
+      clearLeaving();
       return;
     }
 
@@ -267,6 +341,7 @@
   function stayOnHome() {
     var s = exitScreen();
     if (s) s.hide();
+    clearLeaving();
     if (!isHome() || !atBase()) return;
     history.go(1);
     setTimeout(function () {
